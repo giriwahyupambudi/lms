@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="theme-color" content="#ffffff">
+  <title>LMS Smart - Materi</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-light: #dbeafe;
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    * { 
+      box-sizing: border-box; 
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      overflow-x: hidden;
+    }
+
+    /* HEADER */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: white;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 100;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      color: var(--text-main);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      transition: 0.2s;
+    }
+
+    .icon-btn:hover {
+      background: var(--bg-color);
+    }
+
+    .header-title {
+      flex: 1;
+      text-align: center;
+      font-weight: 600;
+      font-size: 1rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 0 10px;
+    }
+
+    /* VIEW AREA */
+    .viewer {
+      position: fixed;
+      top: 60px;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-color);
+      transition: all 0.3s ease;
+    }
+
+    .viewer:fullscreen {
+      top: 0;
+      bottom: 0;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: white;
+    }
+
+    /* ANIMASI LOADING */
+    .loader-container {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.3s ease;
+    }
+
+    .loader {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border-color);
+      border-top: 3px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <button class="icon-btn" onclick="back()">
+    <i data-lucide="arrow-left"></i>
+  </button>
+
+  <div class="header-title" id="displayJudul">Memuat Materi...</div>
+
+  <button class="icon-btn" onclick="toggleFullscreen()" title="Fullscreen">
+    <i data-lucide="maximize" id="fsIcon"></i>
+  </button>
+</div>
+
+<div class="viewer" id="materiList">
+  <div class="loader-container">
+    <div class="loader"></div>
+    <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">Memuat...</div>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+  const userDataForAPI = JSON.parse(localStorage.getItem('user') || '{}');
+  const myTingkatAPI = (userDataForAPI.tingkat || userDataForAPI.Tingkat || "X").toString().trim().toUpperCase();
+  const API_URL = `https://script.google.com/macros/s/AKfycbx8dBNFIqvVixZ5ORodulJYxqjtMvjr-Qajjez1uD7UIeq-ypSI1xaNjdUtJkq3ovzsbw/exec?sheet=materi`;
+
+  if (!localStorage.getItem("user")) {
+    window.location.href = "index.html";
+  }
+
+  function getParam(name) {
+    return new URLSearchParams(window.location.search).get(name);
+  }
+
+  // FUNGSI FULLSCREEN
+  function toggleFullscreen() {
+    const viewer = document.querySelector('.viewer');
+    const icon = document.getElementById('fsIcon');
+
+    if (!document.fullscreenElement) {
+      if (viewer.requestFullscreen) {
+        viewer.requestFullscreen();
+      } else if (viewer.webkitRequestFullscreen) { /* Safari */
+        viewer.webkitRequestFullscreen();
+      } else if (viewer.msRequestFullscreen) { /* IE11 */
+        viewer.msRequestFullscreen();
+      }
+      const iconContainer = icon.parentNode;
+      iconContainer.innerHTML = '<i data-lucide="minimize" id="fsIcon"></i>';
+      lucide.createIcons();
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+      const iconContainer = icon.parentNode;
+      iconContainer.innerHTML = '<i data-lucide="maximize" id="fsIcon"></i>';
+      lucide.createIcons();
+    }
+  }
+
+  document.addEventListener('fullscreenchange', (event) => {
+    const icon = document.getElementById('fsIcon');
+    const iconContainer = icon.parentNode;
+    if (!document.fullscreenElement) {
+      iconContainer.innerHTML = '<i data-lucide="maximize" id="fsIcon"></i>';
+    } else {
+      iconContainer.innerHTML = '<i data-lucide="minimize" id="fsIcon"></i>';
+    }
+    lucide.createIcons();
+  });
+
+  async function loadMateri() {
+    const titleEl = document.getElementById("displayJudul");
+    const container = document.getElementById("materiList");
+
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+      const index = getParam("id");
+
+      const filteredData = data.filter(item => {
+          const itemTingkat = (item.tingkat || item.Tingkat || "SEMUA").toString().trim().toUpperCase();
+          return itemTingkat === myTingkatAPI || itemTingkat === "SEMUA";
+      });
+
+      let m = filteredData[parseInt(index) - 1];
+
+      if (index === null || !m) {
+        titleEl.innerText = "Error";
+        container.innerHTML = '<div class="loader-container"><p style="color:var(--text-muted)">Materi tidak ditemukan</p></div>';
+        return;
+      }
+
+      titleEl.innerText = m.judul || m.Judul || "Materi Pembelajaran";
+
+      let link = (m.link || m.Link || "").toString().trim();
+      let embed = "";
+
+      if (link.includes("youtube.com") || link.includes("youtu.be")) {
+        let id = link.includes("watch?v=") ? link.split("v=")[1].split("&")[0] : link.split("youtu.be/")[1];
+        embed = `<iframe src="https://www.youtube.com/embed/${id}" allowfullscreen></iframe>`;
+      } 
+      else if (link.includes("drive.google.com")) {
+        let match = link.match(/[-\w]{25,}/);
+        if (match) embed = `<iframe src="https://drive.google.com/file/d/${match[0]}/preview"></iframe>`;
+      } 
+      else if (link.toLowerCase().includes(".pdf")) {
+        embed = `<iframe src="${link}"></iframe>`;
+      }
+
+      if (embed) {
+        container.innerHTML = `
+          <div id="iframeLoader" class="loader-container" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-color); z-index: 10;">
+            <div class="loader"></div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Menyiapkan Dokumen...</div>
+          </div>
+        `;
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = embed;
+        const iframe = tempDiv.firstChild;
+        iframe.style.position = 'absolute';
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.zIndex = '1';
+        
+        iframe.onload = () => {
+          const loader = document.getElementById('iframeLoader');
+          if (loader) {
+            loader.style.opacity = '0';
+            setTimeout(() => loader.style.display = 'none', 300);
+          }
+        };
+        container.appendChild(iframe);
+      } else {
+        container.innerHTML = `<div class="loader-container"><a href="${link}" target="_blank" style="display:inline-block; padding:10px 20px; background:var(--primary); color:white; border-radius:8px; text-decoration:none; font-weight:600;">Buka Materi di Tab Baru</a></div>`;
+      }
+
+      // Catat progres bahwa materi ini sudah dibuka
+      logMateriProgress(index);
+
+    } catch (e) {
+      titleEl.innerText = "Error";
+      container.innerHTML = '<div class="loader-container"><p style="color:var(--text-muted)">Gagal memuat data</p></div>';
+    }
+  }
+
+  function back() { window.location.href = "dashboard.html"; }
+
+  function logMateriProgress(idMateri) {
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    const username = userData.username;
+    
+    if (username) {
+      localStorage.setItem(`opened_materi_${username}_${idMateri}`, "true");
+    }
+  }
+
+  loadMateri();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="theme-color" content="#ffffff">
+  <title>LMS Pro - Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-light: #dbeafe;
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --nav-height: 56px;
+      --sidebar-width: 260px;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      overflow-x: hidden;
+    }
+
+    /* HEADER */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: white;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 1.1rem;
+    }
+
+    /* PROFILE & DROPDOWN */
+    .profile-container {
+      position: relative;
+    }
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      width: 180px;
+      background: white;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-lg);
+      display: none;
+      flex-direction: column;
+      padding: 8px;
+      z-index: 1000;
+    }
+
+    .dropdown-menu.active {
+      display: flex;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .dropdown-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      color: var(--text-main);
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+
+    .dropdown-item.logout-text {
+      color: #ef4444;
+    }
+
+    /* SIDEBAR (Desktop) */
+    .sidebar {
+      display: none;
+      width: var(--sidebar-width);
+      background: #1e293b;
+      color: white;
+      padding: 24px;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      z-index: 110;
+    }
+
+    .sidebar .nav-item {
+      flex: none; /* Prevent vertical stretching */
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 14px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      padding: 14px 18px;
+      border-radius: 12px;
+      color: #94a3b8;
+      transition: all 0.2s;
+      width: 100%;
+      margin-bottom: 8px;
+    }
+
+    .sidebar .nav-item:hover {
+      background: #334155;
+      color: white;
+    }
+
+    .sidebar .nav-item.active {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .sidebar .nav-item i, .sidebar .nav-item svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    /* BOTTOM NAV (Mobile Optimized) */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: var(--nav-height);
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 100;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.65rem;
+      font-weight: 600;
+      background: none;
+      border: none;
+      cursor: pointer;
+      flex: 1;
+    }
+
+    .nav-item i {
+      width: 20px;
+      height: 20px;
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+    }
+
+    /* MAIN CONTENT */
+    .main-content {
+      margin-top: 60px;
+      margin-bottom: calc(var(--nav-height) + 20px);
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    /* STATS & CARDS */
+    .header-section {
+      margin-bottom: 20px;
+    }
+
+    .header-section h1 {
+      margin: 0;
+      font-size: 1.4rem;
+      letter-spacing: -0.02em;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stat-icon {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: var(--primary-light);
+      color: var(--primary);
+      margin-bottom: 10px;
+    }
+
+    /* MATERI CARDS */
+    .course-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    .course-card {
+      background: white;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      border-left: 5px solid var(--primary);
+      padding: 16px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .course-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .course-content {
+      flex: 1;
+      padding: 0;
+    }
+
+    .course-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .course-tag {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--primary);
+      background: var(--primary-light);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .course-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .btn-action {
+      padding: 10px 4px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: 1px solid transparent;
+      transition: 0.2s;
+    }
+
+    .btn-action:active {
+      transform: scale(0.95);
+    }
+
+    .btn-study {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-quiz {
+      background: white;
+      color: #10b981;
+      border-color: #10b981;
+    }
+
+    /* RANKING STYLES */
+    .rank-container {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .rank-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: white;
+      gap: 16px;
+    }
+
+    .rank-card .rank-item {
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .rank-card .rank-item:last-child {
+      border-bottom: none;
+    }
+
+    .rank-number {
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      border-radius: 50%;
+      background: #f1f5f9;
+      color: #64748b;
+      flex-shrink: 0;
+    }
+
+    .rank-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .rank-name {
+      font-weight: 500;
+      font-size: 0.9rem;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .rank-score {
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .score-value {
+      font-weight: 800;
+      color: var(--primary);
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .score-label {
+      font-size: 0.6rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .rank-me {
+      background: #eff6ff !important;
+    }
+
+    .badge-me {
+      font-size: 0.6rem;
+      padding: 1px 6px;
+      background: var(--primary);
+      color: white;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    /* ANIMATIONS */
+    .skeleton {
+      background: #ececec;
+      background: linear-gradient(110deg, #ececec 8%, #f5f5f5 18%, #ececec 33%);
+      border-radius: 8px;
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite linear;
+    }
+
+    @keyframes shimmer {
+      to {
+        background-position-x: -200%;
+      }
+    }
+
+    /* TOAST NOTIFICATION */
+    .toast-container {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 90%;
+      max-width: 400px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: #0f172a;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      animation: slideUpToast 0.3s forwards, fadeOutToast 0.3s forwards 3s;
+    }
+
+    @keyframes slideUpToast {
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeOutToast {
+      from {
+        transform: translateY(0);
+        opacity: 1;
+      }
+
+      to {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+    }
+
+    .spin-anim {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* MOBILE SMALL (Compact) */
+    @media (max-width: 400px) {
+      .main-content {
+        padding: 12px 14px;
+      }
+
+      .stat-card {
+        padding: 12px;
+      }
+
+      .stats-grid {
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .course-card {
+        padding: 14px;
+        gap: 12px;
+      }
+
+      .header-section h1 {
+        font-size: 1.25rem;
+      }
+
+      .btn-action {
+        padding: 8px 4px;
+        font-size: 0.7rem;
+      }
+
+      .rank-item {
+        padding: 10px 12px;
+        gap: 12px;
+      }
+
+      .score-value {
+        font-size: 0.95rem;
+      }
+
+      .course-header h3 {
+        font-size: 0.95rem;
+      }
+    }
+
+    /* DESKTOP */
+    @media (min-width: 769px) {
+      .bottom-nav {
+        display: none;
+      }
+
+      .sidebar {
+        display: flex;
+      }
+
+      .top-bar {
+        left: var(--sidebar-width);
+      }
+
+      .main-content {
+        margin-left: var(--sidebar-width);
+        padding: 40px;
+        margin-bottom: 0;
+      }
+
+      .course-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header class="top-bar">
+    <div class="brand">
+      <i data-lucide="graduation-cap"></i>
+      <span>LMS Smart</span>
+    </div>
+    <div class="profile-container">
+      <div class="avatar" id="avatar-toggle" onclick="toggleDropdown()">U</div>
+      <div class="dropdown-menu" id="profile-dropdown">
+        <div class="dropdown-item" style="border-bottom:1px solid var(--border-color); cursor:default;">
+          <div style="display:flex; flex-direction:column">
+            <span id="user-fullname" style="font-weight:600; font-size:0.85rem;">Nama</span>
+            <span id="user-role" style="font-size:0.75rem; color:var(--text-muted)">Pelajar</span>
+            <span id="user-kelas-info"
+              style="font-size:0.7rem; color:var(--primary); font-weight:600; margin-top:4px;">Kelas: -</span>
+          </div>
+        </div>
+        <button class="dropdown-item logout-text" onclick="logout()"><i data-lucide="log-out"></i> Keluar</button>
+      </div>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <div class="brand" style="color:white; margin-bottom: 32px;"><i data-lucide="graduation-cap"></i> LMS Smart</div>
+    <button class="nav-item active" id="tabDashboardD" onclick="showTab('dashboard')"><i data-lucide="layout-grid"></i>
+      Beranda</button>
+    <button class="nav-item" id="tabMateriD" onclick="showTab('materi')"><i data-lucide="book-open"></i> Materi</button>
+    <button class="nav-item" id="tabRankingD" onclick="showTab('ranking')"><i data-lucide="award"></i>
+      Peringkat</button>
+  </aside>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" id="tabDashboard" onclick="showTab('dashboard')"><i data-lucide="home"></i>
+      Beranda</button>
+    <button class="nav-item" id="tabMateri" onclick="showTab('materi')"><i data-lucide="book-open"></i> Materi</button>
+    <button class="nav-item" id="tabRanking" onclick="showTab('ranking')"><i data-lucide="award"></i> Peringkat</button>
+  </nav>
+
+  <main class="main-content">
+    <div class="container">
+
+      <!-- BERANDA -->
+      <section id="dashboardSection">
+        <div class="header-section" style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <h1 id="welcomeText">Halo!</h1>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Ayo lanjutkan belajarmu hari ini.</p>
+          </div>
+          <div id="syncStatus" style="font-size: 0.7rem; color: var(--text-muted); display:flex; align-items:center; gap:6px; font-weight:500; text-align:right;">
+            <i data-lucide="refresh-cw" class="spin-anim" style="width:14px; height:14px;"></i> <span>Menyinkronkan...</span>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon"><i data-lucide="book"></i></div>
+            <span style="font-size:0.75rem; color:var(--text-muted)">Materi</span>
+            <div style="font-weight:700;"><span id="materiProgress">0</span>/<span id="materiTotal">0</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#fef3c7; color:#f59e0b;"><i data-lucide="star"></i></div>
+            <span style="font-size:0.75rem; color:var(--text-muted)">Point Saya</span>
+            <div style="font-weight:700;" id="myScore">0</div>
+          </div>
+        </div>
+
+        <div class="stat-card" style="padding: 0; overflow: hidden; margin-bottom: 24px;">
+          <div style="padding: 16px 16px 8px 16px; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 1rem; font-weight: 700;">Peringkat Teratas</h3>
+            <span style="font-size: 0.8rem; color: var(--primary); font-weight: 600; cursor: pointer;"
+              onclick="showTab('ranking')">Lihat Semua</span>
+          </div>
+          <div id="homeRankingList" class="rank-container" style="padding-bottom: 8px;">
+            <div style="padding:16px">
+              <div class="skeleton" style="height:40px; width:100%"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="upNextContainer">
+          <h3 style="margin: 0 0 12px 0; font-size: 1rem; font-weight: 700;">Lanjutkan Belajar</h3>
+          <div id="upNextCard">
+            <!-- Skeleton Loading -->
+            <div class="course-card">
+              <div class="course-header">
+                <div class="course-content">
+                  <div class="skeleton" style="height: 18px; width: 70%; margin-bottom: 12px;"></div>
+                  <div class="skeleton" style="height: 14px; width: 40px; border-radius: 4px;"></div>
+                </div>
+                <div class="skeleton" style="width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0;"></div>
+              </div>
+              <div class="course-actions">
+                <div class="skeleton" style="height: 36px; width: 100%; border-radius: 8px;"></div>
+                <div class="skeleton" style="height: 36px; width: 100%; border-radius: 8px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MATERI -->
+      <section id="materiSection" style="display:none">
+        <div class="header-section">
+          <h1>Daftar Materi</h1>
+        </div>
+        <div id="materiList" class="course-grid">
+          <!-- Skeleton Loading -->
+          <div class="course-card">
+            <div class="skeleton" style="height: 100px; width: 100%; border-radius: 0;"></div>
+            <div class="course-content">
+              <div class="skeleton" style="height: 14px; width: 60px; margin-bottom: 12px;"></div>
+              <div class="skeleton" style="height: 20px; width: 80%; margin-bottom: 16px;"></div>
+              <div class="course-actions">
+                <div class="skeleton" style="height: 36px; width: 100%; border-radius: 8px;"></div>
+                <div class="skeleton" style="height: 36px; width: 100%; border-radius: 8px;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="course-card hidden md:block">
+            <div class="skeleton" style="height: 100px; width: 100%; border-radius: 0;"></div>
+            <div class="course-content">
+              <div class="skeleton" style="height: 14px; width: 60px; margin-bottom: 12px;"></div>
+              <div class="skeleton" style="height: 20px; width: 80%; margin-bottom: 16px;"></div>
+              <div class="course-actions">
+                <div class="skeleton" style="height: 36px; width: 100%; border-radius: 8px;"></div>
+                <div class="skeleton" style="height: 36px; width: 100%; border-radius: 8px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RANKING -->
+      <section id="rankingSection" style="display:none">
+        <div class="header-section"
+          style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <h1 style="margin:0;">Peringkat Lengkap</h1>
+          <select id="filterKelasDropdown" onchange="filterRanking()"
+            style="padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; font-family: inherit; font-size: 0.85rem; font-weight: 600; color: var(--text-main); background: white; cursor: pointer;">
+            <option value="Semua">Semua Kelas</option>
+          </select>
+        </div>
+        <div id="rankingList" class="rank-card rank-container">
+          <!-- Skeleton Loading -->
+          <div class="rank-item">
+            <div class="skeleton" style="height:40px; width:100%"></div>
+          </div>
+          <div class="rank-item">
+            <div class="skeleton" style="height:40px; width:100%"></div>
+          </div>
+          <div class="rank-item">
+            <div class="skeleton" style="height:40px; width:100%"></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script>
+    lucide.createIcons();
+
+    const API_URL = "https://script.google.com/macros/s/AKfycbx8dBNFIqvVixZ5ORodulJYxqjtMvjr-Qajjez1uD7UIeq-ypSI1xaNjdUtJkq3ovzsbw/exec";
+    const userData = localStorage.getItem("user");
+    if (!userData) { window.location.href = "index.html"; }
+    const user = JSON.parse(userData);
+
+    function getTingkat(obj) {
+      let t = (obj.tingkat || obj.Tingkat || "").toString().trim().toUpperCase();
+      let k = (obj.kelas || obj.Kelas || "").toString().trim().toUpperCase();
+      if (!t || (t === "X" && (k.startsWith("XI") || k.startsWith("XII")))) {
+        if (k.startsWith("XII")) return "XII";
+        if (k.startsWith("XI")) return "XI";
+        if (k.startsWith("X")) return "X";
+      }
+      return t || "X";
+    }
+
+    document.getElementById("welcomeText").innerText = "Halo, " + user.nama.split(' ')[0] + "!";
+    document.getElementById("avatar-toggle").innerText = user.nama.charAt(0);
+    document.getElementById("user-fullname").innerText = user.nama;
+    document.getElementById("user-kelas-info").innerText = "Tingkat " + getTingkat(user) + " • " + (user.kelas || "Tanpa Kelas");
+
+    window.onload = () => { loadAllData(); };
+
+    async function loadAllData() {
+      const syncStatus = document.getElementById("syncStatus");
+
+      // 1. Try load from cache first
+      const cachedMateri = localStorage.getItem("cache_materi");
+      const cachedListNilai = localStorage.getItem("cache_listNilai");
+      const cachedUser = localStorage.getItem("cache_user");
+      const lastUpdated = localStorage.getItem("cache_lastUpdated");
+
+      if (cachedMateri && cachedListNilai && cachedUser) {
+        try {
+          renderMateri(JSON.parse(cachedMateri), JSON.parse(cachedListNilai));
+          renderRanking(JSON.parse(cachedListNilai), JSON.parse(cachedUser));
+          if (lastUpdated) {
+            syncStatus.innerHTML = `<i data-lucide="refresh-cw" class="spin-anim" style="width:14px; height:14px;"></i> <span>Menyinkronkan...</span>`;
+            lucide.createIcons();
+          }
+        } catch (e) { console.error("Cache parsing error", e); }
+      }
+
+      // 2. Fetch fresh data in background
+      try {
+        const [resMateri, resListNilai, resUser] = await Promise.all([
+          fetch(`${API_URL}?sheet=materi`),
+          fetch(`${API_URL}?sheet=listNilai`).catch(() => ({ json: async () => [] })),
+          fetch(`${API_URL}?sheet=user`).catch(() => ({ json: async () => [] }))
+        ]);
+
+        const dataMateri = await resMateri.json();
+        const dataListNilai = await resListNilai.json();
+        const dataUser = await resUser.json();
+
+        // Save to cache
+        localStorage.setItem("cache_materi", JSON.stringify(dataMateri));
+        localStorage.setItem("cache_listNilai", JSON.stringify(dataListNilai));
+        localStorage.setItem("cache_user", JSON.stringify(dataUser));
+        
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        localStorage.setItem("cache_lastUpdated", timeString);
+
+        // Re-render with fresh data silently
+        renderMateri(dataMateri, dataListNilai);
+        renderRanking(dataListNilai, dataUser);
+
+        // Update indicator
+        syncStatus.innerHTML = `<i data-lucide="check-circle" style="width:14px; height:14px; color:#10b981;"></i> <span style="color:#10b981;">Terakhir diperbarui: ${timeString}</span>`;
+        lucide.createIcons();
+
+      } catch (e) {
+        console.error("Gagal menyinkronkan data", e);
+        syncStatus.innerHTML = `<i data-lucide="wifi-off" style="width:14px; height:14px; color:#ef4444;"></i> <span style="color:#ef4444;">Offline. Terakhir: ${lastUpdated || '-'}</span>`;
+        lucide.createIcons();
+      }
+    }
+
+    function toggleDropdown() { document.getElementById('profile-dropdown').classList.toggle('active'); }
+
+    function showTab(tab) {
+      const sections = ['dashboard', 'materi', 'ranking'];
+      sections.forEach(s => {
+        document.getElementById(s + 'Section').style.display = (s === tab) ? 'block' : 'none';
+        const btn = document.getElementById('tab' + s.charAt(0).toUpperCase() + s.slice(1));
+        if (btn) btn.classList.toggle('active', s === tab);
+        const btnD = document.getElementById('tab' + s.charAt(0).toUpperCase() + s.slice(1) + 'D');
+        if (btnD) btnD.classList.toggle('active', s === tab);
+      });
+      window.scrollTo(0, 0);
+    }
+
+    function renderMateri(dataMateriMentah, dataProgres) {
+      const list = document.getElementById("materiList");
+      try {
+        const myTingkat = getTingkat(user);
+
+        // FILTER FRONTEND: Hanya tampilkan materi yang se-tingkat dengan user
+        const dataMateri = dataMateriMentah.filter(m => {
+          const mTingkat = getTingkat(m);
+          return mTingkat === myTingkat || mTingkat === "SEMUA";
+        });
+
+        // Filter progres hanya untuk user yang sedang login
+        const userProgress = dataProgres.filter(p =>
+          p.username && p.username.toString().trim() === user.username.toString().trim()
+        );
+
+        const getVal = (obj, possibleKeys) => {
+          for (const key in obj) {
+            const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+            for (const p of possibleKeys) {
+              if (normKey === p.toLowerCase().replace(/[^a-z0-9]/g, '')) return obj[key];
+            }
+          }
+          return undefined;
+        };
+
+        // Evaluasi (Kuis/Tugas) yang sudah selesai diambil dari server beserta nilai dan waktunya
+        const quizScores = new Map();
+        const quizTimes = new Map();
+        
+        userProgress.filter(p => {
+          let pTipe = getVal(p, ['tipe', 'tipeevaluasi', 'jenis']);
+          return pTipe && pTipe.toString().toLowerCase() !== "materi";
+        }).forEach(p => {
+          let mid = getVal(p, ['id_materi', 'idmateri', 'materi', 'modul', 'id']);
+          if (mid) {
+            mid = mid.toString();
+            let pNilai = getVal(p, ['nilai', 'skor', 'point']);
+            const score = parseInt(pNilai) || 0;
+            
+            let pWaktu = getVal(p, ['waktu', 'timestamp']);
+            let timeStr = pWaktu ? pWaktu.toString().replace(/^'/, '').trim() : "00:00";
+            if (timeStr.includes("1899-12-29") || timeStr.includes("Z")) timeStr = "00:00";
+
+            // Simpan nilai tertinggi jika dikerjakan berkali-kali
+            if (!quizScores.has(mid) || score > quizScores.get(mid)) {
+              quizScores.set(mid, score);
+              quizTimes.set(mid, timeStr);
+            } else if (score === quizScores.get(mid) && timeStr < quizTimes.get(mid)) {
+              // Jika nilai sama, ambil waktu tercepat
+              quizTimes.set(mid, timeStr);
+            }
+          }
+        });
+
+        // Kalkulasi Total Skor Saya
+        let totalScore = 0;
+        quizScores.forEach(score => totalScore += score);
+        document.getElementById("myScore").innerText = totalScore;
+
+
+
+        // Materi yang sudah dibuka cukup diambil dari perangkat (localStorage) agar tidak mengotori database
+        // Hanya tambahkan ke openedMaterials JIKA materi tersebut tidak terkunci secara aturan (mencegah anomali jika listNilai dihapus)
+        const openedMaterials = new Set();
+        dataMateri.forEach((m, i) => {
+          const mid = (i + 1).toString();
+
+          let isMateriLocked = false;
+          if (i > 0) {
+            let prevMid = i.toString(); // i is already (i+1)-1
+            let prevM = dataMateri[i - 1];
+            let prevTipeRaw = getVal(prevM, ['tipeevaluasi', 'tipe', 'evaluasi', 'jenis']);
+            let prevTipe = (prevTipeRaw && prevTipeRaw.toString().trim() !== "") ? prevTipeRaw.toString().trim() : ((i - 1) % 2 === 0 ? "Kuis" : "Tugas");
+            prevTipe = prevTipe.charAt(0).toUpperCase() + prevTipe.slice(1).toLowerCase();
+
+            // Praktik tidak mengunci materi selanjutnya meskipun belum dinilai
+            if (prevTipe !== "Praktik" && prevTipe !== "Ujian praktik") {
+              if (!quizScores.has(prevMid)) isMateriLocked = true;
+            }
+          }
+
+          if (!isMateriLocked) {
+            if (localStorage.getItem(`opened_materi_${user.username}_${mid}`)) openedMaterials.add(mid);
+          } else {
+            localStorage.removeItem(`opened_materi_${user.username}_${mid}`);
+          }
+        });
+
+        document.getElementById("materiTotal").innerText = dataMateri.length;
+        // Progres dinilai berdasarkan jumlah evaluasi (Kuis/Tugas) yang telah diselesaikan
+        document.getElementById("materiProgress").innerText = quizScores.size;
+
+        let upNextHTML = "";
+        let upNextFound = false;
+        list.innerHTML = dataMateri.map((m, i) => {
+          const mid = i + 1;
+          const tipeRaw = getVal(m, ['tipeevaluasi', 'tipe', 'evaluasi', 'jenis']);
+          let tipe = (tipeRaw && tipeRaw.toString().trim() !== "") ? tipeRaw.toString().trim() : (i % 2 === 0 ? "Kuis" : "Tugas");
+          // Format menjadi Kuis atau Tugas atau Praktik
+          tipe = tipe.charAt(0).toUpperCase() + tipe.slice(1).toLowerCase();
+
+          // SKOR
+          let hasScore = quizScores.has(mid.toString());
+          let scoreValue = hasScore ? quizScores.get(mid.toString()) : null;
+          let timeValue = hasScore ? quizTimes.get(mid.toString()) : null;
+
+          // LOGIKA PENGUNCIAN:
+          let prevMid = i > 0 ? i : null;
+          let isMateriLocked = false;
+          if (i > 0) {
+            let prevM = dataMateri[i - 1];
+            let prevTipeRaw = getVal(prevM, ['tipeevaluasi', 'tipe', 'evaluasi', 'jenis']);
+            let prevTipe = (prevTipeRaw && prevTipeRaw.toString().trim() !== "") ? prevTipeRaw.toString().trim() : ((i - 1) % 2 === 0 ? "Kuis" : "Tugas");
+            prevTipe = prevTipe.charAt(0).toUpperCase() + prevTipe.slice(1).toLowerCase();
+            
+            if (prevTipe !== "Praktik" && prevTipe !== "Ujian praktik" && !quizScores.has(prevMid.toString()) && !hasScore) {
+              isMateriLocked = true;
+            }
+          }
+
+          let scoreBadge = hasScore ? `<span style="font-size:0.7rem; font-weight:700; color:#059669; background:#d1fae5; padding:4px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="check-circle" style="width:14px; height:14px;"></i> Point: ${scoreValue}</span>` : '';
+          let timeBadge = hasScore && timeValue ? `<span class="course-tag" style="background:#f1f5f9; color:#64748b; font-size:0.65rem; display:inline-flex; align-items:center; gap:4px;"><i data-lucide="clock" style="width:12px; height:12px;"></i> ${timeValue}</span>` : '';
+
+          let isKuisLocked = isMateriLocked || (!openedMaterials.has(mid.toString()) && !hasScore);
+
+          let btnPelajari = "";
+          let btnKuis = "";
+
+          if (tipe === "Praktik" || tipe === "Ujian praktik") {
+             if (hasScore) {
+                 btnKuis = `<button class="btn-action" style="grid-column: 1 / -1; background:#d1fae5; color:#059669; border:1px solid #a7f3d0; cursor:default; width: 100%; padding: 10px 15px;"><i data-lucide="check-circle" style="width:16px; flex-shrink:0;"></i> <span style="white-space:normal; line-height:1.2;">Lulus Ujian Praktik</span></button>`;
+             } else {
+                 btnKuis = `<button class="btn-action" style="grid-column: 1 / -1; background:#fef3c7; color:#d97706; border:1px solid #fde68a; cursor:default; width: 100%; padding: 10px 15px;"><i data-lucide="clock" class="spin-anim" style="width:16px; flex-shrink:0;"></i> <span style="white-space:normal; line-height:1.2;">Menunggu Penilaian dari Guru</span></button>`;
+             }
+          } else {
+             btnPelajari = isMateriLocked
+               ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed;" onclick="alertLocked('materi')"><i data-lucide="lock" style="width:14px"></i> Terkunci</button>`
+               : `<button class="btn-action btn-study" onclick="openMateri('${mid}')"><i data-lucide="play" style="width:14px"></i> Pelajari</button>`;
+
+             btnKuis = isKuisLocked
+               ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed; border:1px solid #e2e8f0;" onclick="alertLocked('kuis')"><i data-lucide="lock" style="width:14px"></i> Kuis Terkunci</button>`
+               : `<button class="btn-action btn-quiz" onclick="handleEvaluasi('${tipe}', '${mid}', encodeURIComponent(\`${m.judul || m.Judul || ("Materi " + (i + 1))}\`), ${i + 1})"><i data-lucide="${tipe === 'Kuis' ? 'edit-2' : 'upload'}" style="width:14px"></i> ${hasScore ? 'Ulangi ' + tipe : 'Kerjakan ' + tipe}</button>`;
+          }
+
+          let cardHTML = `
+          <div class="course-card">
+            <div class="course-header">
+              <div class="course-content">
+                <h3 style="margin:0 0 8px 0; font-size:0.95rem; font-weight:600; line-height:1.4; color:#334155;">${m.judul || m.Judul || ("Materi " + (i + 1))}</h3>
+                <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
+                  <span class="course-tag">Modul ${i + 1}</span>
+                  ${timeBadge}
+                  ${scoreBadge}
+                </div>
+              </div>
+              <div style="color:var(--primary); opacity:0.15; flex-shrink:0;">
+                <i data-lucide="${tipe === 'Praktik' || tipe === 'Ujian praktik' ? 'clipboard-check' : 'book-open'}" style="width:40px; height:40px;"></i>
+              </div>
+            </div>
+            <div class="course-actions">
+              ${btnPelajari}
+              ${btnKuis}
+            </div>
+          </div>
+        `;
+
+          if (!hasScore && !isMateriLocked && !upNextFound) {
+              upNextHTML = cardHTML;
+              upNextFound = true;
+          }
+
+          return cardHTML;
+        }).join('');
+
+        const upNextContainer = document.getElementById("upNextContainer");
+        const upNextCard = document.getElementById("upNextCard");
+        if (upNextFound && upNextContainer && upNextCard) {
+            upNextContainer.style.display = "block";
+            upNextCard.innerHTML = upNextHTML;
+        } else if (upNextContainer && upNextCard && dataMateri.length > 0) {
+            upNextContainer.style.display = "block";
+            upNextCard.innerHTML = `<div class="course-card" style="text-align: center; padding: 24px; color: var(--primary); font-weight: 600;"><i data-lucide="check-circle" style="width: 32px; height: 32px; margin: 0 auto 8px auto; opacity: 0.8;"></i>Luar biasa! Anda telah menyelesaikan semua materi.</div>`;
+        } else if (upNextContainer) {
+            upNextContainer.style.display = "none";
+        }
+
+        lucide.createIcons();
+      } catch (e) {
+        list.innerHTML = "<p>Gagal memuat materi.</p>";
+        const upNextContainer = document.getElementById("upNextContainer");
+        if (upNextContainer) upNextContainer.style.display = "none";
+      }
+    }
+
+    function showToast(message) {
+      const container = document.getElementById("toastContainer");
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.innerHTML = `<i data-lucide="lock" style="width:18px; color:#facc15;"></i> <span>${message}</span>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+      setTimeout(() => toast.remove(), 3500);
+    }
+
+    function alertLocked(tipe) {
+      if (tipe === 'materi') showToast("Selesaikan Kuis sebelumnya untuk membuka materi ini.");
+      else showToast("Baca materi ini terlebih dahulu sebelum mengerjakan Kuis!");
+    }
+
+    // Fungsi baru untuk menangani tombol evaluasi
+    function handleEvaluasi(tipe, idMateri, titleEncoded, index) {
+      if (tipe === "Kuis") {
+        window.location.href = `evaluasi.html?tipe=kuis&id=${idMateri}&title=${titleEncoded || ''}&idx=${index || idMateri}`;
+      } else {
+        window.location.href = `evaluasi.html?tipe=tugas&id=${idMateri}&title=${titleEncoded || ''}&idx=${index || idMateri}`;
+      }
+    }
+
+    let globalRankingData = [];
+
+    // Helper untuk mengubah "MM:SS" jadi detik
+    function parseTimeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      let s = timeStr.toString().replace(/^'/, '').trim();
+      if (s.includes("1899-12-29") || s.includes("Z")) return 0; // Filter data usang yang rusak karena format Google Sheets
+      const parts = s.split(":");
+      if (parts.length === 2) return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+      if (parts.length === 3) return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+      return 0;
+    }
+
+    // Helper untuk mengubah detik jadi "MM:SS"
+    function formatSecondsToTime(sec) {
+      const m = Math.floor(sec / 60).toString().padStart(2, '0');
+      const s = (sec % 60).toString().padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    function renderRanking(rawNilai, dataUser) {
+      const fullList = document.getElementById("rankingList");
+      const homeList = document.getElementById("homeRankingList");
+
+      try {
+
+        // 1. Kelompokkan berdasarkan username
+        const userMap = new Map();
+        const myTingkat = getTingkat(user);
+
+        // Inisialisasi semua siswa agar tetap tampil dengan nilai 0
+        // HANYA inisialisasi siswa yang setingkat dengan user yang sedang login!
+        dataUser.forEach(u => {
+          const uTingkat = getTingkat(u);
+          if (uTingkat === myTingkat) {
+            const uname = u.username.toString().trim();
+            userMap.set(uname, {
+              username: uname,
+              nama: u.nama,
+              quizzes: new Map()
+            });
+          }
+        });
+
+        rawNilai.forEach(n => {
+          if (!n.tipe || n.tipe.toLowerCase() === "materi") return; // Hanya proses Kuis dan Tugas
+          const uname = n.username.toString().trim();
+
+          // Pastikan user tersebut se-tingkat dengan kita (karena kita mengabaikan tingkat lain)
+          if (!userMap.has(uname)) return;
+          const mid = (n.id_materi || n.idmateri || "").toString();
+          const score = parseInt(n.nilai) || 0;
+          const waktuSec = parseTimeToSeconds(n.waktu);
+
+          if (!userMap.has(uname)) {
+            userMap.set(uname, {
+              username: uname,
+              nama: n.nama,
+              quizzes: new Map() // mid -> { score, waktuSec }
+            });
+          }
+
+          const userObj = userMap.get(uname);
+          // Ambil nilai tertinggi, jika nilai sama ambil waktu tercepat
+          const existing = userObj.quizzes.get(mid);
+          if (!existing) {
+            userObj.quizzes.set(mid, { score, waktuSec });
+          } else {
+            if (score > existing.score) {
+              userObj.quizzes.set(mid, { score, waktuSec });
+            } else if (score === existing.score && waktuSec < existing.waktuSec) {
+              userObj.quizzes.set(mid, { score, waktuSec });
+            }
+          }
+        });
+
+        const kelasSet = new Set();
+        let aggregatedData = [];
+
+        userMap.forEach(userObj => {
+          let totalScore = 0;
+          let totalTimeSec = 0;
+          userObj.quizzes.forEach(q => {
+            totalScore += q.score;
+            totalTimeSec += q.waktuSec;
+          });
+
+          // Cocokkan kelas dari dataUser
+          const matchUser = dataUser.find(u =>
+            u.username.toString().trim() === userObj.username ||
+            u.nama.toString().trim().toLowerCase() === userObj.nama.toString().trim().toLowerCase()
+          );
+
+          let kelas = (matchUser && matchUser.kelas) ? matchUser.kelas : "Tanpa Kelas";
+          if (kelas !== "Tanpa Kelas") kelasSet.add(kelas);
+
+          aggregatedData.push({
+            username: userObj.username,
+            nama: userObj.nama,
+            nilai: totalScore,
+            waktuSec: totalTimeSec,
+            waktu: formatSecondsToTime(totalTimeSec),
+            kelas: kelas
+          });
+        });
+
+        // 2. Sort: Nilai Tertinggi -> Waktu Tercepat (Terkecil)
+        aggregatedData.sort((a, b) => {
+          if (b.nilai !== a.nilai) return b.nilai - a.nilai;
+          return a.waktuSec - b.waktuSec;
+        });
+
+        globalRankingData = aggregatedData;
+
+        homeList.innerHTML = globalRankingData.slice(0, 3).map(renderRankItemHTML).join('');
+
+        const filterDropdown = document.getElementById("filterKelasDropdown");
+        const kelasArray = Array.from(kelasSet).sort();
+        filterDropdown.innerHTML = '<option value="Semua">Semua Kelas</option>';
+        kelasArray.forEach(k => {
+          filterDropdown.innerHTML += `<option value="${k}">${k}</option>`;
+        });
+
+        filterRanking();
+
+      } catch (e) {
+        homeList.innerHTML = "<p style='padding:16px;'>Gagal memuat peringkat.</p>";
+        fullList.innerHTML = "<p style='padding:16px;'>Gagal memuat peringkat.</p>";
+        console.error(e);
+      }
+    }
+
+    function filterRanking() {
+      const filterKelas = document.getElementById("filterKelasDropdown").value;
+      const fullList = document.getElementById("rankingList");
+
+      let filteredData = globalRankingData;
+      if (filterKelas !== "Semua") {
+        filteredData = globalRankingData.filter(u => u.kelas === filterKelas);
+      }
+
+      if (filteredData.length === 0) {
+        fullList.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">Belum ada data peringkat untuk kelas ini.</div>`;
+      } else {
+        fullList.innerHTML = filteredData.map(renderRankItemHTML).join('');
+      }
+    }
+
+    function renderRankItemHTML(u, i) {
+      const isMe = u.username.toString().trim() === user.username.toString().trim() ||
+        u.username.toString().trim().toLowerCase() === user.nama.toString().trim().toLowerCase();
+
+      let medal = i + 1;
+      let medalStyle = "";
+      if (i === 0) { medal = "🥇"; medalStyle = "background:#fef3c7; color:#d97706;"; }
+      else if (i === 1) { medal = "🥈"; medalStyle = "background:#f1f5f9; color:#475569;"; }
+      else if (i === 2) { medal = "🥉"; medalStyle = "background:#fff7ed; color:#9a3412;"; }
+
+      return `
+      <div class="rank-item ${isMe ? 'rank-me' : ''}">
+        <div class="rank-number" style="${medalStyle}">${medal}</div>
+        <div class="rank-info">
+          <div class="rank-name">
+            ${u.nama || u.username} ${isMe ? '<span class="badge-me">ANDA</span>' : ''}
+          </div>
+          <div style="font-size:0.65rem; color:var(--text-muted); margin-top:2px; font-weight:600;">${u.kelas}</div>
+        </div>
+        <div class="rank-score" style="text-align:right;">
+          <div class="score-value" style="font-size:1.1rem; color:var(--primary);">${u.nilai} <span style="font-size:0.65rem; color:var(--text-muted); font-weight:600;">Point</span></div>
+          ${u.waktu ? `<div style="font-size:0.65rem; color:var(--text-muted); margin-top:4px; font-weight:600; display:flex; align-items:center; justify-content:flex-end; gap:4px;"><i data-lucide="clock" style="width:12px; height:12px;"></i> ${u.waktu}</div>` : ''}
+        </div>
+      </div>
+    `;
+    }
+
+    function openMateri(id) { window.location.href = "materi.html?id=" + id; }
+    function logout() { localStorage.removeItem("user"); window.location.href = "index.html"; }
+  </script>
+
+</body>
+
+</html>
