@@ -1077,6 +1077,7 @@
       const parts = s.split(":");
       if (parts.length === 2) return parseInt(parts[0]) * 60 + parseInt(parts[1]);
       if (parts.length === 3) return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+      if (!isNaN(s) && s !== "") return parseInt(s); // Mendukung input angka urutan (misal: 1, 2, 3)
       return 0;
     }
 
