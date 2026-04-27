@@ -865,10 +865,11 @@
         );
 
         const getVal = (obj, possibleKeys) => {
-          for (const key in obj) {
-            const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
-            for (const p of possibleKeys) {
-              if (normKey === p.toLowerCase().replace(/[^a-z0-9]/g, '')) return obj[key];
+          for (const p of possibleKeys) {
+            const pNorm = p.toLowerCase().replace(/[^a-z0-9]/g, '');
+            for (const key in obj) {
+              const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+              if (normKey === pNorm && obj[key] !== undefined && obj[key] !== "") return obj[key];
             }
           }
           return undefined;
