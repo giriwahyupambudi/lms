@@ -971,7 +971,14 @@
           }
 
           let scoreBadge = hasScore ? `<span style="font-size:0.7rem; font-weight:700; color:#059669; background:#d1fae5; padding:4px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="check-circle" style="width:14px; height:14px;"></i> Point: ${scoreValue}</span>` : '';
-          let timeBadge = hasScore && timeValue ? `<span class="course-tag" style="background:#f1f5f9; color:#64748b; font-size:0.65rem; display:inline-flex; align-items:center; gap:4px;"><i data-lucide="clock" style="width:12px; height:12px;"></i> ${timeValue}</span>` : '';
+          let timeBadge = '';
+          if (hasScore && timeValue) {
+            if (!isNaN(timeValue) && timeValue.toString().trim() !== "") {
+              timeBadge = `<span class="course-tag" style="background:#e0e7ff; color:#4f46e5; font-size:0.65rem; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="hash" style="width:12px; height:12px;"></i> Urutan ke-${timeValue}</span>`;
+            } else {
+              timeBadge = `<span class="course-tag" style="background:#f1f5f9; color:#64748b; font-size:0.65rem; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="clock" style="width:12px; height:12px;"></i> ${timeValue}</span>`;
+            }
+          }
 
           let isKuisLocked = isMateriLocked || (!openedMaterials.has(mid.toString()) && !hasScore);
 
