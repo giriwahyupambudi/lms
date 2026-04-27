@@ -887,6 +887,12 @@
           if (mid) {
             mid = mid.toString();
             let pNilai = getVal(p, ['nilai', 'skor', 'point']);
+            
+            // Jika kolom nilai kosong (misal guru baru copy-paste nama siswa tapi belum memasukkan nilai), abaikan baris ini
+            if (pNilai === undefined || pNilai === null || pNilai.toString().trim() === "") {
+              return; 
+            }
+
             const score = parseInt(pNilai) || 0;
             
             let pWaktu = getVal(p, ['waktu', 'timestamp']);
