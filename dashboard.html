@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="theme-color" content="#ffffff">
-  <title>LMS Pro - Dashboard</title>
+  <title>Al Ilmi LMS - Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -244,7 +244,7 @@
 
     .stats-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(3, 1fr);
       gap: 12px;
       margin-bottom: 20px;
     }
@@ -584,7 +584,7 @@
       }
 
       .stats-grid {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(3, 1fr);
       }
     }
   </style>
@@ -595,7 +595,7 @@
   <header class="top-bar">
     <div class="brand">
       <i data-lucide="graduation-cap"></i>
-      <span>LMS Smart</span>
+      <span>Al Ilmi LMS</span>
     </div>
     <div class="profile-container">
       <div class="avatar" id="avatar-toggle" onclick="toggleDropdown()">U</div>
@@ -614,7 +614,7 @@
   </header>
 
   <aside class="sidebar">
-    <div class="brand" style="color:white; margin-bottom: 32px;"><i data-lucide="graduation-cap"></i> LMS Smart</div>
+    <div class="brand" style="color:white; margin-bottom: 32px;"><i data-lucide="graduation-cap"></i> Al Ilmi LMS</div>
     <button class="nav-item active" id="tabDashboardD" onclick="showTab('dashboard')"><i data-lucide="layout-grid"></i>
       Beranda</button>
     <button class="nav-item" id="tabMateriD" onclick="showTab('materi')"><i data-lucide="book-open"></i> Materi</button>
@@ -654,6 +654,11 @@
             <div class="stat-icon" style="background:#fef3c7; color:#f59e0b;"><i data-lucide="star"></i></div>
             <span style="font-size:0.75rem; color:var(--text-muted)">Point Saya</span>
             <div style="font-weight:700;" id="myScore">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#ecfdf5; color:#10b981;"><i data-lucide="award"></i></div>
+            <span style="font-size:0.75rem; color:var(--text-muted)">Peringkat</span>
+            <div style="font-weight:700;" id="myRank">-</div>
           </div>
         </div>
 
@@ -1195,6 +1200,17 @@
         });
 
         globalRankingData = aggregatedData;
+
+        // Cari posisi user saat ini
+        const myRankIndex = aggregatedData.findIndex(u => 
+          u.username.toString().trim() === user.username.toString().trim() ||
+          u.username.toString().trim().toLowerCase() === user.nama.toString().trim().toLowerCase()
+        );
+
+        if (myRankIndex !== -1) {
+          const rankElement = document.getElementById("myRank");
+          if(rankElement) rankElement.innerText = `#${myRankIndex + 1}`;
+        }
 
         homeList.innerHTML = globalRankingData.slice(0, 3).map(renderRankItemHTML).join('');
 
