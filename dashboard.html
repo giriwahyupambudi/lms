@@ -634,12 +634,12 @@
 
       <!-- BERANDA -->
       <section id="dashboardSection">
-        <div class="header-section" style="display:flex; justify-content:space-between; align-items:center;">
-          <div>
+        <div class="header-section" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+          <div style="flex: 1 1 auto; min-width: 150px;">
             <h1 id="welcomeText">Halo!</h1>
             <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Ayo lanjutkan belajarmu hari ini.</p>
           </div>
-          <div id="syncStatus" style="font-size: 0.7rem; color: var(--text-muted); display:flex; align-items:center; gap:6px; font-weight:500; text-align:right;">
+          <div id="syncStatus" style="font-size: 0.7rem; color: var(--text-muted); display:flex; align-items:center; gap:6px; font-weight:500; flex-shrink: 0; background: #f1f5f9; padding: 6px 10px; border-radius: 20px;">
             <i data-lucide="refresh-cw" class="spin-anim" style="width:14px; height:14px;"></i> <span>Menyinkronkan...</span>
           </div>
         </div>
