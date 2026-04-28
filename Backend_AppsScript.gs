@@ -341,6 +341,94 @@ function doPost(e) {
                               .setMimeType(ContentService.MimeType.JSON);
        }
     }
+    if (action === "updateNilaiBulk") {
+         var sheetNilai = ss.getSheetByName("listNilai");
+         if (!sheetNilai) throw new Error("Sheet listNilai tidak ditemukan");
+         
+         var bulkData = postData.data; // Array of objects
+         if(!bulkData || !Array.isArray(bulkData)) throw new Error("Format data bulk tidak valid");
+         
+         var sheetData = sheetNilai.getDataRange().getValues();
+         var headers = sheetData[0];
+         var userCol = -1, materiCol = -1, nilaiCol = -1, waktuCol = -1, namaCol = -1, kelasCol = -1;
+         
+         for(var i = 0; i < headers.length; i++){
+            var h = headers[i].toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+            if(h === "username" || h === "nisn") userCol = i;
+            if(h === "id_materi" || h === "idmateri" || h === "modul") materiCol = i;
+            if(h === "nilai" || h === "skor") nilaiCol = i;
+            if(h === "waktu" || h === "durasi") waktuCol = i;
+            if(h === "nama" || h === "namasiswa" || h === "namalengkap") namaCol = i;
+            if(h === "kelas" || h === "tingkat") kelasCol = i;
+         }
+         
+         if(userCol === -1 || materiCol === -1 || nilaiCol === -1) {
+           throw new Error("Struktur kolom listNilai tidak lengkap (butuh username, id_materi, nilai)");
+         }
+         
+         var newRows = [];
+         
+         for (var d = 0; d < bulkData.length; d++) {
+             var item = bulkData[d];
+             var targetUser = item.username;
+             var targetMateri = item.id_materi;
+             var newNilai = item.nilai;
+             var newWaktu = item.waktu;
+             var targetNama = item.nama || "";
+             var targetKelas = item.kelas || "";
+             
+             var updated = false;
+             for(var j = sheetData.length - 1; j > 0; j--) {
+                var rowUsername = sheetData[j][userCol].toString().trim();
+                var rowMateri = sheetData[j][materiCol].toString().trim();
+                
+                if(rowUsername === targetUser && rowMateri === targetMateri) {
+                   sheetNilai.getRange(j + 1, nilaiCol + 1).setValue(newNilai);
+                   if (waktuCol !== -1 && newWaktu !== undefined) {
+                       sheetNilai.getRange(j + 1, waktuCol + 1).setValue(newWaktu);
+                   }
+                   if (namaCol !== -1 && targetNama !== "") {
+                       sheetNilai.getRange(j + 1, namaCol + 1).setValue(targetNama);
+                   }
+                   if (kelasCol !== -1 && targetKelas !== "") {
+                       sheetNilai.getRange(j + 1, kelasCol + 1).setValue(targetKelas);
+                   }
+                   updated = true;
+                   break;
+                }
+             }
+             
+             if (!updated) {
+                 var newRow = new Array(headers.length).fill("");
+                 newRow[userCol] = targetUser;
+                 newRow[materiCol] = targetMateri;
+                 newRow[nilaiCol] = newNilai;
+                 if(namaCol !== -1) newRow[namaCol] = targetNama;
+                 if(kelasCol !== -1) newRow[kelasCol] = targetKelas;
+                 
+                 for(var i = 0; i < headers.length; i++){
+                   var h = headers[i].toString().toLowerCase();
+                   if(h === "waktu" || h === "timestamp") {
+                      var now = new Date();
+                      newRow[i] = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+                   }
+                   if (waktuCol !== -1 && i === waktuCol && newWaktu !== undefined) {
+                      newRow[i] = newWaktu;
+                   }
+                   if(h === "tipe" || h === "jenis") newRow[i] = "Kuis";
+                 }
+                 newRows.push(newRow);
+             }
+         }
+         
+         if (newRows.length > 0) {
+             var lastRow = sheetNilai.getLastRow();
+             sheetNilai.getRange(lastRow + 1, 1, newRows.length, headers.length).setValues(newRows);
+         }
+         
+         return ContentService.createTextOutput(JSON.stringify({ status: "success", message: bulkData.length + " data nilai berhasil disimpan" }))
+                              .setMimeType(ContentService.MimeType.JSON);
+    }
 
     throw new Error("Aksi tidak dikenali: " + action);
 

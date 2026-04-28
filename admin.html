@@ -302,6 +302,9 @@
               <select class="form-control" id="filterMateriNilai" onchange="renderTableNilai()"></select>
             </div>
           </div>
+          <div style="margin-bottom: 1rem; text-align: right;">
+            <button class="btn btn-primary" onclick="simpanSemuaNilai()"><i data-lucide="saveAll"></i> Simpan Semua Nilai</button>
+          </div>
           <div class="table-responsive">
             <table>
               <thead>
@@ -1043,6 +1046,51 @@
         id_materi: idMateri,
         nilai: inputVal,
         waktu: durasiVal
+      });
+    }
+
+    async function simpanSemuaNilai() {
+      let selKelas = document.getElementById('filterKelasNilai').value;
+      let selMateri = document.getElementById('filterMateriNilai').value;
+      
+      if(!selKelas || !selMateri) {
+         return alert("Pilih kelas dan materi terlebih dahulu!");
+      }
+      
+      let tbody = document.getElementById('nilaiTableBody');
+      let rows = tbody.querySelectorAll('tr');
+      let dataToSave = [];
+      
+      rows.forEach(tr => {
+         let userSpan = tr.querySelector('small');
+         if (!userSpan) return;
+         let username = userSpan.innerText.trim();
+         
+         let inputNilai = document.getElementById(`nilai_${username}`);
+         let inputDurasi = document.getElementById(`durasi_${username}`);
+         
+         if (inputNilai && inputNilai.value !== "") {
+            let nama = tr.querySelector('td:nth-child(2)').childNodes[0].nodeValue.trim();
+            dataToSave.push({
+               username: username,
+               nama: nama,
+               kelas: selKelas,
+               id_materi: selMateri,
+               nilai: inputNilai.value,
+               waktu: inputDurasi ? inputDurasi.value : ""
+            });
+         }
+      });
+      
+      if(dataToSave.length === 0) {
+         return alert("Tidak ada nilai yang diisi untuk disimpan!");
+      }
+      
+      if(!confirm(`Anda akan menyimpan ${dataToSave.length} data nilai sekaligus. Lanjutkan?`)) return;
+      
+      await postData({
+         action: "updateNilaiBulk",
+         data: dataToSave
       });
     }
 
