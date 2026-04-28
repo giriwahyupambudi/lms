@@ -148,7 +148,8 @@
     }
 
     .sidebar .nav-item {
-      flex: none; /* Prevent vertical stretching */
+      flex: none;
+      /* Prevent vertical stretching */
       flex-direction: row;
       align-items: center;
       justify-content: flex-start;
@@ -172,8 +173,9 @@
       background: var(--primary);
       color: white;
     }
-    
-    .sidebar .nav-item i, .sidebar .nav-item svg {
+
+    .sidebar .nav-item i,
+    .sidebar .nav-item svg {
       width: 22px;
       height: 22px;
     }
@@ -510,6 +512,7 @@
     .spin-anim {
       animation: spin 1s linear infinite;
     }
+
     @keyframes spin {
       100% {
         transform: rotate(360deg);
@@ -634,12 +637,15 @@
 
       <!-- BERANDA -->
       <section id="dashboardSection">
-        <div class="header-section" style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+        <div class="header-section"
+          style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
           <div style="flex: 1 1 auto;">
             <h1 id="welcomeText" style="line-height:1.2;">Halo!</h1>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">Ayo lanjutkan belajarmu hari ini.</p>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">Ayo lanjutkan belajarmu hari ini.
+            </p>
           </div>
-          <div id="syncStatus" style="font-size: 0.7rem; color: var(--text-muted); display:flex; align-items:center; gap:4px; font-weight:600; flex-shrink: 0; background: #f1f5f9; padding: 4px 8px; border-radius: 20px;">
+          <div id="syncStatus"
+            style="font-size: 0.7rem; color: var(--text-muted); display:flex; align-items:center; gap:4px; font-weight:600; flex-shrink: 0; background: #f1f5f9; padding: 4px 8px; border-radius: 20px;">
             <i data-lucide="refresh-cw" class="spin-anim" style="width:12px; height:12px;"></i> <span>Sinkron...</span>
           </div>
         </div>
@@ -819,7 +825,7 @@
         localStorage.setItem("cache_materi", JSON.stringify(dataMateri));
         localStorage.setItem("cache_listNilai", JSON.stringify(dataListNilai));
         localStorage.setItem("cache_user", JSON.stringify(dataUser));
-        
+
         const now = new Date();
         const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
         localStorage.setItem("cache_lastUpdated", timeString);
@@ -883,7 +889,7 @@
         // Evaluasi (Kuis/Tugas) yang sudah selesai diambil dari server beserta nilai dan waktunya
         const quizScores = new Map();
         const quizTimes = new Map();
-        
+
         userProgress.filter(p => {
           let pTipe = getVal(p, ['tipe', 'tipeevaluasi', 'jenis']);
           return pTipe && pTipe.toString().toLowerCase() !== "materi";
@@ -892,14 +898,14 @@
           if (mid) {
             mid = mid.toString();
             let pNilai = getVal(p, ['nilai', 'skor', 'point']);
-            
+
             // Jika kolom nilai kosong (misal guru baru copy-paste nama siswa tapi belum memasukkan nilai), abaikan baris ini
             if (pNilai === undefined || pNilai === null || pNilai.toString().trim() === "") {
-              return; 
+              return;
             }
 
             const score = parseInt(pNilai) || 0;
-            
+
             let pWaktu = getVal(p, ['waktu', 'timestamp']);
             let timeStr = pWaktu ? pWaktu.toString().replace(/^'/, '').trim() : "00:00";
             if (timeStr.includes("1899-12-29") || timeStr.includes("Z")) timeStr = "00:00";
@@ -975,7 +981,7 @@
             let prevTipeRaw = getVal(prevM, ['tipeevaluasi', 'tipe', 'evaluasi', 'jenis']);
             let prevTipe = (prevTipeRaw && prevTipeRaw.toString().trim() !== "") ? prevTipeRaw.toString().trim() : ((i - 1) % 2 === 0 ? "Kuis" : "Tugas");
             prevTipe = prevTipe.charAt(0).toUpperCase() + prevTipe.slice(1).toLowerCase();
-            
+
             if (prevTipe !== "Praktik" && prevTipe !== "Ujian praktik" && !quizScores.has(prevMid.toString()) && !hasScore) {
               isMateriLocked = true;
             }
@@ -997,19 +1003,19 @@
           let btnKuis = "";
 
           if (tipe === "Praktik" || tipe === "Ujian praktik") {
-             if (hasScore) {
-                 btnKuis = `<button class="btn-action" style="grid-column: 1 / -1; background:#d1fae5; color:#059669; border:1px solid #a7f3d0; cursor:default; width: 100%; padding: 10px 15px;"><i data-lucide="check-circle" style="width:16px; flex-shrink:0;"></i> <span style="white-space:normal; line-height:1.2;">Lulus Ujian Praktik</span></button>`;
-             } else {
-                 btnKuis = `<button class="btn-action" style="grid-column: 1 / -1; background:#fef3c7; color:#d97706; border:1px solid #fde68a; cursor:default; width: 100%; padding: 10px 15px;"><i data-lucide="clock" class="spin-anim" style="width:16px; flex-shrink:0;"></i> <span style="white-space:normal; line-height:1.2;">Menunggu Penilaian dari Guru</span></button>`;
-             }
+            if (hasScore) {
+              btnKuis = `<button class="btn-action" style="grid-column: 1 / -1; background:#d1fae5; color:#059669; border:1px solid #a7f3d0; cursor:default; width: 100%; padding: 10px 15px;"><i data-lucide="check-circle" style="width:16px; flex-shrink:0;"></i> <span style="white-space:normal; line-height:1.2;">Lulus Ujian Praktik</span></button>`;
+            } else {
+              btnKuis = `<button class="btn-action" style="grid-column: 1 / -1; background:#fef3c7; color:#d97706; border:1px solid #fde68a; cursor:default; width: 100%; padding: 10px 15px;"><i data-lucide="clock" class="spin-anim" style="width:16px; flex-shrink:0;"></i> <span style="white-space:normal; line-height:1.2;">Menunggu Penilaian dari Guru</span></button>`;
+            }
           } else {
-             btnPelajari = isMateriLocked
-               ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed;" onclick="alertLocked('materi')"><i data-lucide="lock" style="width:14px"></i> Terkunci</button>`
-               : `<button class="btn-action btn-study" onclick="openMateri('${mid}')"><i data-lucide="play" style="width:14px"></i> Pelajari</button>`;
+            btnPelajari = isMateriLocked
+              ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed;" onclick="alertLocked('materi')"><i data-lucide="lock" style="width:14px"></i> Terkunci</button>`
+              : `<button class="btn-action btn-study" onclick="openMateri('${mid}')"><i data-lucide="play" style="width:14px"></i> Pelajari</button>`;
 
-             btnKuis = isKuisLocked
-               ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed; border:1px solid #e2e8f0;" onclick="alertLocked('kuis')"><i data-lucide="lock" style="width:14px"></i> Kuis Terkunci</button>`
-               : `<button class="btn-action btn-quiz" onclick="handleEvaluasi('${tipe}', '${mid}', encodeURIComponent(\`${m.judul || m.Judul || ("Materi " + (i + 1))}\`), ${i + 1})"><i data-lucide="${tipe === 'Kuis' ? 'edit-2' : 'upload'}" style="width:14px"></i> ${hasScore ? 'Ulangi ' + tipe : 'Kerjakan ' + tipe}</button>`;
+            btnKuis = isKuisLocked
+              ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed; border:1px solid #e2e8f0;" onclick="alertLocked('kuis')"><i data-lucide="lock" style="width:14px"></i> Kuis Terkunci</button>`
+              : `<button class="btn-action btn-quiz" onclick="handleEvaluasi('${tipe}', '${mid}', encodeURIComponent(\`${m.judul || m.Judul || ("Materi " + (i + 1))}\`), ${i + 1})"><i data-lucide="${tipe === 'Kuis' ? 'edit-2' : 'upload'}" style="width:14px"></i> ${hasScore ? 'Ulangi ' + tipe : 'Kerjakan ' + tipe}</button>`;
           }
 
           let cardHTML = `
@@ -1035,8 +1041,8 @@
         `;
 
           if (!hasScore && !isMateriLocked && !upNextFound) {
-              upNextHTML = cardHTML;
-              upNextFound = true;
+            upNextHTML = cardHTML;
+            upNextFound = true;
           }
 
           return cardHTML;
@@ -1045,13 +1051,13 @@
         const upNextContainer = document.getElementById("upNextContainer");
         const upNextCard = document.getElementById("upNextCard");
         if (upNextFound && upNextContainer && upNextCard) {
-            upNextContainer.style.display = "block";
-            upNextCard.innerHTML = upNextHTML;
+          upNextContainer.style.display = "block";
+          upNextCard.innerHTML = upNextHTML;
         } else if (upNextContainer && upNextCard && dataMateri.length > 0) {
-            upNextContainer.style.display = "block";
-            upNextCard.innerHTML = `<div class="course-card" style="text-align: center; padding: 24px; color: var(--primary); font-weight: 600;"><i data-lucide="check-circle" style="width: 32px; height: 32px; margin: 0 auto 8px auto; opacity: 0.8;"></i>Luar biasa! Anda telah menyelesaikan semua materi.</div>`;
+          upNextContainer.style.display = "block";
+          upNextCard.innerHTML = `<div class="course-card" style="text-align: center; padding: 24px; color: var(--primary); font-weight: 600;"><i data-lucide="check-circle" style="width: 32px; height: 32px; margin: 0 auto 8px auto; opacity: 0.8;"></i>Luar biasa! Anda telah menyelesaikan semua materi.</div>`;
         } else if (upNextContainer) {
-            upNextContainer.style.display = "none";
+          upNextContainer.style.display = "none";
         }
 
         lucide.createIcons();
@@ -1202,14 +1208,14 @@
         globalRankingData = aggregatedData;
 
         // Cari posisi user saat ini
-        const myRankIndex = aggregatedData.findIndex(u => 
+        const myRankIndex = aggregatedData.findIndex(u =>
           u.username.toString().trim() === user.username.toString().trim() ||
           u.username.toString().trim().toLowerCase() === user.nama.toString().trim().toLowerCase()
         );
 
         if (myRankIndex !== -1) {
           const rankElement = document.getElementById("myRank");
-          if(rankElement) rankElement.innerText = `#${myRankIndex + 1}`;
+          if (rankElement) rankElement.innerText = `#${myRankIndex + 1}`;
         }
 
         homeList.innerHTML = globalRankingData.slice(0, 3).map(renderRankItemHTML).join('');
