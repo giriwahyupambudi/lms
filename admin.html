@@ -1016,10 +1016,10 @@
           <td style="font-weight:500;">${nama}<br><small style="color:var(--text-muted)">${username}</small></td>
           <td style="text-align:center; font-size:0.85rem;">${waktuSubmit}</td>
           <td style="text-align:center">
-             <input type="text" id="durasi_${username}" class="form-control" value="${durasiKuis !== '-' ? durasiKuis : ''}" placeholder="00:00" style="max-width:70px; display:inline-block; text-align:center; padding: 0.3rem;">
+             <input type="text" id="durasi_${username}" class="form-control" value="${durasiKuis !== '-' ? durasiKuis : ''}" data-original-value="${durasiKuis !== '-' ? durasiKuis : ''}" placeholder="00:00" style="max-width:70px; display:inline-block; text-align:center; padding: 0.3rem;">
           </td>
           <td style="text-align:center">
-            <input type="number" id="nilai_${username}" class="form-control input-nilai" value="${maxNilai}" placeholder="-" style="max-width:80px; display:inline-block; text-align:center;">
+            <input type="number" id="nilai_${username}" class="form-control input-nilai" value="${maxNilai}" data-original-value="${maxNilai}" placeholder="-" style="max-width:80px; display:inline-block; text-align:center;">
           </td>
           <td style="text-align:center">
             ${maxNilai !== "" ? `<span class="badge active">Tuntas</span>` : `<span class="badge draft">Belum</span>`}
@@ -1070,20 +1070,28 @@
          let inputDurasi = document.getElementById(`durasi_${username}`);
          
          if (inputNilai && inputNilai.value !== "") {
-            let nama = tr.querySelector('td:nth-child(2)').childNodes[0].nodeValue.trim();
-            dataToSave.push({
-               username: username,
-               nama: nama,
-               kelas: selKelas,
-               id_materi: selMateri,
-               nilai: inputNilai.value,
-               waktu: inputDurasi ? inputDurasi.value : ""
-            });
+            let originalNilai = inputNilai.getAttribute("data-original-value") || "";
+            let originalDurasi = inputDurasi ? (inputDurasi.getAttribute("data-original-value") || "") : "";
+            let currentNilai = inputNilai.value.trim();
+            let currentDurasi = inputDurasi ? inputDurasi.value.trim() : "";
+            
+            // Hanya simpan jika ada perubahan nilai atau durasi dari aslinya
+            if (currentNilai !== originalNilai || currentDurasi !== originalDurasi) {
+                let nama = tr.querySelector('td:nth-child(2)').childNodes[0].nodeValue.trim();
+                dataToSave.push({
+                   username: username,
+                   nama: nama,
+                   kelas: selKelas,
+                   id_materi: selMateri,
+                   nilai: currentNilai,
+                   waktu: currentDurasi
+                });
+            }
          }
       });
       
       if(dataToSave.length === 0) {
-         return alert("Tidak ada nilai yang diisi untuk disimpan!");
+         return alert("Tidak ada nilai baru atau perubahan nilai yang perlu disimpan!");
       }
       
       if(!confirm(`Anda akan menyimpan ${dataToSave.length} data nilai sekaligus. Lanjutkan?`)) return;
