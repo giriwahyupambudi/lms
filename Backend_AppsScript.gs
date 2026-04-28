@@ -280,7 +280,7 @@ function doPost(e) {
        var userCol = -1, materiCol = -1, nilaiCol = -1, waktuCol = -1, namaCol = -1, kelasCol = -1;
        
        for(var i = 0; i < headers.length; i++){
-          var h = headers[i].toString().toLowerCase();
+          var h = headers[i].toString().toLowerCase().replace(/[^a-z0-9]/g, '');
           if(h === "username" || h === "nisn") userCol = i;
           if(h === "id_materi" || h === "idmateri" || h === "modul") materiCol = i;
           if(h === "nilai" || h === "skor") nilaiCol = i;
