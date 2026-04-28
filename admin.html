@@ -305,7 +305,15 @@
           <div class="table-responsive">
             <table>
               <thead>
-                <tr><th style="width: 50px;">No</th><th>Nama Siswa</th><th style="text-align:center">Nilai Akhir</th><th>Status</th><th>Aksi</th></tr>
+                <tr>
+                  <th style="width: 50px;">No</th>
+                  <th style="cursor:pointer; user-select:none;" onclick="handleSort('nilai', 'nama')">Nama Siswa <span id="sort_nilai_nama" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
+                  <th style="cursor:pointer; user-select:none;" onclick="handleSort('nilai', 'waktu')">Waktu Submit <span id="sort_nilai_waktu" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
+                  <th style="cursor:pointer; user-select:none;" onclick="handleSort('nilai', 'durasi')">Durasi <span id="sort_nilai_durasi" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
+                  <th style="cursor:pointer; user-select:none; text-align:center; width: 120px;" onclick="handleSort('nilai', 'nilai')">Nilai Akhir <span id="sort_nilai_nilai" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
+                  <th style="cursor:pointer; user-select:none;" onclick="handleSort('nilai', 'status')">Status <span id="sort_nilai_status" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
+                  <th>Aksi</th>
+                </tr>
               </thead>
               <tbody id="nilaiTableBody">
                 <tr><td colspan="5" style="text-align:center;">Pilih kelas dan materi terlebih dahulu.</td></tr>
@@ -439,16 +447,24 @@
         sortState[table].asc = true;
       }
       
-      document.querySelectorAll('.sort-icon-' + table).forEach(el => el.innerHTML = '<i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i>');
-      let iconEl = document.getElementById('sort_' + table + '_' + col);
-      if (iconEl) {
-         iconEl.innerHTML = sortState[table].asc ? '<i data-lucide="chevron-up" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i>' : '<i data-lucide="chevron-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i>';
-      }
-      lucide.createIcons();
-
       if (table === 'materi') renderTableMateri();
       if (table === 'nilai') renderTableNilai();
       if (table === 'user') renderTableUser();
+    }
+
+    function restoreSortIcons() {
+       ['materi', 'nilai', 'user'].forEach(table => {
+          document.querySelectorAll('.sort-icon-' + table).forEach(el => {
+              el.innerHTML = '<i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i>';
+          });
+          if (sortState[table].col) {
+             let iconEl = document.getElementById(`sort_${table}_${sortState[table].col}`);
+             if (iconEl) {
+                iconEl.innerHTML = sortState[table].asc ? '<i data-lucide="chevron-up" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i>' : '<i data-lucide="chevron-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i>';
+             }
+          }
+       });
+       lucide.createIcons();
     }
 
     const getVal = (obj, possibleKeys) => {
@@ -839,18 +855,6 @@
       let selMateri = document.getElementById('filterMateriNilai').value;
       let tbody = document.getElementById('nilaiTableBody');
 
-      // Update Header Table secara dinamis (karena user minta ada waktu)
-      let thead = document.querySelector('#nilaiSection table thead');
-      thead.innerHTML = `<tr>
-        <th style="width: 50px;">No</th>
-        <th style="cursor:pointer; user-select:none;" onclick="handleSort('nilai', 'nama')">Nama Siswa <span id="sort_nilai_nama" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
-        <th style="cursor:pointer; user-select:none;" onclick="handleSort('nilai', 'waktu')">Waktu Submit <span id="sort_nilai_waktu" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
-        <th style="cursor:pointer; user-select:none;" onclick="handleSort('nilai', 'durasi')">Durasi <span id="sort_nilai_durasi" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
-        <th style="cursor:pointer; user-select:none; text-align:center; width: 120px;" onclick="handleSort('nilai', 'nilai')">Nilai Akhir <span id="sort_nilai_nilai" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
-        <th style="cursor:pointer; user-select:none;" onclick="handleSort('nilai', 'status')">Status <span id="sort_nilai_status" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
-        <th>Aksi</th>
-      </tr>`;
-
       if(!selKelas || !selMateri) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Pilih kelas dan materi terlebih dahulu.</td></tr>';
         return;
@@ -956,6 +960,7 @@
         let { username, nama, maxNilai, statusKuis, waktuSubmit, durasiKuis } = item;
         let safeNama = nama.toString().replace(/'/g, "\\'");
         let safeKelas = selKelas.toString().replace(/'/g, "\\'");
+        let safeMateri = selMateri.toString().replace(/'/g, "\\'");
 
         html += `<tr>
           <td>${i+1}</td>
@@ -971,12 +976,12 @@
             ${maxNilai !== "" ? `<span class="badge active">Tuntas</span>` : `<span class="badge draft">Belum</span>`}
           </td>
           <td style="text-align:center">
-            <button class="btn btn-sm btn-outline" onclick="simpanNilai('${username}', '${selMateri}', '${safeNama}', '${safeKelas}')"><i data-lucide="save"></i> Simpan</button>
+            <button class="btn btn-sm btn-outline" onclick="simpanNilai('${username}', '${safeMateri}', '${safeNama}', '${safeKelas}')"><i data-lucide="save"></i> Simpan</button>
           </td>
         </tr>`;
       });
       tbody.innerHTML = html || '<tr><td colspan="7" style="text-align:center">Tidak ada siswa di kelas ini.</td></tr>';
-      lucide.createIcons();
+      restoreSortIcons();
     }
 
     async function simpanNilai(username, idMateri, nama, kelas) {
