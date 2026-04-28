@@ -472,20 +472,29 @@
     // RENDER DASHBOARD
     // ============================================
     function renderDashboard() {
-      document.getElementById('statTotalSiswa').innerText = dataUser.length;
-      document.getElementById('statTotalMateri').innerText = dataMateri.length;
-      document.getElementById('statTotalKuis').innerText = dataNilai.filter(n => {
+      // Pastikan memfilter baris yang kosong (Google Sheets sering mengirim baris kosong jika tidak dihapus)
+      let validNilai = dataNilai.filter(n => {
+         let u = getVal(n, ['username', 'nisn']) || "";
+         let nm = getVal(n, ['nama', 'namasiswa']) || "";
+         return u !== "" || nm !== "";
+      });
+      let validMateri = dataMateri.filter(m => getVal(m, ['judul', 'materi', 'namamateri']));
+      let validUser = dataUser.filter(u => getVal(u, ['username', 'nisn']));
+
+      document.getElementById('statTotalSiswa').innerText = validUser.length;
+      document.getElementById('statTotalMateri').innerText = validMateri.length;
+      document.getElementById('statTotalKuis').innerText = validNilai.filter(n => {
         let tipe = getVal(n, ['tipe', 'jenis']);
         return tipe && tipe.toLowerCase() !== "materi";
       }).length;
       
-      document.getElementById('statDraft').innerText = dataMateri.filter(m => {
+      document.getElementById('statDraft').innerText = validMateri.filter(m => {
         let status = getVal(m, ['status']) || "";
         return status.toString().toLowerCase() === "draft";
       }).length;
 
-      // Aktivitas Terkini
-      let recent = [...dataNilai].reverse().slice(0, 10);
+      // Aktivitas Terkini (Filter out empty rows)
+      let recent = [...validNilai].reverse().slice(0, 10);
       let html = '';
       if(recent.length === 0) html = '<tr><td colspan="4" style="text-align:center">Belum ada aktivitas</td></tr>';
       recent.forEach(r => {
