@@ -792,18 +792,64 @@
       let kSelect = document.getElementById('filterKelasNilai');
       let mSelect = document.getElementById('filterMateriNilai');
       
-      let kelasSet = new Set();
-      dataUser.forEach(u => { 
-         let kelas = getVal(u, ['kelas', 'tingkat']);
-         if(kelas && kelas.toString().trim() !== "") kelasSet.add(kelas); 
+      let selKelas = document.getElementById('filterKelasNilai');
+      let selMateri = document.getElementById('filterMateriNilai');
+      
+      let oldKelas = selKelas.value;
+      let oldMateri = selMateri.value;
+
+      let kls = new Set();
+      dataUser.forEach(u => {
+         let k = getVal(u, ['kelas', 'tingkat']);
+         if(k) kls.add(k.toString().trim());
       });
-      kSelect.innerHTML = '<option value="">-- Pilih Kelas --</option>' + Array.from(kelasSet).sort().map(k => `<option value="${k}">${k}</option>`).join('');
+      
+      selKelas.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+      Array.from(kls).sort().forEach(k => {
+         selKelas.innerHTML += `<option value="${k}">${k}</option>`;
+      });
+      
+      if (oldKelas) {
+          selKelas.value = oldKelas;
+          
+          // Re-populate materi based on the restored class
+          let tingkatUser = getTingkatFromKelas(oldKelas);
+          let materiTingkatIni = dataMateri.filter(m => {
+             let tk = getVal(m, ['kelas', 'tingkat']);
+             return !tk || tk.toString().trim() === "" || tk.toString().trim().toUpperCase() === "SEMUA" || tk.toString().trim().toUpperCase() === tingkatUser.toUpperCase();
+          });
+          
+          selMateri.innerHTML = '<option value="">-- Pilih Materi --</option>';
+          let relativeId = 1;
+          materiTingkatIni.forEach((m) => {
+             let tk = getVal(m, ['kelas', 'tingkat']);
+             let isSemua = !tk || tk.toString().trim() === "" || tk.toString().trim().toUpperCase() === "SEMUA";
+             let actualId = isSemua ? m.rowNumber : relativeId++;
+             let judul = getVal(m, ['judul', 'materi', 'namamateri']) || "Tanpa Judul";
+             selMateri.innerHTML += `<option value="${actualId}">[ID Kuis: ${actualId}] ${judul}</option>`;
+          });
+          
+          if (oldMateri) {
+              selMateri.value = oldMateri;
+              renderTableNilai();
+          } else {
+              document.getElementById('nilaiTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center">Pilih materi untuk menampilkan siswa.</td></tr>';
+          }
+      } else {
+          // Default behavior if nothing was selected
+          selMateri.innerHTML = '';
+          document.getElementById('nilaiTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center">Pilih kelas dan materi terlebih dahulu.</td></tr>';
+      }
 
       // Menambahkan onchange event pada filter Kelas untuk menyaring Materi
-      kSelect.addEventListener('change', onKelasChangeNilai);
+      // Hapus event listener lama agar tidak dobel
+      selKelas.removeEventListener('change', onKelasChangeNilai);
+      selKelas.addEventListener('change', onKelasChangeNilai);
 
-      // Panggil sekali untuk mengisi dropdown materi pada load awal
-      onKelasChangeNilai();
+      // Panggil sekali untuk mengisi dropdown materi pada load awal JIKA belum ada kelas yang direstore
+      if (!oldKelas) {
+          onKelasChangeNilai();
+      }
     }
 
     function getTingkatFromKelas(kelasStr) {
