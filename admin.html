@@ -471,12 +471,17 @@
     }
 
     const getVal = (obj, possibleKeys) => {
+      // Optimasi: Cache key yang sudah dinormalisasi ke dalam object itu sendiri agar tidak diulang-ulang
+      if (!obj._norm) {
+         Object.defineProperty(obj, '_norm', { value: {}, enumerable: false });
+         for (const key in obj) {
+            if (key === '_norm' || key === 'rowNumber') continue;
+            obj._norm[key.toLowerCase().replace(/[^a-z0-9]/g, '')] = obj[key];
+         }
+      }
       for (const p of possibleKeys) {
         const pNorm = p.toLowerCase().replace(/[^a-z0-9]/g, '');
-        for (const key in obj) {
-          const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
-          if (normKey === pNorm && obj[key] !== undefined && obj[key] !== "") return obj[key];
-        }
+        if (obj._norm[pNorm] !== undefined && obj._norm[pNorm] !== "") return obj._norm[pNorm];
       }
       return undefined;
     };
