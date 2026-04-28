@@ -271,16 +271,18 @@ function doPost(e) {
        var targetUser = postData.username;
        var targetMateri = postData.id_materi;
        var newNilai = postData.nilai;
+       var newWaktu = postData.waktu; // Durasi baru
        
        var sheetData = sheetNilai.getDataRange().getValues();
        var headers = sheetData[0];
-       var userCol = -1, materiCol = -1, nilaiCol = -1;
+       var userCol = -1, materiCol = -1, nilaiCol = -1, waktuCol = -1;
        
        for(var i = 0; i < headers.length; i++){
           var h = headers[i].toString().toLowerCase();
           if(h === "username" || h === "nisn") userCol = i;
           if(h === "id_materi" || h === "idmateri" || h === "modul") materiCol = i;
           if(h === "nilai" || h === "skor") nilaiCol = i;
+          if(h === "waktu" || h === "durasi") waktuCol = i;
        }
        
        if(userCol === -1 || materiCol === -1 || nilaiCol === -1) {
@@ -294,13 +296,16 @@ function doPost(e) {
           
           if(rowUsername === targetUser && rowMateri === targetMateri) {
              sheetNilai.getRange(j + 1, nilaiCol + 1).setValue(newNilai);
+             if (waktuCol !== -1 && newWaktu !== undefined) {
+                 sheetNilai.getRange(j + 1, waktuCol + 1).setValue(newWaktu);
+             }
              updated = true;
              break;
           }
        }
        
        if(updated) {
-         return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Nilai berhasil diperbarui" }))
+         return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Nilai & Durasi berhasil diperbarui" }))
                               .setMimeType(ContentService.MimeType.JSON);
        } else {
          var newRow = new Array(headers.length).fill("");
@@ -313,6 +318,9 @@ function doPost(e) {
            if(h === "waktu" || h === "timestamp") {
               var now = new Date();
               newRow[i] = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+           }
+           if (waktuCol !== -1 && i === waktuCol && newWaktu !== undefined) {
+              newRow[i] = newWaktu;
            }
            if(h === "tipe" || h === "jenis") newRow[i] = "Kuis";
          }

@@ -537,9 +537,21 @@
         let tipe = getVal(m, ['tipe', 'tipeevaluasi']) || "Kuis";
         let kelas = getVal(m, ['kelas', 'tingkat']) || "SEMUA";
 
+        // Hitung ID Modul Relatif per Tingkat
+        let mTingkat = getTingkatFromKelas(kelas);
+        let idTingkat = 0;
+        for (let i = 0; i < dataMateri.length; i++) {
+            let t = getTingkatFromKelas(getVal(dataMateri[i], ['kelas', 'tingkat']));
+            if (t === mTingkat || t === "SEMUA" || mTingkat === "SEMUA") {
+                idTingkat++;
+                if (dataMateri[i] === m) break;
+            }
+        }
+        let modulText = mTingkat === "SEMUA" ? "Global" : idTingkat;
+
         html += `<tr>
           <td>
-            <div style="font-weight:600">${judul} <span style="font-size:0.7rem; color:var(--text-muted)">[Modul ${index+1}]</span></div>
+            <div style="font-weight:600">${judul} <span style="font-size:0.7rem; color:var(--text-muted)">[ID Kuis: ${modulText}]</span></div>
             <div style="font-size:0.75rem; color:var(--text-muted)">Mapel: ${mapel} | Tipe: ${tipe}</div>
           </td>
           <td>${kelas}</td>
@@ -826,7 +838,9 @@
           <td>${i+1}</td>
           <td style="font-weight:500;">${nama}</td>
           <td style="font-size:0.8rem; color:var(--text-muted)">${waktuSubmit}</td>
-          <td style="font-size:0.8rem; color:var(--text-muted)">${durasi}</td>
+          <td style="text-align:center">
+            <input type="text" id="durasi_${username}" class="form-control" value="${durasi !== '-' ? durasi : ''}" placeholder="00:00" style="max-width:70px; display:inline-block; text-align:center; padding:0.3rem;">
+          </td>
           <td style="text-align:center">
             <input type="number" id="nilai_${username}" class="form-control input-nilai" value="${maxNilai}" placeholder="-">
           </td>
@@ -840,13 +854,15 @@
 
     async function simpanNilai(username, idMateri) {
       let inputVal = document.getElementById(`nilai_${username}`).value;
+      let durasiVal = document.getElementById(`durasi_${username}`).value;
       if(inputVal === "") return alert("Masukkan angka nilai!");
       
       await postData({
         action: "updateNilaiByUsernameMateri",
         username: username,
         id_materi: idMateri,
-        nilai: inputVal
+        nilai: inputVal,
+        waktu: durasiVal
       });
     }
 
