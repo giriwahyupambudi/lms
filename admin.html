@@ -422,6 +422,15 @@
     let dataMateri = [];
     let dataNilai = [];
     let dataUser = [];
+    
+    // Sistem Draft Penyimpanan Sementara
+    let draftNilai = {};
+
+    function updateDraft(materiId, username, field, value) {
+       let key = `${materiId}_${username}`;
+       if (!draftNilai[key]) draftNilai[key] = {};
+       draftNilai[key][field] = value;
+    }
 
     // Helper Fungsi
     function toggleDropdown() { document.getElementById('profile-dropdown').classList.toggle('active'); }
@@ -1033,15 +1042,24 @@
         let safeKelas = selKelas.toString().replace(/'/g, "\\'");
         let safeMateri = selMateri.toString().replace(/'/g, "\\'");
 
+        let draftKey = `${selMateri}_${username}`;
+        let draftObj = draftNilai[draftKey] || {};
+        
+        let durasiOriginal = durasiKuis !== '-' ? durasiKuis : '';
+        let durasiRender = draftObj.durasi !== undefined ? draftObj.durasi : durasiOriginal;
+        
+        let nilaiOriginal = maxNilai;
+        let nilaiRender = draftObj.nilai !== undefined ? draftObj.nilai : nilaiOriginal;
+
         html += `<tr>
           <td>${i+1}</td>
           <td style="font-weight:500;">${nama}<br><small style="color:var(--text-muted)">${username}</small></td>
           <td style="text-align:center; font-size:0.85rem;">${waktuSubmit}</td>
           <td style="text-align:center">
-             <input type="text" id="durasi_${username}" class="form-control" value="${durasiKuis !== '-' ? durasiKuis : ''}" data-original-value="${durasiKuis !== '-' ? durasiKuis : ''}" placeholder="00:00" style="max-width:70px; display:inline-block; text-align:center; padding: 0.3rem;">
+             <input type="text" id="durasi_${username}" class="form-control" value="${durasiRender}" data-original-value="${durasiOriginal}" oninput="updateDraft('${safeMateri}', '${username}', 'durasi', this.value)" placeholder="00:00" style="max-width:70px; display:inline-block; text-align:center; padding: 0.3rem;">
           </td>
           <td style="text-align:center">
-            <input type="number" id="nilai_${username}" class="form-control input-nilai" value="${maxNilai}" data-original-value="${maxNilai}" placeholder="-" style="max-width:80px; display:inline-block; text-align:center;">
+            <input type="number" id="nilai_${username}" class="form-control input-nilai" value="${nilaiRender}" data-original-value="${nilaiOriginal}" oninput="updateDraft('${safeMateri}', '${username}', 'nilai', this.value)" placeholder="-" style="max-width:80px; display:inline-block; text-align:center;">
           </td>
           <td style="text-align:center">
             ${maxNilai !== "" ? `<span class="badge active">Tuntas</span>` : `<span class="badge draft">Belum</span>`}
@@ -1069,6 +1087,7 @@
         nilai: inputVal,
         waktu: durasiVal
       });
+      delete draftNilai[`${idMateri}_${username}`];
     }
 
     async function simpanSemuaNilai() {
@@ -1121,6 +1140,9 @@
       await postData({
          action: "updateNilaiBulk",
          data: dataToSave
+      });
+      dataToSave.forEach(d => {
+         delete draftNilai[`${d.id_materi}_${d.username}`];
       });
     }
 
