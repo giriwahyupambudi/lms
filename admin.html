@@ -695,24 +695,24 @@
 
       let students = dataUser.filter(u => {
          let kelas = getVal(u, ['kelas', 'tingkat']);
-         return kelas === selKelas;
+         return (kelas || "").toString().trim() === selKelas.toString().trim();
       }).sort((a,b) => {
          let na = getVal(a, ['nama', 'namasiswa']) || "";
          let nb = getVal(b, ['nama', 'namasiswa']) || "";
-         return na.localeCompare(nb);
+         return na.toString().trim().localeCompare(nb.toString().trim());
       });
       
       let html = '';
 
       students.forEach((u, i) => {
-        let username = getVal(u, ['username', 'nisn']) || "";
+        let username = (getVal(u, ['username', 'nisn']) || "").toString().trim();
         let nama = getVal(u, ['nama', 'namalengkap', 'namasiswa']) || "-";
 
         // Cari nilai tertinggi siswa ini di listNilai untuk materi tsb
         let userNilaiData = dataNilai.filter(n => {
-           let nUsername = getVal(n, ['username', 'nisn']);
-           let nMateri = getVal(n, ['id_materi', 'idmateri', 'modul', 'judulkuis']);
-           return nUsername == username && nMateri == selMateri;
+           let nUsername = (getVal(n, ['username', 'nisn']) || "").toString().trim();
+           let nMateri = (getVal(n, ['id_materi', 'idmateri', 'modul', 'judulkuis']) || "").toString().trim();
+           return nUsername === username && nMateri === selMateri.toString().trim();
         });
         
         let maxNilai = "";
@@ -721,7 +721,7 @@
         if(userNilaiData.length > 0) {
            let nilaiArr = userNilaiData.map(n => {
               let val = getVal(n, ['nilai', 'skor']);
-              return parseInt(val) || 0;
+              return parseFloat(val) || 0;
            });
            maxNilai = Math.max(...nilaiArr);
            statusKuis = "Selesai";
