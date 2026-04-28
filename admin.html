@@ -292,18 +292,18 @@
         </div>
 
         <div class="card">
-          <div class="filter-bar">
-            <div class="form-group" style="flex:1; min-width:150px;">
+          <div class="filter-bar" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+            <div class="form-group" style="flex:1; min-width:150px; margin-bottom: 0;">
               <label>Pilih Kelas</label>
               <select class="form-control" id="filterKelasNilai" onchange="renderTableNilai()"></select>
             </div>
-            <div class="form-group" style="flex:1; min-width:150px;">
+            <div class="form-group" style="flex:1; min-width:150px; margin-bottom: 0;">
               <label>Pilih Materi/Kuis</label>
               <select class="form-control" id="filterMateriNilai" onchange="renderTableNilai()"></select>
             </div>
-          </div>
-          <div style="margin-bottom: 1rem; text-align: right;">
-            <button class="btn btn-primary" onclick="simpanSemuaNilai()"><i data-lucide="saveAll"></i> Simpan Semua Nilai</button>
+            <div style="margin-bottom: 0;">
+              <button class="btn btn-primary" onclick="simpanSemuaNilai()"><i data-lucide="saveAll"></i> Simpan Semua</button>
+            </div>
           </div>
           <div class="table-responsive">
             <table>

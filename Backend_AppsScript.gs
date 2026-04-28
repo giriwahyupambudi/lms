@@ -309,6 +309,17 @@ function doPost(e) {
              if (kelasCol !== -1 && targetKelas !== "") {
                  sheetNilai.getRange(j + 1, kelasCol + 1).setValue(targetKelas);
              }
+             
+             // Update timestamp
+             var now = new Date();
+             var timeStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+             for (var colIdx = 0; colIdx < headers.length; colIdx++) {
+                 var hT = headers[colIdx].toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+                 if ((hT === "timestamp" || hT === "waktusubmit" || hT === "tanggal" || hT === "waktu") && colIdx !== waktuCol) {
+                     sheetNilai.getRange(j + 1, colIdx + 1).setValue(timeStr);
+                 }
+             }
+             
              updated = true;
              break;
           }
@@ -393,6 +404,16 @@ function doPost(e) {
                    if (kelasCol !== -1 && targetKelas !== "") {
                        sheetNilai.getRange(j + 1, kelasCol + 1).setValue(targetKelas);
                    }
+                   
+                   var now = new Date();
+                   var timeStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+                   for (var colIdx = 0; colIdx < headers.length; colIdx++) {
+                       var hT = headers[colIdx].toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+                       if ((hT === "timestamp" || hT === "waktusubmit" || hT === "tanggal" || hT === "waktu") && colIdx !== waktuCol) {
+                           sheetNilai.getRange(j + 1, colIdx + 1).setValue(timeStr);
+                       }
+                   }
+                   
                    updated = true;
                    break;
                 }
