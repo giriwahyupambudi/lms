@@ -684,23 +684,34 @@
       onKelasChangeNilai();
     }
 
+    function getTingkatFromKelas(kelasStr) {
+      if (!kelasStr) return "";
+      let ks = kelasStr.toString().trim().toUpperCase();
+      if (ks.startsWith("XII ")) return "XII";
+      if (ks.startsWith("XI ")) return "XI";
+      if (ks.startsWith("X ")) return "X";
+      return ks.split(' ')[0];
+    }
+
     function onKelasChangeNilai() {
       let selKelas = document.getElementById('filterKelasNilai').value;
       let mSelect = document.getElementById('filterMateriNilai');
 
+      let tingkatDipilih = getTingkatFromKelas(selKelas);
+
       let validMateriHTML = '<option value="">-- Pilih Materi --</option>';
       dataMateri.forEach((m, i) => {
          let judul = getVal(m, ['judul', 'materi', 'namamateri']);
-         let kelasMateri = getVal(m, ['kelas', 'tingkat']) || "";
+         let tingkatMateri = getVal(m, ['tingkat', 'kelas']) || "";
          
          if (judul && judul.toString().trim() !== "") {
-             // Tampilkan materi jika kelasnya cocok, ATAU jika kelas materinya "SEMUA", ATAU kosong
+             // Tampilkan materi jika tingkatnya cocok, ATAU "SEMUA", ATAU kosong
+             let tm = tingkatMateri.toString().trim().toUpperCase();
              let isMatch = !selKelas || 
-                           kelasMateri.toString().trim().toUpperCase() === "SEMUA" || 
-                           kelasMateri.toString().trim() === "" ||
-                           kelasMateri.toString().trim() === selKelas.toString().trim();
+                           tm === "SEMUA" || 
+                           tm === "" ||
+                           tm === tingkatDipilih;
                            
-             // Tampilkan semua materi jika belum memilih kelas, kalau sudah pilih kelas, saring
              if (!selKelas || isMatch) {
                  validMateriHTML += `<option value="${i+1}">${judul}</option>`;
              }
