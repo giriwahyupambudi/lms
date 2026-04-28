@@ -272,10 +272,12 @@ function doPost(e) {
        var targetMateri = postData.id_materi;
        var newNilai = postData.nilai;
        var newWaktu = postData.waktu; // Durasi baru
+       var targetNama = postData.nama || "";
+       var targetKelas = postData.kelas || "";
        
        var sheetData = sheetNilai.getDataRange().getValues();
        var headers = sheetData[0];
-       var userCol = -1, materiCol = -1, nilaiCol = -1, waktuCol = -1;
+       var userCol = -1, materiCol = -1, nilaiCol = -1, waktuCol = -1, namaCol = -1, kelasCol = -1;
        
        for(var i = 0; i < headers.length; i++){
           var h = headers[i].toString().toLowerCase();
@@ -283,6 +285,8 @@ function doPost(e) {
           if(h === "id_materi" || h === "idmateri" || h === "modul") materiCol = i;
           if(h === "nilai" || h === "skor") nilaiCol = i;
           if(h === "waktu" || h === "durasi") waktuCol = i;
+          if(h === "nama" || h === "namasiswa" || h === "namalengkap") namaCol = i;
+          if(h === "kelas" || h === "tingkat") kelasCol = i;
        }
        
        if(userCol === -1 || materiCol === -1 || nilaiCol === -1) {
@@ -299,6 +303,12 @@ function doPost(e) {
              if (waktuCol !== -1 && newWaktu !== undefined) {
                  sheetNilai.getRange(j + 1, waktuCol + 1).setValue(newWaktu);
              }
+             if (namaCol !== -1 && targetNama !== "") {
+                 sheetNilai.getRange(j + 1, namaCol + 1).setValue(targetNama);
+             }
+             if (kelasCol !== -1 && targetKelas !== "") {
+                 sheetNilai.getRange(j + 1, kelasCol + 1).setValue(targetKelas);
+             }
              updated = true;
              break;
           }
@@ -312,6 +322,8 @@ function doPost(e) {
          newRow[userCol] = targetUser;
          newRow[materiCol] = targetMateri;
          newRow[nilaiCol] = newNilai;
+         if(namaCol !== -1) newRow[namaCol] = targetNama;
+         if(kelasCol !== -1) newRow[kelasCol] = targetKelas;
          
          for(var i = 0; i < headers.length; i++){
            var h = headers[i].toString().toLowerCase();

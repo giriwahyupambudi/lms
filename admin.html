@@ -845,14 +845,14 @@
             <input type="number" id="nilai_${username}" class="form-control input-nilai" value="${maxNilai}" placeholder="-">
           </td>
           <td><span class="badge ${statusKuis === 'Selesai' ? 'active' : 'draft'}">${statusKuis}</span></td>
-          <td><button class="btn btn-sm btn-outline" onclick="simpanNilai('${username}', '${selMateri}')"><i data-lucide="save"></i> Simpan</button></td>
+          <td><button class="btn btn-sm btn-outline" onclick="simpanNilai('${username}', '${selMateri}', '${nama}', '${selKelas}')"><i data-lucide="save"></i> Simpan</button></td>
         </tr>`;
       });
       tbody.innerHTML = html || '<tr><td colspan="7" style="text-align:center">Tidak ada siswa di kelas ini.</td></tr>';
       lucide.createIcons();
     }
 
-    async function simpanNilai(username, idMateri) {
+    async function simpanNilai(username, idMateri, nama, kelas) {
       let inputVal = document.getElementById(`nilai_${username}`).value;
       let durasiVal = document.getElementById(`durasi_${username}`).value;
       if(inputVal === "") return alert("Masukkan angka nilai!");
@@ -860,6 +860,8 @@
       await postData({
         action: "updateNilaiByUsernameMateri",
         username: username,
+        nama: nama,
+        kelas: kelas,
         id_materi: idMateri,
         nilai: inputVal,
         waktu: durasiVal
