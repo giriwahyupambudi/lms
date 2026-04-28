@@ -677,15 +677,40 @@
       });
       kSelect.innerHTML = '<option value="">-- Pilih Kelas --</option>' + Array.from(kelasSet).sort().map(k => `<option value="${k}">${k}</option>`).join('');
 
-      // Filter materi yang kosong agar dropdown rapi
+      // Menambahkan onchange event pada filter Kelas untuk menyaring Materi
+      kSelect.addEventListener('change', onKelasChangeNilai);
+
+      // Panggil sekali untuk mengisi dropdown materi pada load awal
+      onKelasChangeNilai();
+    }
+
+    function onKelasChangeNilai() {
+      let selKelas = document.getElementById('filterKelasNilai').value;
+      let mSelect = document.getElementById('filterMateriNilai');
+
       let validMateriHTML = '<option value="">-- Pilih Materi --</option>';
       dataMateri.forEach((m, i) => {
          let judul = getVal(m, ['judul', 'materi', 'namamateri']);
+         let kelasMateri = getVal(m, ['kelas', 'tingkat']) || "";
+         
          if (judul && judul.toString().trim() !== "") {
-             validMateriHTML += `<option value="${i+1}">${judul}</option>`;
+             // Tampilkan materi jika kelasnya cocok, ATAU jika kelas materinya "SEMUA", ATAU kosong
+             let isMatch = !selKelas || 
+                           kelasMateri.toString().trim().toUpperCase() === "SEMUA" || 
+                           kelasMateri.toString().trim() === "" ||
+                           kelasMateri.toString().trim() === selKelas.toString().trim();
+                           
+             // Tampilkan semua materi jika belum memilih kelas, kalau sudah pilih kelas, saring
+             if (!selKelas || isMatch) {
+                 validMateriHTML += `<option value="${i+1}">${judul}</option>`;
+             }
          }
       });
       mSelect.innerHTML = validMateriHTML;
+      
+      // Kosongkan tabel saat kelas diganti
+      let tbody = document.getElementById('nilaiTableBody');
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Pilih kelas dan materi terlebih dahulu.</td></tr>';
     }
 
     function renderTableNilai() {
