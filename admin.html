@@ -355,6 +355,8 @@
       <div class="modal-body">
         <input type="hidden" id="materiRowNum" value="">
         <div class="form-group"><label>Judul Materi</label><input type="text" id="mJudul" class="form-control" placeholder="Contoh: Logaritma Dasar"></div>
+        <div class="form-group"><label>Deskripsi (Opsional)</label><input type="text" id="mDeskripsi" class="form-control" placeholder="Penjelasan singkat materi"></div>
+        <div class="form-group"><label>Link / Tautan (Opsional)</label><input type="text" id="mLink" class="form-control" placeholder="Link Google Form / Modul"></div>
         <div class="form-group"><label>Mata Pelajaran</label><input type="text" id="mMapel" class="form-control" placeholder="Contoh: Matematika"></div>
         <div class="form-group"><label>Target Kelas / Tingkat</label><input type="text" id="mKelas" class="form-control" placeholder="Contoh: X, XI, XII, atau SEMUA"></div>
         <div class="form-group"><label>Tipe</label><select id="mTipe" class="form-control"><option value="Kuis">Kuis</option><option value="Materi">Materi</option><option value="Tugas">Tugas</option></select></div>
@@ -534,7 +536,7 @@
         
         let judul = getVal(m, ['judul', 'materi', 'namamateri']) || "Tanpa Judul";
         let mapel = getVal(m, ['mapel', 'matapelajaran']) || "-";
-        let tipe = getVal(m, ['tipe', 'tipeevaluasi']) || "Kuis";
+        let tipe = getVal(m, ['tipe', 'tipeevaluasi', 'tipe_evaluasi']) || "Kuis";
         let kelas = getVal(m, ['kelas', 'tingkat']) || "SEMUA";
 
         // Hitung ID Modul Relatif per Tingkat
@@ -572,6 +574,8 @@
       document.getElementById('materiModalTitle').innerText = "Tambah Materi Baru";
       document.getElementById('materiRowNum').value = "";
       document.getElementById('mJudul').value = "";
+      document.getElementById('mDeskripsi').value = "";
+      document.getElementById('mLink').value = "";
       document.getElementById('mMapel').value = "";
       document.getElementById('mKelas').value = "";
       document.getElementById('mTipe').value = "Kuis";
@@ -582,22 +586,35 @@
     function editMateri(m) {
       document.getElementById('materiModalTitle').innerText = "Edit Materi";
       document.getElementById('materiRowNum').value = m.rowNumber;
-      document.getElementById('mJudul').value = getVal(m, ['judul', 'materi']) || "";
+      document.getElementById('mJudul').value = getVal(m, ['judul', 'materi', 'namamateri']) || "";
+      document.getElementById('mDeskripsi').value = getVal(m, ['deskripsi', 'keterangan']) || "";
+      document.getElementById('mLink').value = getVal(m, ['link', 'url']) || "";
       document.getElementById('mMapel').value = getVal(m, ['mapel', 'matapelajaran']) || "";
       document.getElementById('mKelas').value = getVal(m, ['kelas', 'tingkat']) || "";
-      document.getElementById('mTipe').value = getVal(m, ['tipe', 'tipeevaluasi']) || "Kuis";
+      document.getElementById('mTipe').value = getVal(m, ['tipe', 'tipeevaluasi', 'tipe_evaluasi']) || "Kuis";
       document.getElementById('mStatus').value = getVal(m, ['status']) || "Aktif";
       openModal('materiModal');
     }
 
     async function saveMateri() {
       let rowNum = document.getElementById('materiRowNum').value;
+      
+      let judulVal = document.getElementById('mJudul').value;
+      let descVal = document.getElementById('mDeskripsi').value;
+      let linkVal = document.getElementById('mLink').value;
+      let mapelVal = document.getElementById('mMapel').value;
+      let kelasVal = document.getElementById('mKelas').value;
+      let tipeVal = document.getElementById('mTipe').value;
+      let statusVal = document.getElementById('mStatus').value;
+
       let data = {
-        "judul": document.getElementById('mJudul').value,
-        "mapel": document.getElementById('mMapel').value,
-        "kelas": document.getElementById('mKelas').value,
-        "tipe": document.getElementById('mTipe').value,
-        "status": document.getElementById('mStatus').value
+        "judul": judulVal, "materi": judulVal, "namamateri": judulVal,
+        "deskripsi": descVal, "keterangan": descVal,
+        "link": linkVal, "url": linkVal,
+        "mapel": mapelVal, "matapelajaran": mapelVal,
+        "kelas": kelasVal, "tingkat": kelasVal,
+        "tipe": tipeVal, "tipe_evaluasi": tipeVal, "tipeevaluasi": tipeVal,
+        "status": statusVal
       };
       
       closeModal('materiModal');
