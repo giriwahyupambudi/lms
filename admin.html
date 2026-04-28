@@ -802,10 +802,10 @@
         let maxNilai = "";
         let statusKuis = "Belum";
         let waktuSubmit = "-";
-        let durasi = "-";
+        let durasiKuis = "-";
         
         if(userNilaiData.length > 0) {
-           // Ambil percobaan dengan nilai tertinggi
+           // Jika lebih dari 1, ambil yang terbesar
            userNilaiData.sort((a, b) => {
                let valA = parseFloat(getVal(a, ['nilai', 'skor'])) || 0;
                let valB = parseFloat(getVal(b, ['nilai', 'skor'])) || 0;
@@ -824,28 +824,29 @@
                } catch(e) {}
            }
            
-           // Cari durasi (biasanya bernama waktu, durasi, waktuaktif)
-           durasi = getVal(bestAttempt, ['waktu', 'durasi', 'waktuaktif']);
-           // Jika durasi sama dengan timestamp, berarti kolomnya tertukar, kita coba bypass
-           if (!durasi || durasi === waktuSubmit || durasi.length > 10) {
-               durasi = bestAttempt['Waktu'] || bestAttempt['waktu'] || "-";
-           }
-           
-           statusKuis = "Selesai";
+           // Cari durasi (bisa bernama waktu, durasi, dll)
+           durasiKuis = getVal(bestAttempt, ['waktu', 'durasi', 'waktuaktif']) || "-";
         }
+
+        let safeNama = nama.toString().replace(/'/g, "\\'");
+        let safeKelas = selKelas.toString().replace(/'/g, "\\'");
 
         html += `<tr>
           <td>${i+1}</td>
-          <td style="font-weight:500;">${nama}</td>
-          <td style="font-size:0.8rem; color:var(--text-muted)">${waktuSubmit}</td>
+          <td style="font-weight:500;">${nama}<br><small style="color:var(--text-muted)">${username}</small></td>
+          <td style="text-align:center; font-size:0.85rem;">${waktuSubmit}</td>
           <td style="text-align:center">
-            <input type="text" id="durasi_${username}" class="form-control" value="${durasi !== '-' ? durasi : ''}" placeholder="00:00" style="max-width:70px; display:inline-block; text-align:center; padding:0.3rem;">
+             <input type="text" id="durasi_${username}" class="form-control" value="${durasiKuis !== '-' ? durasiKuis : ''}" placeholder="00:00" style="max-width:70px; display:inline-block; text-align:center; padding: 0.3rem;">
           </td>
           <td style="text-align:center">
-            <input type="number" id="nilai_${username}" class="form-control input-nilai" value="${maxNilai}" placeholder="-">
+            <input type="number" id="nilai_${username}" class="form-control input-nilai" value="${maxNilai}" placeholder="-" style="max-width:80px; display:inline-block; text-align:center;">
           </td>
-          <td><span class="badge ${statusKuis === 'Selesai' ? 'active' : 'draft'}">${statusKuis}</span></td>
-          <td><button class="btn btn-sm btn-outline" onclick="simpanNilai('${username}', '${selMateri}', '${nama}', '${selKelas}')"><i data-lucide="save"></i> Simpan</button></td>
+          <td style="text-align:center">
+            ${maxNilai !== "" ? `<span class="badge active">Tuntas</span>` : `<span class="badge draft">Belum</span>`}
+          </td>
+          <td style="text-align:center">
+            <button class="btn btn-sm btn-outline" onclick="simpanNilai('${username}', '${selMateri}', '${safeNama}', '${safeKelas}')"><i data-lucide="save"></i> Simpan</button>
+          </td>
         </tr>`;
       });
       tbody.innerHTML = html || '<tr><td colspan="7" style="text-align:center">Tidak ada siswa di kelas ini.</td></tr>';
