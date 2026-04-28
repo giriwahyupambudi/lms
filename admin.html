@@ -551,25 +551,42 @@
         return status.toString().toLowerCase() === "draft";
       }).length;
 
-      // Aktivitas Terkini (Filter out empty rows)
-      let recent = [...validNilai].reverse().slice(0, 10);
-      let html = '';
-      if(recent.length === 0) html = '<tr><td colspan="4" style="text-align:center">Belum ada aktivitas</td></tr>';
-      recent.forEach(r => {
-        let userNama = getVal(r, ['nama', 'namasiswa', 'username']) || "-";
-        let waktu = getVal(r, ['waktu', 'timestamp', 'waktupengerjaan']) || "-";
-        let judul = getVal(r, ['judul', 'judulkuis', 'idmateri', 'id_materi', 'materi']) || "Kuis";
-        let nilai = getVal(r, ['nilai', 'skor']) || 0;
+        // Aktivitas Terkini (Filter out empty rows, sort by time descending)
+        let recent = [...validNilai].sort((a, b) => {
+            let tA = getVal(a, ['timestamp', 'waktusubmit', 'tanggal', 'waktu']);
+            let tB = getVal(b, ['timestamp', 'waktusubmit', 'tanggal', 'waktu']);
+            let dA = tA ? new Date(tA).getTime() : 0;
+            let dB = tB ? new Date(tB).getTime() : 0;
+            if (isNaN(dA)) dA = 0;
+            if (isNaN(dB)) dB = 0;
+            return dB - dA; // Descending, terbaru di atas
+        }).slice(0, 10);
         
-        html += `<tr>
-          <td style="font-weight:500;">${userNama}</td>
-          <td>${judul}</td>
-          <td style="font-size:0.8rem; color:var(--text-muted)">${waktu}</td>
-          <td><span class="badge active">${nilai} Point</span></td>
-        </tr>`;
-      });
-      document.getElementById('aktivitasTableBody').innerHTML = html;
-      lucide.createIcons();
+        let html = '';
+        if(recent.length === 0) html = '<tr><td colspan="4" style="text-align:center">Belum ada aktivitas</td></tr>';
+        recent.forEach(r => {
+          let userNama = getVal(r, ['nama', 'namasiswa', 'username']) || "-";
+          let waktu = getVal(r, ['timestamp', 'waktusubmit', 'tanggal', 'waktu']) || "-";
+          
+          if(waktu !== "-") {
+              try {
+                  let d = new Date(waktu);
+                  if(!isNaN(d.getTime())) waktu = d.toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+              } catch(e) {}
+          }
+          
+          let judul = getVal(r, ['judul', 'judulkuis', 'idmateri', 'id_materi', 'materi']) || "Kuis";
+          let nilai = getVal(r, ['nilai', 'skor']) || 0;
+          
+          html += `<tr>
+            <td style="font-weight:500;">${userNama}</td>
+            <td>${judul}</td>
+            <td style="font-size:0.8rem; color:var(--text-muted)">${waktu}</td>
+            <td><span class="badge active">${nilai} Point</span></td>
+          </tr>`;
+        });
+        document.getElementById('aktivitasTableBody').innerHTML = html;
+        lucide.createIcons();
     }
 
     // ============================================
