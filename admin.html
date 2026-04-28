@@ -673,14 +673,19 @@
       let kelasSet = new Set();
       dataUser.forEach(u => { 
          let kelas = getVal(u, ['kelas', 'tingkat']);
-         if(kelas) kelasSet.add(kelas); 
+         if(kelas && kelas.toString().trim() !== "") kelasSet.add(kelas); 
       });
       kSelect.innerHTML = '<option value="">-- Pilih Kelas --</option>' + Array.from(kelasSet).sort().map(k => `<option value="${k}">${k}</option>`).join('');
 
-      mSelect.innerHTML = '<option value="">-- Pilih Materi --</option>' + dataMateri.map((m,i) => {
-         let judul = getVal(m, ['judul', 'materi', 'namamateri']) || 'Materi '+(i+1);
-         return `<option value="${i+1}">${judul}</option>`;
-      }).join('');
+      // Filter materi yang kosong agar dropdown rapi
+      let validMateriHTML = '<option value="">-- Pilih Materi --</option>';
+      dataMateri.forEach((m, i) => {
+         let judul = getVal(m, ['judul', 'materi', 'namamateri']);
+         if (judul && judul.toString().trim() !== "") {
+             validMateriHTML += `<option value="${i+1}">${judul}</option>`;
+         }
+      });
+      mSelect.innerHTML = validMateriHTML;
     }
 
     function renderTableNilai() {
@@ -688,8 +693,20 @@
       let selMateri = document.getElementById('filterMateriNilai').value;
       let tbody = document.getElementById('nilaiTableBody');
 
+      // Update Header Table secara dinamis (karena user minta ada waktu)
+      let thead = document.querySelector('#nilaiSection table thead');
+      thead.innerHTML = `<tr>
+        <th style="width: 50px;">No</th>
+        <th>Nama Siswa</th>
+        <th>Waktu Submit</th>
+        <th>Durasi</th>
+        <th style="text-align:center; width: 120px;">Nilai Akhir</th>
+        <th>Status</th>
+        <th>Aksi</th>
+      </tr>`;
+
       if(!selKelas || !selMateri) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">Pilih kelas dan materi terlebih dahulu.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Pilih kelas dan materi terlebih dahulu.</td></tr>';
         return;
       }
 
@@ -708,7 +725,7 @@
         let username = (getVal(u, ['username', 'nisn']) || "").toString().trim();
         let nama = getVal(u, ['nama', 'namalengkap', 'namasiswa']) || "-";
 
-        // Cari nilai tertinggi siswa ini di listNilai untuk materi tsb
+        // Cari nilai siswa ini di listNilai untuk materi tsb
         let userNilaiData = dataNilai.filter(n => {
            let nUsername = (getVal(n, ['username', 'nisn']) || "").toString().trim();
            let nMateri = (getVal(n, ['id_materi', 'idmateri', 'modul', 'judulkuis']) || "").toString().trim();
@@ -717,19 +734,44 @@
         
         let maxNilai = "";
         let statusKuis = "Belum";
+        let waktuSubmit = "-";
+        let durasi = "-";
         
         if(userNilaiData.length > 0) {
-           let nilaiArr = userNilaiData.map(n => {
-              let val = getVal(n, ['nilai', 'skor']);
-              return parseFloat(val) || 0;
+           // Ambil percobaan dengan nilai tertinggi
+           userNilaiData.sort((a, b) => {
+               let valA = parseFloat(getVal(a, ['nilai', 'skor'])) || 0;
+               let valB = parseFloat(getVal(b, ['nilai', 'skor'])) || 0;
+               return valB - valA;
            });
-           maxNilai = Math.max(...nilaiArr);
+           
+           let bestAttempt = userNilaiData[0];
+           maxNilai = parseFloat(getVal(bestAttempt, ['nilai', 'skor'])) || 0;
+           
+           // Cari waktu submit (bisa bernama timestamp, submit, dll)
+           waktuSubmit = getVal(bestAttempt, ['timestamp', 'waktusubmit', 'tanggal']) || "-";
+           if(waktuSubmit !== "-") {
+               try {
+                   let d = new Date(waktuSubmit);
+                   if(!isNaN(d.getTime())) waktuSubmit = d.toLocaleString('id-ID', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+               } catch(e) {}
+           }
+           
+           // Cari durasi (biasanya bernama waktu, durasi, waktuaktif)
+           durasi = getVal(bestAttempt, ['waktu', 'durasi', 'waktuaktif']);
+           // Jika durasi sama dengan timestamp, berarti kolomnya tertukar, kita coba bypass
+           if (!durasi || durasi === waktuSubmit || durasi.length > 10) {
+               durasi = bestAttempt['Waktu'] || bestAttempt['waktu'] || "-";
+           }
+           
            statusKuis = "Selesai";
         }
 
         html += `<tr>
           <td>${i+1}</td>
           <td style="font-weight:500;">${nama}</td>
+          <td style="font-size:0.8rem; color:var(--text-muted)">${waktuSubmit}</td>
+          <td style="font-size:0.8rem; color:var(--text-muted)">${durasi}</td>
           <td style="text-align:center">
             <input type="number" id="nilai_${username}" class="form-control input-nilai" value="${maxNilai}" placeholder="-">
           </td>
@@ -737,7 +779,7 @@
           <td><button class="btn btn-sm btn-outline" onclick="simpanNilai('${username}', '${selMateri}')"><i data-lucide="save"></i> Simpan</button></td>
         </tr>`;
       });
-      tbody.innerHTML = html || '<tr><td colspan="5" style="text-align:center">Tidak ada siswa di kelas ini.</td></tr>';
+      tbody.innerHTML = html || '<tr><td colspan="7" style="text-align:center">Tidak ada siswa di kelas ini.</td></tr>';
       lucide.createIcons();
     }
 
