@@ -696,31 +696,35 @@
     function onKelasChangeNilai() {
       let selKelas = document.getElementById('filterKelasNilai').value;
       let mSelect = document.getElementById('filterMateriNilai');
+      let tbody = document.getElementById('nilaiTableBody');
+
+      if (!selKelas) {
+          mSelect.innerHTML = '<option value="">-- Pilih Kelas Terlebih Dahulu --</option>';
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Pilih kelas dan materi terlebih dahulu.</td></tr>';
+          return;
+      }
 
       let tingkatDipilih = getTingkatFromKelas(selKelas);
 
+      // Saring materi sesuai tingkat yang dipilih (sama seperti perilaku di dashboard.html)
+      // Karena dashboard.html men-generate idMateri berdasarkan urutan array SETELAH difilter!
+      let materiTingkatIni = dataMateri.filter(m => {
+          let tingkatMateri = getVal(m, ['tingkat', 'kelas']) || "";
+          let tm = tingkatMateri.toString().trim().toUpperCase();
+          return tm === "SEMUA" || tm === tingkatDipilih;
+      });
+
       let validMateriHTML = '<option value="">-- Pilih Materi --</option>';
-      dataMateri.forEach((m, i) => {
+      materiTingkatIni.forEach((m, i) => {
          let judul = getVal(m, ['judul', 'materi', 'namamateri']);
-         let tingkatMateri = getVal(m, ['tingkat', 'kelas']) || "";
-         
          if (judul && judul.toString().trim() !== "") {
-             // Tampilkan materi jika tingkatnya cocok, ATAU "SEMUA", ATAU kosong
-             let tm = tingkatMateri.toString().trim().toUpperCase();
-             let isMatch = !selKelas || 
-                           tm === "SEMUA" || 
-                           tm === "" ||
-                           tm === tingkatDipilih;
-                           
-             if (!selKelas || isMatch) {
-                 validMateriHTML += `<option value="${i+1}">${judul}</option>`;
-             }
+             // value di sini sekarang akan cocok 100% dengan id_materi yang tersimpan di listNilai
+             // karena mengikuti urutan index (i+1) khusus untuk kelas tersebut.
+             validMateriHTML += `<option value="${i+1}">${judul}</option>`;
          }
       });
-      mSelect.innerHTML = validMateriHTML;
       
-      // Kosongkan tabel saat kelas diganti
-      let tbody = document.getElementById('nilaiTableBody');
+      mSelect.innerHTML = validMateriHTML;
       tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Pilih kelas dan materi terlebih dahulu.</td></tr>';
     }
 
