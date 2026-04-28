@@ -761,11 +761,26 @@
         let username = (getVal(u, ['username', 'nisn']) || "").toString().trim();
         let nama = getVal(u, ['nama', 'namalengkap', 'namasiswa']) || "-";
 
+        let selMateriOption = document.getElementById('filterMateriNilai').options[document.getElementById('filterMateriNilai').selectedIndex];
+        let selMateriJudul = selMateriOption ? selMateriOption.text.toString().trim() : "";
+
         // Cari nilai siswa ini di listNilai untuk materi tsb
         let userNilaiData = dataNilai.filter(n => {
-           let nUsername = (getVal(n, ['username', 'nisn']) || "").toString().trim();
-           let nMateri = (getVal(n, ['id_materi', 'idmateri', 'modul', 'judulkuis']) || "").toString().trim();
-           return nUsername === username && nMateri === selMateri.toString().trim();
+           let nUserRaw = (getVal(n, ['username', 'nisn']) || "").toString().trim();
+           let nNamaRaw = (getVal(n, ['nama', 'namasiswa', 'namalengkap']) || "").toString().trim();
+           
+           let isUserMatch = (nUserRaw === username) || 
+                             (nNamaRaw !== "" && nNamaRaw.toLowerCase() === nama.toString().trim().toLowerCase()) || 
+                             (nUserRaw !== "" && nUserRaw.toLowerCase() === nama.toString().trim().toLowerCase());
+                             
+           let nMatRaw = (getVal(n, ['id_materi', 'idmateri', 'modul']) || "").toString().trim();
+           let nMatJudulRaw = (getVal(n, ['judul', 'materi', 'judulkuis', 'namamateri']) || "").toString().trim();
+           
+           let isMateriMatch = (nMatRaw === selMateri.toString().trim()) || 
+                               (nMatRaw !== "" && nMatRaw.toLowerCase() === selMateriJudul.toLowerCase()) ||
+                               (nMatJudulRaw !== "" && nMatJudulRaw.toLowerCase() === selMateriJudul.toLowerCase());
+                               
+           return isUserMatch && isMateriMatch;
         });
         
         let maxNilai = "";
