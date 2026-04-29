@@ -235,17 +235,33 @@
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-header">
-            <h3>Aktivitas Terkini (10 Kuis Terakhir)</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 24px;">
+          <div class="card" style="margin-bottom: 0;">
+            <div class="card-header">
+              <h3>Aktivitas Terkini (10 Kuis Terakhir)</h3>
+            </div>
+            <div class="table-responsive">
+              <table>
+                <thead><tr><th>Siswa</th><th>Materi/Kuis</th><th>Waktu</th><th>Nilai</th></tr></thead>
+                <tbody id="aktivitasTableBody">
+                  <tr><td colspan="4" style="text-align:center;">Memuat data...</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div class="table-responsive">
-            <table>
-              <thead><tr><th>Siswa</th><th>Materi/Kuis</th><th>Waktu</th><th>Nilai</th></tr></thead>
-              <tbody id="aktivitasTableBody">
-                <tr><td colspan="4" style="text-align:center;">Memuat data...</td></tr>
-              </tbody>
-            </table>
+
+          <div class="card" style="margin-bottom: 0;">
+            <div class="card-header">
+              <h3>10 Peserta Login Terakhir</h3>
+            </div>
+            <div class="table-responsive">
+              <table>
+                <thead><tr><th>Siswa</th><th>Kelas</th><th>Waktu Login</th><th>Status</th></tr></thead>
+                <tbody id="loginTableBody">
+                  <tr><td colspan="4" style="text-align:center;">Memuat data...</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
@@ -422,6 +438,7 @@
     let dataMateri = [];
     let dataNilai = [];
     let dataUser = [];
+    let dataLogLogin = [];
     
     // Sistem Draft Penyimpanan Sementara
     let draftNilai = {};
@@ -517,15 +534,17 @@
     async function loadAllData() {
       showOverlay("Mengambil data dari Spreadsheet...");
       try {
-        const [resM, resN, resU] = await Promise.all([
+        const [resM, resN, resU, resL] = await Promise.all([
           fetch(`${API_URL}?sheet=materi`),
           fetch(`${API_URL}?sheet=listNilai`),
-          fetch(`${API_URL}?sheet=user`)
+          fetch(`${API_URL}?sheet=user`),
+          fetch(`${API_URL}?sheet=logLogin`)
         ]);
 
         dataMateri = await resM.json();
         dataNilai = await resN.json();
         dataUser = await resU.json();
+        dataLogLogin = await resL.json();
 
         renderDashboard();
         renderTableMateri();
@@ -565,8 +584,13 @@
         return status.toString().toLowerCase() === "draft";
       }).length;
 
-        // Aktivitas Terkini (Filter out empty rows, sort by time descending)
-        let recent = [...validNilai].sort((a, b) => {
+        // Aktivitas Terkini (Filter out empty rows & logins, sort by time descending)
+        let kuisData = validNilai.filter(n => {
+           let idm = getVal(n, ['idmateri', 'id_materi', 'materi', 'judul', 'tipe']) || "";
+           return idm.toString().toUpperCase() !== "LOGIN_ACTIVITY" && idm.toString().toUpperCase() !== "SYSTEM";
+        });
+        
+        let recent = [...kuisData].sort((a, b) => {
             let tA = getVal(a, ['timestamp', 'waktusubmit', 'tanggal', 'waktu']);
             let tB = getVal(b, ['timestamp', 'waktusubmit', 'tanggal', 'waktu']);
             let dA = tA ? new Date(tA).getTime() : 0;
@@ -600,6 +624,44 @@
           </tr>`;
         });
         document.getElementById('aktivitasTableBody').innerHTML = html;
+
+        // Login Terakhir
+        let validLogLogin = (Array.isArray(dataLogLogin) ? dataLogLogin : []).filter(n => getVal(n, ['username', 'nisn', 'nama']));
+
+        let recentLogins = [...validLogLogin].sort((a, b) => {
+            let tA = getVal(a, ['timestamp', 'waktu']);
+            let tB = getVal(b, ['timestamp', 'waktu']);
+            let dA = tA ? new Date(tA).getTime() : 0;
+            let dB = tB ? new Date(tB).getTime() : 0;
+            if (isNaN(dA)) dA = 0;
+            if (isNaN(dB)) dB = 0;
+            return dB - dA; // Descending
+        }).slice(0, 10);
+
+        let loginHtml = '';
+        if(recentLogins.length === 0) loginHtml = '<tr><td colspan="4" style="text-align:center">Belum ada data login</td></tr>';
+        recentLogins.forEach(r => {
+          let userNama = getVal(r, ['nama', 'namasiswa', 'username']) || "-";
+          let kelas = getVal(r, ['kelas', 'tingkat']) || "-";
+          let waktu = getVal(r, ['timestamp', 'waktusubmit', 'tanggal', 'waktu']) || "-";
+          
+          if(waktu !== "-") {
+              try {
+                  let d = new Date(waktu);
+                  if(!isNaN(d.getTime())) waktu = d.toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+              } catch(e) {}
+          }
+          
+          let nilai = getVal(r, ['status', 'nilai', 'skor']) || "Sukses";
+          
+          loginHtml += `<tr>
+            <td style="font-weight:500;">${userNama}</td>
+            <td>${kelas}</td>
+            <td style="font-size:0.8rem; color:var(--text-muted)">${waktu}</td>
+            <td><span class="badge active">${nilai}</span></td>
+          </tr>`;
+        });
+        document.getElementById('loginTableBody').innerHTML = loginHtml;
         lucide.createIcons();
     }
 

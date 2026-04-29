@@ -710,6 +710,25 @@
                     }
                     if (!user.tingkat) user.tingkat = "X";
 
+                    // Record login activity
+                    try {
+                        const now = new Date();
+                        const timeStr = now.toISOString();
+                        fetch(API_URL, {
+                            method: "POST",
+                            body: JSON.stringify({
+                                action: "saveLogin",
+                                data: {
+                                    username: user.username || user.nisn || "-",
+                                    nama: user.nama,
+                                    kelas: user.kelas,
+                                    status: "Sukses",
+                                    waktu: timeStr
+                                }
+                            }),
+                            mode: "no-cors"
+                        });
+                    } catch(e) {}
 
                     updateMsg("Berhasil! Mengalihkan...", "#059669", "check-circle");
                     localStorage.setItem("user", JSON.stringify(user));

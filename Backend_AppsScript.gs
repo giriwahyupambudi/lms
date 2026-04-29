@@ -188,6 +188,29 @@ function doPost(e) {
     }
 
     // ===============================================
+    // ACTION: SAVE LOGIN DATA
+    // ===============================================
+    if (action === "saveLogin") {
+      sheet = ss.getSheetByName("logLogin");
+      if (!sheet) {
+        sheet = ss.insertSheet("logLogin");
+        sheet.appendRow(["username", "nama", "kelas", "waktu", "status"]);
+      }
+      
+      var pData = postData.data || postData;
+      sheet.appendRow([
+         pData.username || "-",
+         pData.nama || "-",
+         pData.kelas || "-",
+         pData.waktu || new Date().toISOString(),
+         pData.status || "Sukses"
+      ]);
+      
+      return ContentService.createTextOutput(JSON.stringify({status: "success"}))
+                           .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ===============================================
     // ACTION 4: ADD / EDIT DATA (ADMIN PANEL)
     // ===============================================
     if (action === "saveData") {
