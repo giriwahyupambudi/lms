@@ -180,6 +180,7 @@
     <button class="nav-item" id="tabMateriD" onclick="showTab('materi')"><i data-lucide="book-open"></i> Kelola Materi</button>
     <button class="nav-item" id="tabNilaiD" onclick="showTab('nilai')"><i data-lucide="graduation-cap"></i> Input Nilai</button>
     <button class="nav-item" id="tabUsersD" onclick="showTab('users')"><i data-lucide="users"></i> Pengguna</button>
+    <button class="nav-item" id="tabSettingsD" onclick="showTab('settings')"><i data-lucide="settings"></i> Pengaturan</button>
     <div style="flex:1"></div>
     <button class="nav-item" style="margin-top: auto;" onclick="window.location.href='dashboard.html'"><i data-lucide="external-link"></i> Ke LMS Siswa</button>
   </aside>
@@ -189,6 +190,7 @@
     <button class="nav-item" id="tabMateri" onclick="showTab('materi')"><i data-lucide="book-open"></i> Materi</button>
     <button class="nav-item" id="tabNilai" onclick="showTab('nilai')"><i data-lucide="graduation-cap"></i> Nilai</button>
     <button class="nav-item" id="tabUsers" onclick="showTab('users')"><i data-lucide="users"></i> Pengguna</button>
+    <button class="nav-item" id="tabSettings" onclick="showTab('settings')"><i data-lucide="settings"></i> Pengaturan</button>
   </nav>
 
   <main class="main-content">
@@ -261,6 +263,46 @@
                   <tr><td colspan="4" style="text-align:center;">Memuat data...</td></tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom: 0;">
+            <div class="card-header">
+              <h3>10 Tugas Terkirim Terakhir</h3>
+            </div>
+            <div class="table-responsive">
+              <table>
+                <thead><tr><th>Siswa</th><th>Materi</th><th>Waktu</th><th>File</th></tr></thead>
+                <tbody id="tugasTableBody">
+                  <tr><td colspan="4" style="text-align:center;">Memuat data...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION: PENGATURAN ================= -->
+      <section id="settingsSection" style="display:none">
+        <div class="header-section">
+          <div>
+            <h1>Pengaturan Sistem</h1>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Atur konfigurasi sistem LMS.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Penyimpanan Google Drive</h3>
+          </div>
+          <div style="padding: 20px;">
+            <div class="form-group" style="max-width: 500px;">
+              <label>Folder ID (Untuk Upload Tugas Siswa)</label>
+              <div style="display:flex; gap:10px;">
+                <input type="text" id="settingFolderId" class="form-control" placeholder="Masukkan ID Folder Drive Anda...">
+                <button class="btn btn-primary" onclick="saveSettingFolderId()"><i data-lucide="save"></i> Simpan</button>
+              </div>
+              <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">Contoh ID dari URL Drive: 1aBcDeFgHiJkLmNoP_QrStUvWxYz</p>
             </div>
           </div>
         </div>
@@ -439,6 +481,8 @@
     let dataNilai = [];
     let dataUser = [];
     let dataLogLogin = [];
+    let dataLogTugas = [];
+    let dataSettings = [];
     
     // Sistem Draft Penyimpanan Sementara
     let draftNilai = {};
@@ -513,10 +557,10 @@
     };
 
     function showTab(tabName) {
-      ['dashboardSection', 'materiSection', 'nilaiSection', 'usersSection'].forEach(s => document.getElementById(s).style.display = 'none');
+      ['dashboardSection', 'materiSection', 'nilaiSection', 'usersSection', 'settingsSection'].forEach(s => document.getElementById(s).style.display = 'none');
       document.getElementById(tabName + 'Section').style.display = 'block';
       
-      ['tabDashboard', 'tabMateri', 'tabNilai', 'tabUsers'].forEach(id => {
+      ['tabDashboard', 'tabMateri', 'tabNilai', 'tabUsers', 'tabSettings'].forEach(id => {
         let el = document.getElementById(id); if(el) el.classList.remove('active');
         let elD = document.getElementById(id+'D'); if(elD) elD.classList.remove('active');
       });
@@ -534,17 +578,28 @@
     async function loadAllData() {
       showOverlay("Mengambil data dari Spreadsheet...");
       try {
-        const [resM, resN, resU, resL] = await Promise.all([
+        const [resM, resN, resU, resL, resS, resT] = await Promise.all([
           fetch(`${API_URL}?sheet=materi`),
           fetch(`${API_URL}?sheet=listNilai`),
           fetch(`${API_URL}?sheet=user`),
-          fetch(`${API_URL}?sheet=logLogin`)
+          fetch(`${API_URL}?sheet=logLogin`),
+          fetch(`${API_URL}?sheet=settings`),
+          fetch(`${API_URL}?sheet=logTugas`).catch(() => ({ json: async () => [] }))
         ]);
 
         dataMateri = await resM.json();
         dataNilai = await resN.json();
         dataUser = await resU.json();
         dataLogLogin = await resL.json();
+        dataSettings = await resS.json();
+        dataLogTugas = await resT.json();
+        
+        if (Array.isArray(dataSettings)) {
+          let folderSetting = dataSettings.find(s => getVal(s, ['key', 'pengaturan']) === "FOLDER_TUGAS");
+          if (folderSetting) {
+            document.getElementById('settingFolderId').value = getVal(folderSetting, ['value', 'nilai']) || "";
+          }
+        }
 
         renderDashboard();
         renderTableMateri();
@@ -662,6 +717,45 @@
           </tr>`;
         });
         document.getElementById('loginTableBody').innerHTML = loginHtml;
+
+        // Tugas Terkirim Terakhir
+        let validLogTugas = (Array.isArray(dataLogTugas) ? dataLogTugas : []).filter(n => getVal(n, ['username', 'nisn', 'nama']));
+
+        let recentTugas = [...validLogTugas].sort((a, b) => {
+            let tA = getVal(a, ['waktu', 'timestamp', 'tanggal']);
+            let tB = getVal(b, ['waktu', 'timestamp', 'tanggal']);
+            let dA = tA ? new Date(tA).getTime() : 0;
+            let dB = tB ? new Date(tB).getTime() : 0;
+            if (isNaN(dA)) dA = 0;
+            if (isNaN(dB)) dB = 0;
+            return dB - dA; // Descending
+        }).slice(0, 10);
+
+        let tugasHtml = '';
+        if(recentTugas.length === 0) tugasHtml = '<tr><td colspan="4" style="text-align:center">Belum ada tugas terkirim</td></tr>';
+        recentTugas.forEach(r => {
+          let userNama = getVal(r, ['nama', 'username']) || "-";
+          let materi = getVal(r, ['materi', 'judul']) || "-";
+          let waktu = getVal(r, ['waktu', 'timestamp']) || "-";
+          
+          if(waktu !== "-") {
+              try {
+                  let d = new Date(waktu);
+                  if(!isNaN(d.getTime())) waktu = d.toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+              } catch(e) {}
+          }
+          
+          let fileUrl = getVal(r, ['link_tugas', 'file']) || "#";
+          
+          tugasHtml += `<tr>
+            <td style="font-weight:500;">${userNama}</td>
+            <td>${materi}</td>
+            <td style="font-size:0.8rem; color:var(--text-muted)">${waktu}</td>
+            <td><a href="${fileUrl}" target="_blank" class="btn-icon" style="color:var(--primary); border-color:var(--primary-light); background:var(--primary-light);"><i data-lucide="external-link"></i></a></td>
+          </tr>`;
+        });
+        document.getElementById('tugasTableBody').innerHTML = tugasHtml;
+
         lucide.createIcons();
     }
 
@@ -879,6 +973,28 @@
       
       closeModal('userModal');
       await postData({ action: "saveData", sheet: "user", rowNumber: rowNum, data: JSON.stringify(data) });
+    }
+
+    // ============================================
+    // SIMPAN PENGATURAN
+    // ============================================
+    async function saveSettingFolderId() {
+      let folderId = document.getElementById('settingFolderId').value.trim();
+      if (!folderId) {
+        alert("Folder ID tidak boleh kosong");
+        return;
+      }
+      
+      let rowNum = "";
+      if (Array.isArray(dataSettings)) {
+         let existing = dataSettings.find(s => getVal(s, ['key', 'pengaturan']) === "FOLDER_TUGAS");
+         if (existing && existing.rowNumber) {
+            rowNum = existing.rowNumber;
+         }
+      }
+      
+      let data = { "key": "FOLDER_TUGAS", "value": folderId };
+      await postData({ action: "saveData", sheet: "settings", rowNumber: rowNum, data: JSON.stringify(data) });
     }
 
     // ============================================

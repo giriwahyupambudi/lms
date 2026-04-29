@@ -811,15 +811,27 @@
 
       // 2. Fetch fresh data in background
       try {
-        const [resMateri, resListNilai, resUser] = await Promise.all([
+        const [resMateri, resListNilai, resUser, resLogTugas] = await Promise.all([
           fetch(`${API_URL}?sheet=materi`),
           fetch(`${API_URL}?sheet=listNilai`).catch(() => ({ json: async () => [] })),
-          fetch(`${API_URL}?sheet=user`).catch(() => ({ json: async () => [] }))
+          fetch(`${API_URL}?sheet=user`).catch(() => ({ json: async () => [] })),
+          fetch(`${API_URL}?sheet=logTugas`).catch(() => ({ json: async () => [] }))
         ]);
 
         const dataMateri = await resMateri.json();
-        const dataListNilai = await resListNilai.json();
+        let dataListNilai = await resListNilai.json();
         const dataUser = await resUser.json();
+        const dataLogTugas = await resLogTugas.json();
+
+        // Gabungkan logTugas ke dataListNilai agar progress terbaca.
+        // Ubah link_tugas menjadi nilai agar dikenali oleh renderMateri
+        if (dataLogTugas && dataLogTugas.length > 0) {
+           const mappedTugas = dataLogTugas.map(t => ({
+              ...t,
+              nilai: t.link_tugas ? `Terkirim (${t.link_tugas})` : "Terkirim"
+           }));
+           dataListNilai = dataListNilai.concat(mappedTugas);
+        }
 
         // Save to cache
         localStorage.setItem("cache_materi", JSON.stringify(dataMateri));
@@ -1088,7 +1100,7 @@
       if (tipe === "Kuis") {
         window.location.href = `evaluasi.html?tipe=kuis&id=${idMateri}&title=${titleEncoded || ''}&idx=${index || idMateri}`;
       } else {
-        window.location.href = `evaluasi.html?tipe=tugas&id=${idMateri}&title=${titleEncoded || ''}&idx=${index || idMateri}`;
+        window.location.href = `uploadtugas.html?tipe=tugas&id=${idMateri}&title=${titleEncoded || ''}&idx=${index || idMateri}`;
       }
     }
 

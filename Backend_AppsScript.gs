@@ -211,10 +211,76 @@ function doPost(e) {
     }
 
     // ===============================================
+    // ACTION: UPLOAD TUGAS
+    // ===============================================
+    if (action === "uploadTugas") {
+      var pData = postData.data || postData;
+      
+      // Ambil folder ID dari settings
+      var settingsSheet = ss.getSheetByName("settings");
+      var folderId = "";
+      if (settingsSheet) {
+         var setObj = settingsSheet.getDataRange().getValues();
+         for(var s=1; s<setObj.length; s++){
+            if(setObj[s][0] === "FOLDER_TUGAS") { folderId = setObj[s][1]; break; }
+         }
+      }
+      if (!folderId) {
+         throw new Error("Folder ID belum diatur oleh Admin. Hubungi Admin.");
+      }
+      
+      try {
+         var folder = DriveApp.getFolderById(folderId);
+         
+         // Decode Base64
+         var splitBase = pData.base64.split(',');
+         var type = splitBase[0].split(';')[0].replace('data:', '');
+         var byteCharacters = Utilities.base64Decode(splitBase[1]);
+         var blob = Utilities.newBlob(byteCharacters, type, pData.filename);
+         
+         var file = folder.createFile(blob);
+         var fileUrl = file.getUrl();
+         
+         // Simpan record ke logTugas
+         var sheetTugas = ss.getSheetByName("logTugas");
+         if (!sheetTugas) {
+            sheetTugas = ss.insertSheet("logTugas");
+            sheetTugas.appendRow(["username", "nama", "kelas", "id_materi", "materi", "tipe", "link_tugas", "waktu"]);
+         }
+         
+         var now = new Date();
+         var timeStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+         
+         sheetTugas.appendRow([
+            pData.username || "-",
+            pData.nama || "-",
+            pData.kelas || "-",
+            pData.id_materi || "-",
+            pData.judul || "Tugas",
+            "Tugas",
+            fileUrl,
+            timeStr
+         ]);
+         
+         return ContentService.createTextOutput(JSON.stringify({status: "success", url: fileUrl}))
+                              .setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+         throw new Error("Gagal mengupload file: " + err.message);
+      }
+    }
+
+    // ===============================================
     // ACTION 4: ADD / EDIT DATA (ADMIN PANEL)
     // ===============================================
     if (action === "saveData") {
-      if (!sheet) throw new Error("Sheet " + sheetName + " tidak ditemukan");
+      if (!sheet) {
+        if (sheetName === "settings") {
+          sheet = ss.insertSheet("settings");
+          sheet.appendRow(["key", "value"]);
+        } else {
+          throw new Error("Sheet " + sheetName + " tidak ditemukan");
+        }
+      }
 
       var dataToSave;
       try {
