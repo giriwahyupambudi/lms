@@ -547,3 +547,14 @@ function doPost(e) {
                          .setMimeType(ContentService.MimeType.JSON);
   }
 }
+
+// ============================================
+// FUNGSI UNTUK MENGAKTIFKAN OTORISASI DRIVE
+// ============================================
+function setupAwal() {
+  // Jalankan fungsi ini SATU KALI dari editor Apps Script 
+  // untuk memunculkan popup izin akses Google Drive.
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var folder = DriveApp.getRootFolder();
+  Logger.log("Otorisasi berhasil. Script kini memiliki akses ke Drive.");
+}
