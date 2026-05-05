@@ -1027,7 +1027,7 @@
 
             btnKuis = isKuisLocked
               ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed; border:1px solid #e2e8f0;" onclick="alertLocked('kuis')"><i data-lucide="lock" style="width:14px"></i> Kuis Terkunci</button>`
-              : `<button class="btn-action btn-quiz" onclick="handleEvaluasi('${tipe}', '${mid}', encodeURIComponent(\`${m.judul || m.Judul || ("Materi " + (i + 1))}\`), ${i + 1})"><i data-lucide="${tipe === 'Kuis' ? 'edit-2' : 'upload'}" style="width:14px"></i> ${hasScore ? 'Ulangi ' + tipe : 'Kerjakan ' + tipe}</button>`;
+              : `<button class="btn-action btn-quiz" onclick="handleEvaluasi('${tipe}', '${mid}', encodeURIComponent(\`${m.judul || m.Judul || ("Materi " + (i + 1))}\`), ${i + 1})"><i data-lucide="${tipe === 'Kuis' ? 'edit-2' : (tipe.toLowerCase() === 'editor' ? 'type' : 'upload')}" style="width:14px"></i> ${hasScore ? 'Ulangi ' + tipe : 'Kerjakan ' + tipe}</button>`;
           }
 
           let cardHTML = `
@@ -1099,6 +1099,8 @@
     function handleEvaluasi(tipe, idMateri, titleEncoded, index) {
       if (tipe === "Kuis") {
         window.location.href = `evaluasi.html?tipe=kuis&id=${idMateri}&title=${titleEncoded || ''}&idx=${index || idMateri}`;
+      } else if (tipe.toLowerCase() === "editor") {
+        window.location.href = `tugas-editor.html?tipe=editor&id=${idMateri}&title=${titleEncoded || ''}&idx=${index || idMateri}`;
       } else {
         window.location.href = `uploadtugas.html?tipe=tugas&id=${idMateri}&title=${titleEncoded || ''}&idx=${index || idMateri}`;
       }

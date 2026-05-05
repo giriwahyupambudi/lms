@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor Tugas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Quill.js for Rich Text Editing -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    
+    <!-- html2pdf for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        /* Loader CSS */
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 3px solid #blue-600;
+            border-right: 3px solid transparent;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Quill Editor overrides to look more like a document */
+        #editor-container {
+            min-height: 400px;
+            background: white;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+        }
+        .ql-toolbar.ql-snow {
+            border-top-left-radius: 0.75rem;
+            border-top-right-radius: 0.75rem;
+            border-color: #e2e8f0;
+            background: #f8fafc;
+        }
+        .ql-container.ql-snow {
+            border-bottom-left-radius: 0.75rem;
+            border-bottom-right-radius: 0.75rem;
+            border-color: #e2e8f0;
+        }
+        
+        /* PDF specific styling */
+        .pdf-header {
+            display: none;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+        }
+        .pdf-header h2 { margin: 0; font-size: 18px; }
+        .pdf-header p { margin: 4px 0 0 0; font-size: 12px; color: #555; }
+    </style>
+</head>
+<body class="bg-slate-50">
+
+    <div class="max-w-4xl mx-auto pb-24 min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="px-4 py-4 flex items-center justify-between bg-white border-b border-slate-100 shadow-sm sticky top-0 z-10">
+            <button onclick="history.back()" class="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                <i data-lucide="arrow-left" class="w-6 h-6 text-slate-600"></i>
+            </button>
+            <div class="text-center">
+                <h1 id="page-title" class="font-bold text-slate-800 text-lg">Lembar Kerja Tugas</h1>
+                <p id="page-subtitle" class="text-xs text-slate-500 font-medium mt-0.5">Memuat...</p>
+            </div>
+            <div class="w-10"></div> <!-- Spacer -->
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 px-4 py-6 flex flex-col">
+            
+            <div id="editor-wrapper" class="bg-white rounded-xl shadow-sm border border-slate-100 animate-fade-in flex flex-col">
+                <div class="p-4 border-b border-slate-100 bg-blue-50/50 rounded-t-xl">
+                    <p class="text-sm text-slate-600">Ketik jawaban tugas Anda di bawah ini. Anda dapat <b>menyisipkan gambar</b> (copy-paste) dan mengatur format teks.</p>
+                </div>
+                
+                <!-- The text editor -->
+                <div id="editor-container"></div>
+            </div>
+
+            <!-- Error Message Box -->
+            <div id="error-box" class="hidden mt-4 p-4 bg-red-50 rounded-xl border border-red-100 flex items-start gap-3">
+                <i data-lucide="alert-circle" class="w-5 h-5 text-red-500 shrink-0 mt-0.5"></i>
+                <p id="error-text" class="text-sm font-medium text-red-800"></p>
+            </div>
+
+            <div id="action-container" class="mt-6 flex gap-4">
+                <button id="upload-btn" class="flex-1 bg-blue-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center">
+                    <i data-lucide="send" class="w-5 h-5 mr-2" id="btn-icon"></i>
+                    <span id="btn-text">Kirim Tugas</span>
+                    <div id="btn-loader" class="spinner hidden ml-2" style="border-top-color: white;"></div>
+                </button>
+            </div>
+
+            <!-- Success Container -->
+            <div id="success-container" class="hidden flex-col items-center justify-center p-8 mt-4 text-center animate-fade-in bg-white rounded-2xl shadow-sm border border-slate-100">
+                <div class="w-20 h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                    <i data-lucide="check-circle" class="w-10 h-10"></i>
+                </div>
+                <h2 class="text-2xl font-black text-slate-800 mb-2">Tugas Terkirim!</h2>
+                <p class="text-slate-500 font-medium mb-8">Kerja bagus! Tugas Anda berhasil dikonversi ke PDF dan tercatat di sistem.</p>
+                
+                <button onclick="window.location.href='dashboard.html'" class="w-full bg-slate-800 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-slate-200 hover:bg-slate-900 active:scale-95 transition-all">
+                    Kembali ke Beranda
+                </button>
+            </div>
+            
+            <!-- Hidden element for PDF generation to include student info header -->
+            <div id="pdf-content-wrapper" style="display: none; padding: 20px;">
+                <div class="pdf-header" style="display: block;">
+                    <h2 id="pdf-title">Judul Tugas</h2>
+                    <p id="pdf-student-info">Nama: - | Kelas: -</p>
+                    <p id="pdf-date">Tanggal: -</p>
+                </div>
+                <div id="pdf-body" class="ql-editor" style="padding:0;"></div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbx8dBNFIqvVixZ5ORodulJYxqjtMvjr-Qajjez1uD7UIeq-ypSI1xaNjdUtJkq3ovzsbw/exec";
+        const urlParams = new URLSearchParams(window.location.search);
+        const idMateri = urlParams.get('id');
+        const titleParam = urlParams.get('title') || "Tugas Editor";
+        
+        // Validasi Sesi
+        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+        if (!userData.username) {
+            alert("Sesi Anda telah berakhir. Silakan login kembali.");
+            window.location.href = "index.html";
+        }
+
+        let quill;
+
+        window.onload = () => {
+            lucide.createIcons();
+            if(!idMateri) {
+                showError("ID Tugas tidak ditemukan di URL.");
+                document.getElementById('upload-btn').disabled = true;
+            }
+            document.getElementById('page-subtitle').innerText = decodeURIComponent(titleParam);
+            
+            // Initialize Quill editor
+            quill = new Quill('#editor-container', {
+                theme: 'snow',
+                placeholder: 'Mulai mengetik tugas Anda di sini... Anda bisa copy-paste gambar secara langsung ke area ini.',
+                modules: {
+                    toolbar: [
+                        [{ 'header': [1, 2, 3, false] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        [{ 'color': [] }, { 'background': [] }],
+                        [{ 'align': [] }],
+                        ['link', 'image'],
+                        ['clean']
+                    ]
+                }
+            });
+
+            // --- FITUR AUTO-SAVE (DRAFT) ---
+            const draftKey = `draft_editor_${userData.username}_${idMateri}`;
+            
+            // Muat draft jika ada
+            const savedDraft = localStorage.getItem(draftKey);
+            if (savedDraft) {
+                quill.root.innerHTML = savedDraft;
+            }
+
+            // Simpan setiap ada perubahan ketikan
+            quill.on('text-change', function() {
+                localStorage.setItem(draftKey, quill.root.innerHTML);
+            });
+            // -------------------------------
+
+            document.getElementById('upload-btn').addEventListener('click', processAndUpload);
+        };
+
+        function showError(msg) {
+            const errBox = document.getElementById('error-box');
+            document.getElementById('error-text').innerText = msg;
+            errBox.classList.remove('hidden');
+        }
+
+        function hideError() {
+            document.getElementById('error-box').classList.add('hidden');
+        }
+
+        async function processAndUpload() {
+            if (quill.getText().trim().length === 0 && !quill.root.innerHTML.includes('<img')) {
+                showError("Tugas masih kosong. Silakan isi terlebih dahulu.");
+                return;
+            }
+
+            hideError();
+            
+            const btn = document.getElementById('upload-btn');
+            const btnText = document.getElementById('btn-text');
+            const btnLoader = document.getElementById('btn-loader');
+            const btnIcon = document.getElementById('btn-icon');
+            
+            btn.disabled = true;
+            btnText.innerText = "Memproses Dokumen...";
+            btnIcon.classList.add('hidden');
+            btnLoader.classList.remove('hidden');
+
+            try {
+                // 1. Prepare HTML content for PDF
+                const pdfWrapper = document.getElementById('pdf-content-wrapper');
+                document.getElementById('pdf-title').innerText = decodeURIComponent(titleParam);
+                document.getElementById('pdf-student-info').innerText = `Nama: ${userData.nama || '-'} | Kelas: ${userData.kelas || userData.tingkat || '-'}`;
+                
+                const now = new Date();
+                document.getElementById('pdf-date').innerText = `Waktu Pengumpulan: ${now.toLocaleDateString('id-ID')} ${now.toLocaleTimeString('id-ID')}`;
+                
+                document.getElementById('pdf-body').innerHTML = quill.root.innerHTML;
+                
+                pdfWrapper.style.display = 'block'; // Make visible temporarily for html2pdf (it can render off-screen if block)
+
+                // Wait a moment for images to render
+                await new Promise(r => setTimeout(r, 500));
+
+                // 2. Generate PDF using html2pdf
+                const opt = {
+                    margin:       15,
+                    filename:     'tugas.pdf',
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+
+                btnText.innerText = "Menyusun PDF...";
+                
+                // Get PDF as base64 data URI
+                const pdfBase64 = await html2pdf().set(opt).from(pdfWrapper).outputPdf('datauristring');
+                
+                pdfWrapper.style.display = 'none'; // Hide again
+
+                // 3. Upload to server
+                btnText.innerText = "Mengunggah Tugas...";
+                
+                const payload = {
+                    action: 'uploadTugas',
+                    data: {
+                        username: userData.username || userData.nisn || "-",
+                        nama: userData.nama || "-",
+                        kelas: userData.kelas || userData.tingkat || "-",
+                        id_materi: idMateri,
+                        judul: decodeURIComponent(titleParam),
+                        filename: userData.nama.split(" ")[0] + "_" + idMateri + "_Tugas_Editor.pdf",
+                        base64: pdfBase64
+                    }
+                };
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.status === "success") {
+                    // Hapus draft karena tugas sudah terkirim
+                    localStorage.removeItem(`draft_editor_${userData.username}_${idMateri}`);
+
+                    // Success
+                    document.getElementById('editor-wrapper').classList.add('hidden');
+                    document.getElementById('action-container').classList.add('hidden');
+                    
+                    const successDiv = document.getElementById('success-container');
+                    successDiv.classList.remove('hidden');
+                    successDiv.classList.add('flex');
+                    lucide.createIcons();
+                } else {
+                    throw new Error(result.message || "Gagal mengunggah file");
+                }
+
+            } catch (error) {
+                console.error(error);
+                showError(error.message || "Terjadi kesalahan saat mengonversi atau mengunggah. Pastikan gambar tidak terlalu besar.");
+                btn.disabled = false;
+                btnText.innerText = "Coba Kirim Lagi";
+                btnIcon.classList.remove('hidden');
+                btnLoader.classList.add('hidden');
+                document.getElementById('pdf-content-wrapper').style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
