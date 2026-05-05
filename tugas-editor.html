@@ -85,6 +85,23 @@
             display: block;
             margin: 10px auto;
         }
+
+        /* HACK: Perbesar titik tarik (resize handles) gambar agar mudah disentuh di HP */
+        div[style*="cursor: nwse-resize"],
+        div[style*="cursor: nesw-resize"],
+        div[style*="cursor: nw-resize"],
+        div[style*="cursor: ne-resize"],
+        div[style*="cursor: sw-resize"],
+        div[style*="cursor: se-resize"] {
+            width: 24px !important;
+            height: 24px !important;
+            background-color: #3b82f6 !important; /* Warna biru cerah */
+            border: 2px solid white !important;
+            border-radius: 50% !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+            z-index: 50 !important;
+            opacity: 0.9 !important;
+        }
     </style>
 </head>
 <body class="bg-slate-50">
