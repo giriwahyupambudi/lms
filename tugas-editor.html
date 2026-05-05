@@ -96,20 +96,21 @@
         <!-- Main Content -->
         <main class="flex-1 px-4 py-6 flex flex-col">
             
-            <div id="editor-wrapper" class="bg-slate-200 rounded-xl shadow-inner border border-slate-300 animate-fade-in flex flex-col items-center relative overflow-hidden">
+            <div id="editor-wrapper" class="bg-slate-200 rounded-xl shadow-inner border border-slate-300 animate-fade-in flex flex-col items-center relative">
                 
                 <!-- Custom Sticky Toolbar -->
-                <div id="toolbar-container" class="w-full bg-white border-b border-slate-300 sticky top-0 z-20 shadow-sm flex justify-center py-2">
-                    <!-- Quill akan otomatis mengisi div ini jika dikonfigurasi -->
+                <div id="toolbar-container" class="w-full bg-white border-b border-slate-300 sticky top-[72px] z-20 shadow-sm flex justify-center py-2 px-2 overflow-x-auto">
+                    <!-- Quill akan otomatis mengisi div ini -->
                 </div>
 
-                <div class="w-full py-8 flex flex-col items-center">
+                <!-- Container Bisa di-Scroll secara Horizontal di HP -->
+                <div class="w-full py-8 flex flex-col items-center overflow-x-auto">
                     <div class="w-full max-w-[210mm] mb-4 text-center">
-                        <p class="text-sm font-medium text-slate-500">Lembar Kerja A4</p>
+                        <p class="text-sm font-medium text-slate-500">Lembar Kerja A4 (Geser ke samping jika di layar HP)</p>
                     </div>
 
                     <!-- Kertas A4 Virtual -->
-                    <div id="pdf-export-area" class="bg-white shadow-lg" style="width: 210mm; min-height: 297mm; padding: 25.4mm; box-sizing: border-box; display: flex; flex-direction: column;">
+                    <div id="pdf-export-area" class="bg-white shadow-lg shrink-0" style="width: 210mm; min-height: 297mm; padding: 25.4mm; box-sizing: border-box; display: flex; flex-direction: column;">
                     
                     <!-- Kop Surat Dinamis -->
                     <div style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
@@ -118,12 +119,13 @@
                         <p id="doc-date" style="margin: 6px 0 0 0; font-size: 14px; color: #333; font-family: 'Inter', sans-serif;">Waktu: -</p>
                     </div>
 
-                    <!-- The text editor -->
                     <div id="editor-container" style="flex: 1; border: none !important; font-family: 'Inter', sans-serif;"></div>
                 </div>
+                </div> <!-- End of scrollable container -->
             </div>
 
-            <div id="action-container" class="mt-8 flex justify-end gap-4 w-full max-w-[210mm] mx-auto">
+            <!-- Tombol Aksi Bawah -->
+            <div id="action-container" class="mt-8 flex justify-end gap-4 w-full mx-auto px-4">
                 <button onclick="window.history.back()" class="px-6 py-3 rounded-xl font-medium text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 shadow-sm transition-all flex items-center gap-2">
                     <i data-lucide="arrow-left" class="w-5 h-5"></i> Batal
                 </button>
@@ -168,6 +170,19 @@
             </div>
             <div class="flex-1 bg-slate-200 relative flex flex-col">
                 <iframe id="preview-iframe" class="w-full h-full border-0 bg-slate-200"></iframe>
+                
+                <!-- Fallback Mobile (Tidak Mendukung Iframe PDF) -->
+                <div id="mobile-pdf-fallback" class="hidden flex-col items-center justify-center p-8 text-center h-full bg-white">
+                    <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6">
+                        <i data-lucide="file-check" class="w-10 h-10 text-blue-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-3">Dokumen PDF Berhasil Disusun</h3>
+                    <p class="text-slate-500 font-medium max-w-sm mb-8 leading-relaxed">Perangkat seluler tidak mendukung pratinjau PDF secara langsung. Dokumen Anda sudah siap dikirim, atau Anda dapat mengunduhnya untuk dicek.</p>
+                    <a id="mobile-pdf-link" href="#" download="Tugas_Saya.pdf" class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl flex items-center gap-2 transition-all border border-slate-200 shadow-sm">
+                        <i data-lucide="download" class="w-5 h-5"></i> Unduh PDF
+                    </a>
+                </div>
+
                 <!-- Animasi Loading Premium -->
                 <div id="preview-loading" class="absolute inset-0 bg-slate-50 flex flex-col items-center justify-center z-20">
                     <div class="relative flex items-center justify-center w-24 h-24 mb-6">
@@ -330,9 +345,19 @@
                 // Kembalikan posisi scroll
                 window.scrollTo(0, originalScrollY);
                 
-                // Tampilkan di Iframe
+                // Tampilkan di Iframe atau Mobile Fallback
                 document.getElementById('preview-loading').style.display = 'none';
-                document.getElementById('preview-iframe').src = currentPdfBase64;
+                
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                if (isMobile) {
+                    document.getElementById('preview-iframe').classList.add('hidden');
+                    const fallback = document.getElementById('mobile-pdf-fallback');
+                    fallback.classList.remove('hidden');
+                    fallback.classList.add('flex');
+                    document.getElementById('mobile-pdf-link').href = currentPdfBase64;
+                } else {
+                    document.getElementById('preview-iframe').src = currentPdfBase64;
+                }
 
             } catch (error) {
                 console.error(error);
