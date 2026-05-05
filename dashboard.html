@@ -795,12 +795,13 @@
       // 1. Try load from cache first
       const cachedMateri = localStorage.getItem("cache_materi");
       const cachedListNilai = localStorage.getItem("cache_listNilai");
+      const cachedLogTugas = localStorage.getItem("cache_logTugas");
       const cachedUser = localStorage.getItem("cache_user");
       const lastUpdated = localStorage.getItem("cache_lastUpdated");
 
       if (cachedMateri && cachedListNilai && cachedUser) {
         try {
-          renderMateri(JSON.parse(cachedMateri), JSON.parse(cachedListNilai));
+          renderMateri(JSON.parse(cachedMateri), JSON.parse(cachedListNilai), cachedLogTugas ? JSON.parse(cachedLogTugas) : []);
           renderRanking(JSON.parse(cachedListNilai), JSON.parse(cachedUser));
           if (lastUpdated) {
             syncStatus.innerHTML = `<i data-lucide="refresh-cw" class="spin-anim" style="width:14px; height:14px;"></i> <span>Menyinkronkan...</span>`;
@@ -823,31 +824,18 @@
         const dataUser = await resUser.json();
         const dataLogTugas = await resLogTugas.json();
 
-        // Gabungkan logTugas ke dataListNilai agar progress terbaca.
-        // Ubah link_tugas menjadi nilai agar dikenali oleh renderMateri
-        if (dataLogTugas && dataLogTugas.length > 0) {
-           const mappedTugas = dataLogTugas.map(t => {
-              // Cari berbagai kemungkinan nama kolom untuk URL
-              let url = t.link_tugas || t.linktugas || t.url_file || t.urlfile || t.link || t['link tugas'] || t['url file'] || t.file || "";
-              return {
-                  ...t,
-                  nilai: url ? `Terkirim (${url})` : "Terkirim"
-              };
-           });
-           dataListNilai = dataListNilai.concat(mappedTugas);
-        }
-
         // Save to cache
         localStorage.setItem("cache_materi", JSON.stringify(dataMateri));
         localStorage.setItem("cache_listNilai", JSON.stringify(dataListNilai));
         localStorage.setItem("cache_user", JSON.stringify(dataUser));
+        localStorage.setItem("cache_logTugas", JSON.stringify(dataLogTugas));
 
         const now = new Date();
         const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
         localStorage.setItem("cache_lastUpdated", timeString);
 
         // Re-render with fresh data silently
-        renderMateri(dataMateri, dataListNilai);
+        renderMateri(dataMateri, dataListNilai, dataLogTugas);
         renderRanking(dataListNilai, dataUser);
 
         // Update indicator
@@ -875,7 +863,7 @@
       window.scrollTo(0, 0);
     }
 
-    function renderMateri(dataMateriMentah, dataProgres) {
+    function renderMateri(dataMateriMentah, dataProgres, dataLogTugas = []) {
       const list = document.getElementById("materiList");
       try {
         const myTingkat = getTingkat(user);
@@ -901,6 +889,21 @@
           }
           return undefined;
         };
+
+        // Peta URL Tugas dari logTugas (terpisah dari logNilai numerik)
+        const taskUrls = new Map();
+        if (Array.isArray(dataLogTugas)) {
+            dataLogTugas.forEach(t => {
+                let rUser = t.username || t.Username || t.USERNAME || t.nisn || t.NISN || "";
+                if (rUser.toString().trim() === user.username.toString().trim()) {
+                    let rMid = t.idmateri || t.id_materi || t.id || "";
+                    if (rMid) {
+                        let url = t.link_tugas || t.linktugas || t.url_file || t.urlfile || t.link || t['link tugas'] || t['url file'] || t.file || "";
+                        if (url) taskUrls.set(rMid.toString(), url);
+                    }
+                }
+            });
+        }
 
         // Evaluasi (Kuis/Tugas) yang sudah selesai diambil dari server beserta nilai dan waktunya
         const quizScores = new Map();
@@ -1002,19 +1005,29 @@
           let isMateriLocked = false;
 
           let sVal = rawScoreValue;
-          let fileUrl = "";
+          let fileUrl = taskUrls.has(mid.toString()) ? taskUrls.get(mid.toString()) : "";
+          
           if (hasScore) {
+              // Jika ada format "Terkirim (http...)" peninggalan lama di logNilai, ekstrak URL-nya
               let fileUrlMatch = sVal.match(/Terkirim \((http.*?)\)/i);
               if (fileUrlMatch) {
-                  fileUrl = fileUrlMatch[1];
+                  if (!fileUrl) fileUrl = fileUrlMatch[1];
                   sVal = "Terkirim";
               } else if (sVal.toLowerCase().includes("http")) { 
                   let httpIdx = sVal.toLowerCase().indexOf("http");
-                  fileUrl = sVal.substring(httpIdx).replace(')','').trim();
+                  if (!fileUrl) fileUrl = sVal.substring(httpIdx).replace(')','').trim();
                   sVal = sVal.substring(0, httpIdx).replace('(', '').trim();
                   if (!sVal) sVal = "Terkirim";
               }
-              if (sVal === "0" && fileUrl === "") sVal = "0"; // Handle explicit 0 score
+              if (sVal === "0" && !fileUrl) sVal = "0"; // Handle explicit 0 score
+          }
+
+          // Jika ada URL dari logTugas, dan belum dinilai oleh guru (hasScore false) atau nilainya masih "Terkirim"
+          if (fileUrl && (!hasScore || (sVal && sVal.toString().toLowerCase().includes("terkirim")))) {
+             if (!hasScore) {
+                hasScore = true;
+                sVal = "Terkirim";
+             }
           }
 
           let scoreBadge = hasScore ? `<span style="font-size:0.7rem; font-weight:700; color:#059669; background:#d1fae5; padding:4px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="check-circle" style="width:14px; height:14px;"></i> Point: ${sVal}</span>` : '';
