@@ -7,8 +7,14 @@ function doGet(e) {
   
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   if (!sheet) {
-    return ContentService.createTextOutput(JSON.stringify([]))
-                         .setMimeType(ContentService.MimeType.JSON);
+    if (sheetName === "admin") {
+      sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet("admin");
+      sheet.appendRow(["nama", "username", "password", "role"]);
+      sheet.appendRow(["Admin Utama", "admin", "admin123", "Administrator"]);
+    } else {
+      return ContentService.createTextOutput(JSON.stringify([]))
+                           .setMimeType(ContentService.MimeType.JSON);
+    }
   }
   
   var rawData = sheet.getDataRange().getValues();

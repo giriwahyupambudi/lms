@@ -471,6 +471,19 @@
   </div>
 
   <script>
+    // ===== CEK LOGIN ADMIN =====
+    const adminSession = localStorage.getItem("admin_user");
+    if (!adminSession) {
+        window.location.href = "login-admin.html";
+    } else {
+        try {
+            const adminData = JSON.parse(adminSession);
+            document.getElementById('admin-name').innerText = adminData.nama || adminData.username || "Admin";
+            document.getElementById('avatar-toggle').innerText = (adminData.nama || adminData.username || "A").charAt(0).toUpperCase();
+        } catch(e) {}
+    }
+    // ============================
+
     lucide.createIcons();
 
     // Pastikan API_URL sama dengan di dashboard.html
@@ -496,7 +509,7 @@
     // Helper Fungsi
     function toggleDropdown() { document.getElementById('profile-dropdown').classList.toggle('active'); }
     document.addEventListener('click', function(e) { if (!document.querySelector('.profile-container').contains(e.target)) document.getElementById('profile-dropdown').classList.remove('active'); });
-    function logout() { localStorage.removeItem("user"); window.location.href = "index.html"; }
+    function logout() { localStorage.removeItem("admin_user"); window.location.href = "login-admin.html"; }
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     function showOverlay(text) { 
