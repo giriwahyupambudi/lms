@@ -977,7 +977,21 @@
           let prevMid = i > 0 ? i : null;
           let isMateriLocked = false;
 
-          let scoreBadge = hasScore ? `<span style="font-size:0.7rem; font-weight:700; color:#059669; background:#d1fae5; padding:4px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="check-circle" style="width:14px; height:14px;"></i> Point: ${scoreValue}</span>` : '';
+          let sVal = scoreValue ? scoreValue.toString() : "";
+          let fileUrl = "";
+          if (hasScore) {
+              let fileUrlMatch = sVal.match(/Terkirim \((http.*?)\)/i);
+              if (fileUrlMatch) {
+                  fileUrl = fileUrlMatch[1];
+                  sVal = "Terkirim";
+              } else if (sVal.includes("http")) { 
+                  fileUrl = sVal.substring(sVal.indexOf("http")).replace(')','');
+                  sVal = sVal.substring(0, sVal.indexOf("http")).trim();
+              }
+          }
+
+          let scoreBadge = hasScore ? `<span style="font-size:0.7rem; font-weight:700; color:#059669; background:#d1fae5; padding:4px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="check-circle" style="width:14px; height:14px;"></i> Point: ${sVal}</span>` : '';
+          
           let timeBadge = '';
           if (hasScore && timeValue) {
             if (!isNaN(timeValue) && timeValue.toString().trim() !== "") {
@@ -1008,6 +1022,15 @@
               : `<button class="btn-action btn-quiz" onclick="handleEvaluasi('${tipe}', '${mid}', encodeURIComponent(\`${m.judul || m.Judul || ("Materi " + (i + 1))}\`), ${i + 1})"><i data-lucide="${tipe === 'Kuis' ? 'edit-2' : (tipe.toLowerCase() === 'editor' ? 'type' : 'upload')}" style="width:14px"></i> ${hasScore ? 'Ulangi ' + tipe : 'Kerjakan ' + tipe}</button>`;
           }
 
+          let viewBtnHTML = "";
+          if (fileUrl) {
+              let previewUrl = fileUrl;
+              if (previewUrl.includes('drive.google.com/file/d/')) {
+                  previewUrl = previewUrl.replace(/\/view.*$/, '/preview');
+              }
+              viewBtnHTML = `<button class="btn-action" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; grid-column: 1 / -1; margin-top: 2px;" onclick="openViewModal('${previewUrl}')"><i data-lucide="eye" style="width:14px"></i> Lihat Dokumen Tugas Anda</button>`;
+          }
+
           let cardHTML = `
           <div class="course-card">
             <div class="course-header">
@@ -1026,6 +1049,7 @@
             <div class="course-actions">
               ${btnPelajari}
               ${btnKuis}
+              ${viewBtnHTML}
             </div>
           </div>
         `;
@@ -1280,7 +1304,39 @@
 
     function openMateri(id) { window.location.href = "materi.html?id=" + id; }
     function logout() { localStorage.removeItem("user"); window.location.href = "index.html"; }
+
+    function openViewModal(url) {
+      document.getElementById('viewFileModal').style.display = 'flex';
+      const iframe = document.getElementById('viewFileIframe');
+      const loader = document.getElementById('viewFileLoading');
+      iframe.src = ""; // Clear
+      loader.style.display = 'flex';
+      
+      iframe.onload = function() {
+        loader.style.display = 'none';
+      };
+      iframe.src = url;
+    }
   </script>
+
+  <!-- Modal Lihat File -->
+  <div id="viewFileModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.7); z-index:9999; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px);">
+    <div style="background:white; border-radius:16px; width:100%; max-width:800px; height:85vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);">
+      <div style="padding:16px 20px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; background:#f8fafc;">
+        <h3 style="margin:0; font-size:1.1rem; font-weight:600; display:flex; align-items:center; gap:8px; color:#1e293b;"><i data-lucide="file-check" style="color:#2563eb; width:20px; height:20px;"></i> Dokumen Tugas Anda</h3>
+        <button onclick="document.getElementById('viewFileModal').style.display='none'" style="background:none; border:none; cursor:pointer; color:#64748b; padding:6px; border-radius:8px; display:flex; align-items:center; justify-content:center; transition: background 0.2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='none'">
+          <i data-lucide="x" style="width:20px; height:20px;"></i>
+        </button>
+      </div>
+      <div style="flex:1; background:#f1f5f9; position:relative;">
+        <iframe id="viewFileIframe" style="width:100%; height:100%; border:none; position:relative; z-index:2;" src=""></iframe>
+        <div id="viewFileLoading" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); display:flex; flex-direction:column; align-items:center; gap:12px; z-index:1;">
+          <i data-lucide="loader-2" class="spin-anim" style="width:32px; height:32px; color:#2563eb;"></i>
+          <span style="font-weight:500; color:#64748b; font-size:0.9rem;">Memuat dokumen dari Google Drive...</span>
+        </div>
+      </div>
+    </div>
+  </div>
 
 </body>
 
