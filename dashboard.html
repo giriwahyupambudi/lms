@@ -1110,19 +1110,24 @@
     function parseTimeToSeconds(timeStr) {
       if (!timeStr) return 0;
       let s = timeStr.toString().replace(/^'/, '').trim();
-      if (s.includes("1899-12-29") || s.includes("Z")) return 0; // Filter data usang yang rusak karena format Google Sheets
+      
+      // Jika formatnya mirip timestamp tanggal (mengandung spasi, T, Z, atau -), ini adalah waktu submit tugas, BUKAN durasi pengerjaan.
+      if (s.includes("1899-12-29") || s.includes("Z") || s.includes("-") || s.includes("T") || s.includes(" ")) return 0;
+      
       const parts = s.split(":");
       if (parts.length === 2) return parseInt(parts[0]) * 60 + parseInt(parts[1]);
       if (parts.length === 3) return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
-      if (!isNaN(s) && s !== "") return parseInt(s); // Mendukung input angka urutan (misal: 1, 2, 3)
+      if (!isNaN(s) && s !== "") return parseInt(s);
       return 0;
     }
 
-    // Helper untuk mengubah detik jadi "MM:SS"
+    // Helper untuk mengubah detik jadi "MM:SS" atau "HH:MM:SS"
     function formatSecondsToTime(sec) {
-      const m = Math.floor(sec / 60).toString().padStart(2, '0');
+      if (sec === 0 || isNaN(sec)) return "00:00";
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60).toString().padStart(2, '0');
       const s = (sec % 60).toString().padStart(2, '0');
-      return `${m}:${s}`;
+      return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
     }
 
     function renderRanking(rawNilai, dataUser) {

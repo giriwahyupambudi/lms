@@ -1195,7 +1195,10 @@
     function parseTimeToSeconds(timeStr) {
       if (!timeStr) return 0;
       let s = timeStr.toString().replace(/^'/, '').trim();
-      if (s.includes("1899-12-29") || s.includes("Z")) return 0; // Filter data usang
+      
+      // Jika formatnya mirip timestamp tanggal (mengandung spasi, T, Z, atau -), ini adalah waktu submit tugas, BUKAN durasi pengerjaan.
+      if (s.includes("1899-12-29") || s.includes("Z") || s.includes("-") || s.includes("T") || s.includes(" ")) return 0;
+      
       const parts = s.split(":");
       if (parts.length === 2) return parseInt(parts[0]) * 60 + parseInt(parts[1]);
       if (parts.length === 3) return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
