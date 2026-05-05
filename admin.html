@@ -180,6 +180,7 @@
     <button class="nav-item" id="tabMateriD" onclick="showTab('materi')"><i data-lucide="book-open"></i> Kelola Materi</button>
     <button class="nav-item" id="tabNilaiD" onclick="showTab('nilai')"><i data-lucide="graduation-cap"></i> Input Nilai</button>
     <button class="nav-item" id="tabTugasD" onclick="showTab('tugas')"><i data-lucide="file-text"></i> Tugas</button>
+    <button class="nav-item" id="tabRankingD" onclick="showTab('ranking')"><i data-lucide="award"></i> Peringkat</button>
     <button class="nav-item" id="tabUsersD" onclick="showTab('users')"><i data-lucide="users"></i> Pengguna</button>
     <button class="nav-item" id="tabSettingsD" onclick="showTab('settings')"><i data-lucide="settings"></i> Pengaturan</button>
     <div style="flex:1"></div>
@@ -191,6 +192,7 @@
     <button class="nav-item" id="tabMateri" onclick="showTab('materi')"><i data-lucide="book-open"></i> Materi</button>
     <button class="nav-item" id="tabNilai" onclick="showTab('nilai')"><i data-lucide="graduation-cap"></i> Nilai</button>
     <button class="nav-item" id="tabTugas" onclick="showTab('tugas')"><i data-lucide="file-text"></i> Tugas</button>
+    <button class="nav-item" id="tabRanking" onclick="showTab('ranking')"><i data-lucide="award"></i> Peringkat</button>
     <button class="nav-item" id="tabUsers" onclick="showTab('users')"><i data-lucide="users"></i> Pengguna</button>
     <button class="nav-item" id="tabSettings" onclick="showTab('settings')"><i data-lucide="settings"></i> Pengaturan</button>
   </nav>
@@ -426,6 +428,41 @@
         </div>
       </section>
 
+      <!-- ================= SECTION: PERINGKAT ================= -->
+      <section id="rankingSection" style="display:none">
+        <div class="header-section">
+          <div>
+            <h1>Peringkat Siswa</h1>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Lihat peringkat (leaderboard) global seluruh siswa.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="filter-bar" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+            <div class="form-group" style="flex:1; min-width:150px; margin-bottom: 0;">
+              <label>Filter Kelas</label>
+              <select class="form-control" id="filterKelasRanking" onchange="renderRankingAdmin()"></select>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 50px;">Rank</th>
+                  <th>Nama Siswa</th>
+                  <th>Kelas</th>
+                  <th style="text-align:right">Total Point</th>
+                  <th style="text-align:right">Waktu (MM:SS)</th>
+                </tr>
+              </thead>
+              <tbody id="tabelRankingBody">
+                <tr><td colspan="5" style="text-align:center;">Memuat data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <!-- ================= SECTION: PENGGUNA ================= -->
       <section id="usersSection" style="display:none">
         <div class="header-section">
@@ -614,10 +651,10 @@
     };
 
     function showTab(tabName) {
-      ['dashboardSection', 'materiSection', 'nilaiSection', 'usersSection', 'settingsSection', 'tugasSection'].forEach(s => document.getElementById(s).style.display = 'none');
+      ['dashboardSection', 'materiSection', 'nilaiSection', 'usersSection', 'settingsSection', 'tugasSection', 'rankingSection'].forEach(s => document.getElementById(s).style.display = 'none');
       document.getElementById(tabName + 'Section').style.display = 'block';
       
-      ['tabDashboard', 'tabMateri', 'tabNilai', 'tabUsers', 'tabSettings', 'tabTugas'].forEach(id => {
+      ['tabDashboard', 'tabMateri', 'tabNilai', 'tabUsers', 'tabSettings', 'tabTugas', 'tabRanking'].forEach(id => {
         let el = document.getElementById(id); if(el) el.classList.remove('active');
         let elD = document.getElementById(id+'D'); if(elD) elD.classList.remove('active');
       });
@@ -664,6 +701,8 @@
         populateFilterNilai();
         populateFilterTugas();
         renderTableTugas();
+        populateFilterRanking();
+        renderRankingAdmin();
         
         hideOverlay();
       } catch (e) {
@@ -1138,6 +1177,145 @@
       });
       document.getElementById('tabelTugasBody').innerHTML = html || '<tr><td colspan="6" style="text-align:center">Tidak ada data tugas yang sesuai.</td></tr>';
       restoreSortIcons();
+    }
+
+    // ============================================
+    // RENDER RANKING ADMIN
+    // ============================================
+    // Helper untuk mengubah "MM:SS" jadi detik
+    function parseTimeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      let s = timeStr.toString().replace(/^'/, '').trim();
+      if (s.includes("1899-12-29") || s.includes("Z")) return 0; // Filter data usang
+      const parts = s.split(":");
+      if (parts.length === 2) return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+      if (parts.length === 3) return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+      if (!isNaN(s) && s !== "") return parseInt(s);
+      return 0;
+    }
+
+    // Helper untuk mengubah detik jadi "MM:SS"
+    function formatSecondsToTime(sec) {
+      const m = Math.floor(sec / 60).toString().padStart(2, '0');
+      const s = (sec % 60).toString().padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    function populateFilterRanking() {
+      let selKelas = document.getElementById('filterKelasRanking');
+      if (!selKelas) return;
+      let oldKelas = selKelas.value;
+      
+      let kls = new Set();
+      dataUser.forEach(u => {
+         let k = getVal(u, ['kelas', 'tingkat']);
+         if(k && getVal(u, ['role', 'peran']) !== "admin") kls.add(k.toString().trim());
+      });
+      
+      selKelas.innerHTML = '<option value="">Semua Kelas</option>';
+      Array.from(kls).sort().forEach(k => {
+         selKelas.innerHTML += `<option value="${k}">${k}</option>`;
+      });
+      
+      if (oldKelas) selKelas.value = oldKelas;
+    }
+
+    function renderRankingAdmin() {
+      const selKelas = document.getElementById('filterKelasRanking').value;
+      
+      const userMap = new Map();
+      
+      // Filter user (hanya siswa, bukan admin)
+      dataUser.forEach(u => {
+        let k = getVal(u, ['kelas', 'tingkat']) || "Tanpa Kelas";
+        if (selKelas && selKelas !== "" && k !== selKelas) return; // filter kelas
+        
+        const uname = (getVal(u, ['username', 'nisn']) || "").toString().trim();
+        if (uname) {
+          userMap.set(uname, {
+            username: uname,
+            nama: getVal(u, ['nama', 'namalengkap', 'namasiswa']) || uname,
+            kelas: k,
+            quizzes: new Map()
+          });
+        }
+      });
+
+      // Gabungkan data nilai & tugas
+      let gabunganNilai = (Array.isArray(dataNilai) ? dataNilai : []).concat(Array.isArray(dataLogTugas) ? dataLogTugas : []);
+
+      gabunganNilai.forEach(n => {
+        let pTipe = getVal(n, ['tipe', 'tipeevaluasi', 'jenis']);
+        if (pTipe && pTipe.toString().toLowerCase() === "materi") return; 
+
+        const uname = (getVal(n, ['username', 'nisn']) || "").toString().trim();
+        if (!userMap.has(uname)) return; // hanya proses siswa yang sesuai filter
+
+        const mid = (getVal(n, ['id_materi', 'idmateri', 'materi', 'modul', 'id']) || "").toString();
+        let pNilai = getVal(n, ['nilai', 'skor', 'point']);
+        
+        if (pNilai === undefined || pNilai === null || pNilai.toString().trim() === "" || pNilai.toString().includes("Terkirim")) return;
+
+        const score = parseInt(pNilai) || 0;
+        const waktuSec = parseTimeToSeconds(getVal(n, ['waktu', 'timestamp']));
+
+        const userObj = userMap.get(uname);
+        const existing = userObj.quizzes.get(mid);
+        if (!existing) {
+          userObj.quizzes.set(mid, { score, waktuSec });
+        } else {
+          if (score > existing.score) {
+            userObj.quizzes.set(mid, { score, waktuSec });
+          } else if (score === existing.score && waktuSec < existing.waktuSec) {
+            userObj.quizzes.set(mid, { score, waktuSec });
+          }
+        }
+      });
+
+      let aggregatedData = [];
+      userMap.forEach(userObj => {
+        let totalScore = 0;
+        let totalTimeSec = 0;
+        userObj.quizzes.forEach(q => {
+          totalScore += q.score;
+          totalTimeSec += q.waktuSec;
+        });
+
+        if (totalScore > 0) { // Hanya tampilkan yang punya poin
+          aggregatedData.push({
+            nama: userObj.nama,
+            kelas: userObj.kelas,
+            nilai: totalScore,
+            waktuSec: totalTimeSec,
+            waktu: formatSecondsToTime(totalTimeSec)
+          });
+        }
+      });
+
+      // Sort: Nilai Tertinggi -> Waktu Tercepat
+      aggregatedData.sort((a, b) => {
+        if (b.nilai !== a.nilai) return b.nilai - a.nilai;
+        return a.waktuSec - b.waktuSec;
+      });
+
+      let html = '';
+      aggregatedData.forEach((d, i) => {
+        let rankBadge = '';
+        if (i === 0) rankBadge = '<span style="background:#fef08a; color:#854d0e; padding:2px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;"><i class="fas fa-trophy"></i> 1</span>';
+        else if (i === 1) rankBadge = '<span style="background:#e2e8f0; color:#475569; padding:2px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;"><i class="fas fa-medal"></i> 2</span>';
+        else if (i === 2) rankBadge = '<span style="background:#fed7aa; color:#9a3412; padding:2px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;"><i class="fas fa-medal"></i> 3</span>';
+        else rankBadge = `<span style="font-weight:600; color:var(--text-muted)">${i + 1}</span>`;
+
+        html += `<tr>
+          <td style="text-align:center">${rankBadge}</td>
+          <td style="font-weight:600;">${d.nama}</td>
+          <td>${d.kelas}</td>
+          <td style="text-align:right; font-weight:700; color:var(--primary)">${d.nilai}</td>
+          <td style="text-align:right; font-size:0.85rem; color:var(--text-muted)">${d.waktu}</td>
+        </tr>`;
+      });
+
+      document.getElementById('tabelRankingBody').innerHTML = html || '<tr><td colspan="5" style="text-align:center">Belum ada data peringkat untuk kelas ini.</td></tr>';
     }
 
     // ============================================
