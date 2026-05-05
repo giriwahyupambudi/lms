@@ -105,10 +105,12 @@
                 <p id="error-text" class="text-sm font-medium text-red-800"></p>
             </div>
 
-            <div id="action-container" class="mt-6 flex gap-4">
-                <button id="upload-btn" class="flex-1 bg-blue-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center">
-                    <i data-lucide="send" class="w-5 h-5 mr-2" id="btn-icon"></i>
-                    <span id="btn-text">Kirim Tugas</span>
+            <div id="action-container" class="mt-6 flex justify-end gap-4">
+                <button onclick="window.history.back()" class="px-6 py-3 rounded-xl font-medium text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 shadow-sm transition-all flex items-center gap-2">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i> Batal
+                </button>
+                <button id="preview-btn" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-sm transition-all flex items-center gap-2 transform active:scale-95">
+                    <i id="btn-icon" data-lucide="eye" class="w-5 h-5"></i> <span id="btn-text">Preview Tugas</span>
                     <div id="btn-loader" class="spinner hidden ml-2" style="border-top-color: white;"></div>
                 </button>
             </div>
@@ -140,6 +142,35 @@
             </div>
 
         </main>
+    </div>
+
+    <!-- PREVIEW MODAL -->
+    <div id="preview-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm transition-all">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden transform transition-all">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2"><i data-lucide="file-check" class="w-5 h-5 text-blue-600"></i> Preview Tugas</h3>
+                <button onclick="closePreview()" class="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-200">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="flex-1 bg-slate-200 relative flex flex-col">
+                <iframe id="preview-iframe" class="w-full h-full border-0"></iframe>
+                <!-- Loading state -->
+                <div id="preview-loading" class="absolute inset-0 bg-white flex flex-col items-center justify-center z-10">
+                    <i data-lucide="loader-2" class="w-10 h-10 animate-spin text-blue-600 mb-4"></i>
+                    <p class="text-slate-600 font-medium">Menyusun pratinjau dokumen...</p>
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-200 bg-white flex flex-wrap justify-between items-center gap-4">
+                <p class="text-sm text-slate-500 hidden sm:block"><i data-lucide="info" class="w-4 h-4 inline-block -mt-1 mr-1"></i> Pastikan halaman tidak terpotong sebelum mengirim.</p>
+                <div class="flex gap-3 w-full sm:w-auto">
+                    <button onclick="closePreview()" class="flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-medium text-slate-700 hover:bg-slate-100 transition-colors border border-slate-300">Edit Lagi</button>
+                    <button id="confirm-send-btn" onclick="sendTaskFromPreview()" class="flex-1 sm:flex-none px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium flex justify-center items-center gap-2 transition-colors shadow-sm">
+                        <i data-lucide="send" class="w-4 h-4"></i> Kirim Sekarang
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -200,7 +231,7 @@
             });
             // -------------------------------
 
-            document.getElementById('upload-btn').addEventListener('click', processAndUpload);
+            document.getElementById('preview-btn').addEventListener('click', generatePreview);
         };
 
         function showError(msg) {
@@ -213,7 +244,9 @@
             document.getElementById('error-box').classList.add('hidden');
         }
 
-        async function processAndUpload() {
+        let currentPdfBase64 = null;
+
+        async function generatePreview() {
             if (quill.getText().trim().length === 0 && !quill.root.innerHTML.includes('<img')) {
                 showError("Tugas masih kosong. Silakan isi terlebih dahulu.");
                 return;
@@ -221,17 +254,22 @@
 
             hideError();
             
-            const btn = document.getElementById('upload-btn');
+            const btn = document.getElementById('preview-btn');
             const btnText = document.getElementById('btn-text');
             const btnLoader = document.getElementById('btn-loader');
             const btnIcon = document.getElementById('btn-icon');
             
             btn.disabled = true;
-            btnText.innerText = "Memproses Dokumen...";
+            btnText.innerText = "Mempersiapkan...";
             btnIcon.classList.add('hidden');
             btnLoader.classList.remove('hidden');
 
             try {
+                // Tampilkan Modal Loading
+                document.getElementById('preview-modal').classList.remove('hidden');
+                document.getElementById('preview-loading').style.display = 'flex';
+                document.getElementById('preview-iframe').src = "";
+                
                 // 1. Prepare HTML content for PDF
                 const pdfWrapper = document.getElementById('pdf-content-wrapper');
                 document.getElementById('pdf-title').innerText = decodeURIComponent(titleParam);
@@ -241,7 +279,6 @@
                 document.getElementById('pdf-date').innerText = `Waktu Pengumpulan: ${now.toLocaleDateString('id-ID')} ${now.toLocaleTimeString('id-ID')}`;
                 
                 document.getElementById('pdf-body').innerHTML = quill.root.innerHTML;
-
 
                 // Wait a moment for images to render
                 await new Promise(r => setTimeout(r, 500));
@@ -258,13 +295,39 @@
 
                 btnText.innerText = "Menyusun PDF...";
                 
-                // Get PDF as base64 data URI
-                const pdfBase64 = await html2pdf().set(opt).from(pdfWrapper).outputPdf('datauristring');
-
-
-                // 3. Upload to server
-                btnText.innerText = "Mengunggah Tugas...";
+                // Generate PDF Base64
+                currentPdfBase64 = await html2pdf().set(opt).from(pdfWrapper).outputPdf('datauristring');
                 
+                // Tampilkan di Iframe
+                document.getElementById('preview-loading').style.display = 'none';
+                document.getElementById('preview-iframe').src = currentPdfBase64;
+
+            } catch (error) {
+                console.error(error);
+                showError("Gagal memproses pratinjau: " + error.message);
+                closePreview();
+            } finally {
+                btn.disabled = false;
+                btnText.innerText = "Preview Tugas";
+                btnIcon.classList.remove('hidden');
+                btnLoader.classList.add('hidden');
+            }
+        }
+
+        window.closePreview = function() {
+            document.getElementById('preview-modal').classList.add('hidden');
+        };
+
+        async function sendTaskFromPreview() {
+            if (!currentPdfBase64) return;
+            
+            const btn = document.getElementById('confirm-send-btn');
+            const originalBtnHtml = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Mengirim...`;
+            btn.disabled = true;
+            lucide.createIcons();
+
+            try {
                 const payload = {
                     action: 'uploadTugas',
                     data: {
@@ -274,7 +337,7 @@
                         id_materi: idMateri,
                         judul: decodeURIComponent(titleParam),
                         filename: userData.nama.split(" ")[0] + "_" + idMateri + "_Tugas_Editor.pdf",
-                        base64: pdfBase64
+                        base64: currentPdfBase64
                     }
                 };
 
@@ -290,6 +353,7 @@
                     localStorage.removeItem(`draft_editor_${userData.username}_${idMateri}`);
 
                     // Success
+                    document.getElementById('preview-modal').classList.add('hidden');
                     document.getElementById('editor-wrapper').classList.add('hidden');
                     document.getElementById('action-container').classList.add('hidden');
                     
@@ -303,12 +367,10 @@
 
             } catch (error) {
                 console.error(error);
-                showError(error.message || "Terjadi kesalahan saat mengonversi atau mengunggah. Pastikan gambar tidak terlalu besar.");
+                alert("Terjadi kesalahan saat mengunggah. Silakan coba lagi.");
+                btn.innerHTML = originalBtnHtml;
                 btn.disabled = false;
-                btnText.innerText = "Coba Kirim Lagi";
-                btnIcon.classList.remove('hidden');
-                btnLoader.classList.add('hidden');
-                document.getElementById('pdf-content-wrapper').style.display = 'none';
+                lucide.createIcons();
             }
         }
     </script>
