@@ -1202,7 +1202,9 @@
       const parts = s.split(":");
       if (parts.length === 2) return parseInt(parts[0]) * 60 + parseInt(parts[1]);
       if (parts.length === 3) return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
-      if (!isNaN(s) && s !== "") return parseInt(s);
+      
+      // Jika input hanya berupa angka urutan maju (misal "1", "2"), konversikan menjadi menit (dikali 60 detik)
+      if (!isNaN(s) && s !== "") return parseInt(s) * 60;
       return 0;
     }
 
