@@ -947,19 +947,7 @@
           const mid = (i + 1).toString();
 
           let isMateriLocked = false;
-          if (i > 0) {
-            let prevMid = i.toString(); // i is already (i+1)-1
-            let prevM = dataMateri[i - 1];
-            let prevTipeRaw = getVal(prevM, ['tipeevaluasi', 'tipe', 'evaluasi', 'jenis']);
-            let prevTipe = (prevTipeRaw && prevTipeRaw.toString().trim() !== "") ? prevTipeRaw.toString().trim() : ((i - 1) % 2 === 0 ? "Kuis" : "Tugas");
-            prevTipe = prevTipe.charAt(0).toUpperCase() + prevTipe.slice(1).toLowerCase();
-
-            // Praktik tidak mengunci materi selanjutnya meskipun belum dinilai
-            if (prevTipe !== "Praktik" && prevTipe !== "Ujian praktik") {
-              if (!quizScores.has(prevMid)) isMateriLocked = true;
-            }
-          }
-
+          
           if (!isMateriLocked) {
             if (localStorage.getItem(`opened_materi_${user.username}_${mid}`)) openedMaterials.add(mid);
           } else {
@@ -988,16 +976,6 @@
           // LOGIKA PENGUNCIAN:
           let prevMid = i > 0 ? i : null;
           let isMateriLocked = false;
-          if (i > 0) {
-            let prevM = dataMateri[i - 1];
-            let prevTipeRaw = getVal(prevM, ['tipeevaluasi', 'tipe', 'evaluasi', 'jenis']);
-            let prevTipe = (prevTipeRaw && prevTipeRaw.toString().trim() !== "") ? prevTipeRaw.toString().trim() : ((i - 1) % 2 === 0 ? "Kuis" : "Tugas");
-            prevTipe = prevTipe.charAt(0).toUpperCase() + prevTipe.slice(1).toLowerCase();
-
-            if (prevTipe !== "Praktik" && prevTipe !== "Ujian praktik" && !quizScores.has(prevMid.toString()) && !hasScore) {
-              isMateriLocked = true;
-            }
-          }
 
           let scoreBadge = hasScore ? `<span style="font-size:0.7rem; font-weight:700; color:#059669; background:#d1fae5; padding:4px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="check-circle" style="width:14px; height:14px;"></i> Point: ${scoreValue}</span>` : '';
           let timeBadge = '';
