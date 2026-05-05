@@ -151,7 +151,7 @@
                 </div>
 
                 <!-- Container Utama -->
-                <div class="w-full py-0 pb-24 sm:py-8 sm:pb-8 flex flex-col items-center">
+                <div class="w-full py-0 pb-16 sm:py-8 sm:pb-8 flex flex-col items-center">
                     <div class="w-full max-w-[210mm] mb-4 text-center px-4 hidden sm:block">
                         <p class="text-sm font-medium text-slate-500">Lembar Kerja Tugas (Otomatis menyesuaikan layar)</p>
                     </div>
@@ -160,7 +160,7 @@
                     <div id="pdf-export-area" class="bg-white shadow-none sm:shadow-lg shrink-0 w-full sm:w-[210mm] sm:p-[12.7mm]" style="max-width: 210mm; min-height: 297mm; padding: 1rem; box-sizing: border-box; display: flex; flex-direction: column;">
                     
                     <!-- Kop Surat Dinamis -->
-                    <div style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+                    <div id="dynamic-kop" class="hidden sm:block" style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
                         <h2 id="doc-title" style="margin: 0; font-size: 22px; font-weight: bold; font-family: 'Inter', sans-serif;">Judul Tugas</h2>
                         <p id="doc-student" style="margin: 6px 0 0 0; font-size: 14px; color: #333; font-family: 'Inter', sans-serif;">Nama: - | Kelas: -</p>
                         <p id="doc-date" style="margin: 6px 0 0 0; font-size: 14px; color: #333; font-family: 'Inter', sans-serif;">Waktu: -</p>
@@ -172,12 +172,12 @@
             </div>
 
             <!-- Tombol Aksi Bawah -->
-            <div id="action-container" class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-40 flex justify-end gap-3 sm:relative sm:mt-8 sm:border-0 sm:shadow-none sm:bg-transparent sm:px-4 sm:w-full sm:mx-auto">
-                <button onclick="window.history.back()" class="flex-1 sm:flex-none px-4 py-3 rounded-xl font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center justify-center gap-2">
+            <div id="action-container" class="fixed bottom-0 left-0 right-0 p-3 bg-white border-t border-slate-200 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-40 flex justify-end gap-2 sm:relative sm:mt-8 sm:border-0 sm:shadow-none sm:bg-transparent sm:px-4 sm:w-full sm:mx-auto sm:gap-3">
+                <button onclick="window.history.back()" class="flex-1 sm:flex-none px-3 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base">
                     Batal
                 </button>
-                <button id="preview-btn" class="flex-[2] sm:flex-none px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-sm transition-all flex items-center justify-center gap-2 transform active:scale-95">
-                    <i id="btn-icon" data-lucide="send" class="w-5 h-5"></i> <span id="btn-text">Kirim</span>
+                <button id="preview-btn" class="flex-[2] sm:flex-none px-3 py-2 sm:px-4 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg sm:rounded-xl font-semibold shadow-sm transition-all flex items-center justify-center gap-1.5 sm:gap-2 transform active:scale-95 text-sm sm:text-base">
+                    <i id="btn-icon" data-lucide="send" class="w-4 h-4"></i> <span id="btn-text">Kirim</span>
                     <div id="btn-loader" class="spinner hidden ml-2 w-4 h-4" style="border-top-color: white;"></div>
                 </button>
             </div>
@@ -231,14 +231,14 @@
                 </div>
 
                 <!-- Animasi Loading Premium -->
-                <div id="preview-loading" class="absolute inset-0 bg-slate-50 flex flex-col items-center justify-center z-20">
-                    <div class="relative flex items-center justify-center w-24 h-24 mb-6">
+                <div id="preview-loading" class="absolute inset-0 bg-slate-50 flex flex-col items-center justify-center z-20 p-4">
+                    <div class="relative flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 mb-4 sm:mb-6 shrink-0">
                         <div class="absolute inset-0 border-4 border-slate-200 rounded-2xl shadow-inner"></div>
                         <div class="absolute inset-0 border-4 border-blue-600 rounded-2xl border-t-transparent animate-spin shadow-[0_0_15px_rgba(37,99,235,0.3)]"></div>
-                        <i data-lucide="file-check-2" class="w-10 h-10 text-blue-600 animate-pulse"></i>
+                        <i data-lucide="file-check-2" class="w-8 h-8 sm:w-10 sm:h-10 text-blue-600 animate-pulse"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-slate-800 mb-2">Menyusun Dokumen</h3>
-                    <p class="text-slate-500 font-medium text-center max-w-xs leading-relaxed">Mohon tunggu sebentar, sistem sedang mengunci format halaman dan merakit PDF Anda...</p>
+                    <h3 class="text-lg sm:text-xl font-bold text-slate-800 mb-2 text-center">Menyusun Dokumen</h3>
+                    <p class="text-xs sm:text-sm text-slate-500 font-medium text-center max-w-xs leading-relaxed">Mohon tunggu sebentar, sistem sedang mengunci format halaman dan merakit PDF Anda...</p>
                 </div>
             </div>
             <div class="p-4 border-t border-slate-200 bg-white flex flex-wrap justify-between items-center gap-4">
@@ -444,6 +444,14 @@
                 // Ambil elemen area kertas utuh
                 const exportArea = document.getElementById('pdf-export-area');
 
+                // Tampilkan kembali kop surat dinamis (jika disembunyikan di mobile)
+                const dynamicKop = document.getElementById('dynamic-kop');
+                let kopWasHidden = false;
+                if (dynamicKop && dynamicKop.classList.contains('hidden')) {
+                    dynamicKop.classList.remove('hidden', 'sm:block'); // Hapus class tailwind agar tampil saat difoto
+                    kopWasHidden = true;
+                }
+
                 // Paksa ukuran menjadi area cetak asli (tanpa margin) saat difoto agar margin tiap halaman merata
                 const origWidth = exportArea.style.width;
                 const origMaxWidth = exportArea.style.maxWidth;
@@ -476,6 +484,11 @@
                 exportArea.style.width = origWidth;
                 exportArea.style.maxWidth = origMaxWidth;
                 exportArea.style.padding = origPadding;
+                
+                // Sembunyikan kembali kop surat dinamis (jika sebelumnya disembunyikan)
+                if (kopWasHidden && dynamicKop) {
+                    dynamicKop.classList.add('hidden', 'sm:block');
+                }
                 
                 // Kembalikan posisi scroll
                 window.scrollTo(0, originalScrollY);
