@@ -826,10 +826,14 @@
         // Gabungkan logTugas ke dataListNilai agar progress terbaca.
         // Ubah link_tugas menjadi nilai agar dikenali oleh renderMateri
         if (dataLogTugas && dataLogTugas.length > 0) {
-           const mappedTugas = dataLogTugas.map(t => ({
-              ...t,
-              nilai: t.link_tugas ? `Terkirim (${t.link_tugas})` : "Terkirim"
-           }));
+           const mappedTugas = dataLogTugas.map(t => {
+              // Cari berbagai kemungkinan nama kolom untuk URL
+              let url = t.link_tugas || t.linktugas || t.url_file || t.urlfile || t.link || t['link tugas'] || t['url file'] || t.file || "";
+              return {
+                  ...t,
+                  nilai: url ? `Terkirim (${url})` : "Terkirim"
+              };
+           });
            dataListNilai = dataListNilai.concat(mappedTugas);
         }
 
@@ -984,9 +988,11 @@
               if (fileUrlMatch) {
                   fileUrl = fileUrlMatch[1];
                   sVal = "Terkirim";
-              } else if (sVal.includes("http")) { 
-                  fileUrl = sVal.substring(sVal.indexOf("http")).replace(')','');
-                  sVal = sVal.substring(0, sVal.indexOf("http")).trim();
+              } else if (sVal.toLowerCase().includes("http")) { 
+                  let httpIdx = sVal.toLowerCase().indexOf("http");
+                  fileUrl = sVal.substring(httpIdx).replace(')','').trim();
+                  sVal = sVal.substring(0, httpIdx).replace('(', '').trim();
+                  if (!sVal) sVal = "Terkirim";
               }
           }
 
