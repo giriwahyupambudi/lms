@@ -232,7 +232,7 @@
         if (match) embed = `<iframe src="https://drive.google.com/file/d/${match[0]}/preview"></iframe>`;
       } 
       else if (link.toLowerCase().includes(".pdf")) {
-        embed = `<iframe src="${link}"></iframe>`;
+        embed = `<iframe src="${link}#view=FitH&toolbar=0"></iframe>`;
       }
 
       if (embed) {
