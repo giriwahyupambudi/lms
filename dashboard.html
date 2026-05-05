@@ -905,6 +905,7 @@
         // Evaluasi (Kuis/Tugas) yang sudah selesai diambil dari server beserta nilai dan waktunya
         const quizScores = new Map();
         const quizTimes = new Map();
+        const quizRawScores = new Map();
 
         userProgress.filter(p => {
           let pTipe = getVal(p, ['tipe', 'tipeevaluasi', 'jenis']);
@@ -920,6 +921,7 @@
               return;
             }
 
+            const rawVal = pNilai.toString();
             const score = parseInt(pNilai) || 0;
 
             let pWaktu = getVal(p, ['waktu', 'timestamp']);
@@ -927,12 +929,22 @@
             if (timeStr.includes("1899-12-29") || timeStr.includes("Z")) timeStr = "00:00";
 
             // Simpan nilai tertinggi jika dikerjakan berkali-kali
-            if (!quizScores.has(mid) || score > quizScores.get(mid)) {
+            // Prioritaskan skor yang lebih besar, atau rawVal yang mengandung http jika skor sama (kasus tugas)
+            if (!quizScores.has(mid)) {
               quizScores.set(mid, score);
               quizTimes.set(mid, timeStr);
-            } else if (score === quizScores.get(mid) && timeStr < quizTimes.get(mid)) {
-              // Jika nilai sama, ambil waktu tercepat
+              quizRawScores.set(mid, rawVal);
+            } else if (score > quizScores.get(mid)) {
+              quizScores.set(mid, score);
               quizTimes.set(mid, timeStr);
+              quizRawScores.set(mid, rawVal);
+            } else if (score === quizScores.get(mid)) {
+              if (timeStr < quizTimes.get(mid)) {
+                quizTimes.set(mid, timeStr);
+                quizRawScores.set(mid, rawVal);
+              } else if (rawVal.includes("http") && !quizRawScores.get(mid).includes("http")) {
+                quizRawScores.set(mid, rawVal);
+              }
             }
           }
         });
@@ -975,13 +987,14 @@
           // SKOR
           let hasScore = quizScores.has(mid.toString());
           let scoreValue = hasScore ? quizScores.get(mid.toString()) : null;
+          let rawScoreValue = hasScore ? quizRawScores.get(mid.toString()) : "";
           let timeValue = hasScore ? quizTimes.get(mid.toString()) : null;
 
           // LOGIKA PENGUNCIAN:
           let prevMid = i > 0 ? i : null;
           let isMateriLocked = false;
 
-          let sVal = scoreValue ? scoreValue.toString() : "";
+          let sVal = rawScoreValue;
           let fileUrl = "";
           if (hasScore) {
               let fileUrlMatch = sVal.match(/Terkirim \((http.*?)\)/i);
@@ -994,6 +1007,7 @@
                   sVal = sVal.substring(0, httpIdx).replace('(', '').trim();
                   if (!sVal) sVal = "Terkirim";
               }
+              if (sVal === "0" && fileUrl === "") sVal = "0"; // Handle explicit 0 score
           }
 
           let scoreBadge = hasScore ? `<span style="font-size:0.7rem; font-weight:700; color:#059669; background:#d1fae5; padding:4px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="check-circle" style="width:14px; height:14px;"></i> Point: ${sVal}</span>` : '';

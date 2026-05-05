@@ -257,6 +257,7 @@
                     kelas: userData.kelas || userData.tingkat || "-",
                     id_materi: idMateri,
                     judul: decodeURIComponent(titleParam),
+                    tipe: urlParams.get('tipe') || "Tugas",
                     filename: userData.nama.split(" ")[0] + "_" + idMateri + "_" + selectedFile.name,
                     base64: base64File
                 }

@@ -245,6 +245,15 @@ function doPost(e) {
          var blob = Utilities.newBlob(byteCharacters, type, pData.filename);
          
          var file = folder.createFile(blob);
+         
+         // Atur izin file agar bisa dilihat oleh siapa saja yang memiliki link (tanpa harus login Google)
+         try {
+             file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+         } catch (sharingError) {
+             // Abaikan jika akun Google Workspace sekolah melarang berbagi file publik
+             Logger.log("Gagal set izin sharing: " + sharingError.toString());
+         }
+         
          var fileUrl = file.getUrl();
          
          // Simpan record ke logTugas
@@ -263,7 +272,7 @@ function doPost(e) {
             pData.kelas || "-",
             pData.id_materi || "-",
             pData.judul || "Tugas",
-            "Tugas",
+            pData.tipe || "Tugas",
             fileUrl,
             timeStr
          ]);

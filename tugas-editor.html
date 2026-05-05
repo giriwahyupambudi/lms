@@ -65,10 +65,16 @@
         .pdf-header h2 { margin: 0; font-size: 22px; font-weight: bold; }
         .pdf-header p { margin: 6px 0 0 0; font-size: 14px; color: #333; }
         
-        /* Cegah gambar terpotong horizontal di PDF */
-        #pdf-body img {
-            max-width: 100% !important;
-            height: auto !important;
+        /* Cegah elemen terpotong horizontal saat berganti halaman di PDF */
+        #pdf-export-area img,
+        #pdf-export-area p,
+        #pdf-export-area li,
+        #pdf-export-area h1,
+        #pdf-export-area h2,
+        #pdf-export-area h3,
+        #pdf-export-area .header-info {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
         }
     </style>
 </head>
@@ -76,7 +82,7 @@
 
     <div class="max-w-4xl mx-auto pb-24 min-h-screen flex flex-col">
         <!-- Header -->
-        <header class="px-4 py-4 flex items-center justify-between bg-white border-b border-slate-100 shadow-sm sticky top-0 z-10">
+        <header class="px-4 py-4 flex items-center justify-between bg-white border-b border-slate-100 shadow-sm sticky top-0 z-30">
             <button onclick="history.back()" class="p-2 hover:bg-slate-100 rounded-full transition-colors">
                 <i data-lucide="arrow-left" class="w-6 h-6 text-slate-600"></i>
             </button>
@@ -90,33 +96,51 @@
         <!-- Main Content -->
         <main class="flex-1 px-4 py-6 flex flex-col">
             
-            <div id="editor-wrapper" class="bg-white rounded-xl shadow-sm border border-slate-100 animate-fade-in flex flex-col">
-                <div class="p-4 border-b border-slate-100 bg-blue-50/50 rounded-t-xl">
-                    <p class="text-sm text-slate-600">Ketik jawaban tugas Anda di bawah ini. Anda dapat <b>menyisipkan gambar</b> (copy-paste) dan mengatur format teks.</p>
-                </div>
+            <div id="editor-wrapper" class="bg-slate-200 rounded-xl shadow-inner border border-slate-300 animate-fade-in flex flex-col items-center relative overflow-hidden">
                 
-                <!-- The text editor -->
-                <div id="editor-container"></div>
+                <!-- Custom Sticky Toolbar -->
+                <div id="toolbar-container" class="w-full bg-white border-b border-slate-300 sticky top-0 z-20 shadow-sm flex justify-center py-2">
+                    <!-- Quill akan otomatis mengisi div ini jika dikonfigurasi -->
+                </div>
+
+                <div class="w-full py-8 flex flex-col items-center">
+                    <div class="w-full max-w-[210mm] mb-4 text-center">
+                        <p class="text-sm font-medium text-slate-500">Lembar Kerja A4</p>
+                    </div>
+
+                    <!-- Kertas A4 Virtual -->
+                    <div id="pdf-export-area" class="bg-white shadow-lg" style="width: 210mm; min-height: 297mm; padding: 25.4mm; box-sizing: border-box; display: flex; flex-direction: column;">
+                    
+                    <!-- Kop Surat Dinamis -->
+                    <div style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+                        <h2 id="doc-title" style="margin: 0; font-size: 22px; font-weight: bold; font-family: 'Inter', sans-serif;">Judul Tugas</h2>
+                        <p id="doc-student" style="margin: 6px 0 0 0; font-size: 14px; color: #333; font-family: 'Inter', sans-serif;">Nama: - | Kelas: -</p>
+                        <p id="doc-date" style="margin: 6px 0 0 0; font-size: 14px; color: #333; font-family: 'Inter', sans-serif;">Waktu: -</p>
+                    </div>
+
+                    <!-- The text editor -->
+                    <div id="editor-container" style="flex: 1; border: none !important; font-family: 'Inter', sans-serif;"></div>
+                </div>
             </div>
 
-            <!-- Error Message Box -->
-            <div id="error-box" class="hidden mt-4 p-4 bg-red-50 rounded-xl border border-red-100 flex items-start gap-3">
-                <i data-lucide="alert-circle" class="w-5 h-5 text-red-500 shrink-0 mt-0.5"></i>
-                <p id="error-text" class="text-sm font-medium text-red-800"></p>
-            </div>
-
-            <div id="action-container" class="mt-6 flex justify-end gap-4">
+            <div id="action-container" class="mt-8 flex justify-end gap-4 w-full max-w-[210mm] mx-auto">
                 <button onclick="window.history.back()" class="px-6 py-3 rounded-xl font-medium text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 shadow-sm transition-all flex items-center gap-2">
                     <i data-lucide="arrow-left" class="w-5 h-5"></i> Batal
                 </button>
                 <button id="preview-btn" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-sm transition-all flex items-center gap-2 transform active:scale-95">
                     <i id="btn-icon" data-lucide="eye" class="w-5 h-5"></i> <span id="btn-text">Preview Tugas</span>
-                    <div id="btn-loader" class="spinner hidden ml-2" style="border-top-color: white;"></div>
+                    <div id="btn-loader" class="spinner hidden ml-2 w-4 h-4" style="border-top-color: white;"></div>
                 </button>
             </div>
 
+            <!-- Error Message Box -->
+            <div id="error-box" class="hidden mt-4 mx-auto w-full max-w-3xl p-4 bg-red-50 rounded-xl border border-red-100 flex items-start gap-3">
+                <i data-lucide="alert-circle" class="w-5 h-5 text-red-500 shrink-0 mt-0.5"></i>
+                <p id="error-text" class="text-sm font-medium text-red-800"></p>
+            </div>
+
             <!-- Success Container -->
-            <div id="success-container" class="hidden flex-col items-center justify-center p-8 mt-4 text-center animate-fade-in bg-white rounded-2xl shadow-sm border border-slate-100">
+            <div id="success-container" class="hidden flex-col items-center justify-center p-8 mt-8 mx-auto w-full max-w-3xl text-center animate-fade-in bg-white rounded-2xl shadow-sm border border-slate-100">
                 <div class="w-20 h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mb-4 shadow-inner">
                     <i data-lucide="check-circle" class="w-10 h-10"></i>
                 </div>
@@ -128,18 +152,7 @@
                 </button>
             </div>
             
-            <!-- Hidden element for PDF generation to include student info header -->
-            <!-- Dibuat absolute dengan z-index di bawah untuk rendering html2pdf tanpa terpotong (menghindari left negative) -->
-            <div id="pdf-capture-container" style="display: none; position: absolute; top: 0; left: 0; z-index: -100; width: 800px; background: white; pointer-events: none;">
-                <div id="pdf-content-wrapper" style="padding: 40px; background: white;">
-                    <div class="pdf-header" style="display: block;">
-                        <h2 id="pdf-title">Judul Tugas</h2>
-                        <p id="pdf-student-info">Nama: - | Kelas: -</p>
-                        <p id="pdf-date">Tanggal: -</p>
-                    </div>
-                    <div id="pdf-body" class="ql-editor" style="padding:0; font-family: 'Inter', sans-serif;"></div>
-                </div>
-            </div>
+
 
         </main>
     </div>
@@ -154,11 +167,16 @@
                 </button>
             </div>
             <div class="flex-1 bg-slate-200 relative flex flex-col">
-                <iframe id="preview-iframe" class="w-full h-full border-0"></iframe>
-                <!-- Loading state -->
-                <div id="preview-loading" class="absolute inset-0 bg-white flex flex-col items-center justify-center z-10">
-                    <i data-lucide="loader-2" class="w-10 h-10 animate-spin text-blue-600 mb-4"></i>
-                    <p class="text-slate-600 font-medium">Menyusun pratinjau dokumen...</p>
+                <iframe id="preview-iframe" class="w-full h-full border-0 bg-slate-200"></iframe>
+                <!-- Animasi Loading Premium -->
+                <div id="preview-loading" class="absolute inset-0 bg-slate-50 flex flex-col items-center justify-center z-20">
+                    <div class="relative flex items-center justify-center w-24 h-24 mb-6">
+                        <div class="absolute inset-0 border-4 border-slate-200 rounded-2xl shadow-inner"></div>
+                        <div class="absolute inset-0 border-4 border-blue-600 rounded-2xl border-t-transparent animate-spin shadow-[0_0_15px_rgba(37,99,235,0.3)]"></div>
+                        <i data-lucide="file-check-2" class="w-10 h-10 text-blue-600 animate-pulse"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Menyusun Dokumen</h3>
+                    <p class="text-slate-500 font-medium text-center max-w-xs leading-relaxed">Mohon tunggu sebentar, sistem sedang mengunci format halaman dan merakit PDF Anda...</p>
                 </div>
             </div>
             <div class="p-4 border-t border-slate-200 bg-white flex flex-wrap justify-between items-center gap-4">
@@ -196,10 +214,20 @@
             }
             document.getElementById('page-subtitle').innerText = decodeURIComponent(titleParam);
             
+            // Isi data kop surat dinamis di layar
+            document.getElementById('doc-title').innerText = decodeURIComponent(titleParam);
+            document.getElementById('doc-student').innerText = `Nama: ${userData.nama || '-'} | Kelas: ${userData.kelas || userData.tingkat || '-'}`;
+            const updateTime = () => {
+                const docDate = document.getElementById('doc-date');
+                if (docDate) docDate.innerText = `Waktu Pengumpulan: ${new Date().toLocaleString('id-ID')}`;
+            };
+            updateTime();
+            setInterval(updateTime, 1000);
+            
             // Initialize Quill editor
             quill = new Quill('#editor-container', {
                 theme: 'snow',
-                placeholder: 'Mulai mengetik tugas Anda di sini... Anda bisa copy-paste gambar secara langsung ke area ini.',
+                placeholder: 'Mulai mengetik tugas Anda di sini...',
                 modules: {
                     imageResize: {
                         displaySize: true
@@ -215,6 +243,13 @@
                     ]
                 }
             });
+
+            // Pindahkan toolbar otomatis buatan Quill ke penampung sticky di atas
+            const qlToolbar = document.querySelector('.ql-toolbar');
+            if (qlToolbar) {
+                document.getElementById('toolbar-container').appendChild(qlToolbar);
+                qlToolbar.style.border = 'none'; // hapus border bawaan
+            }
 
             // --- FITUR AUTO-SAVE (DRAFT) ---
             const draftKey = `draft_editor_${userData.username}_${idMateri}`;
@@ -270,42 +305,31 @@
                 document.getElementById('preview-loading').style.display = 'flex';
                 document.getElementById('preview-iframe').src = "";
                 
-                // Siapkan konten HTML
-                const captureContainer = document.getElementById('pdf-capture-container');
-                const pdfWrapper = document.getElementById('pdf-content-wrapper');
-                
-                // Tampilkan sementara di background agar html2canvas bisa merender penuh
-                captureContainer.style.display = 'block';
+                // Amankan posisi scroll (Cegah html2canvas memotong bagian atas)
+                const originalScrollY = window.scrollY;
+                window.scrollTo(0, 0);
 
-                document.getElementById('pdf-title').innerText = decodeURIComponent(titleParam);
-                document.getElementById('pdf-student-info').innerText = `Nama: ${userData.nama || '-'} | Kelas: ${userData.kelas || userData.tingkat || '-'}`;
-                
-                const now = new Date();
-                document.getElementById('pdf-date').innerText = `Waktu Pengumpulan: ${now.toLocaleDateString('id-ID')} ${now.toLocaleTimeString('id-ID')}`;
-                
-                document.getElementById('pdf-body').innerHTML = quill.root.innerHTML;
-
-                // Wait a moment for images to render
-                await new Promise(r => setTimeout(r, 500));
+                // Ambil elemen area kertas utuh (Kertas A4 Virtual di layar)
+                const exportArea = document.getElementById('pdf-export-area');
 
                 // 2. Generate PDF using html2pdf
                 const opt = {
-                    margin:       [10, 10, 10, 10], // top, left, bottom, right
+                    margin:       0, // Tidak perlu margin karena kertas virtual sudah punya padding 25.4mm
                     filename:     'tugas.pdf',
-                    image:        { type: 'jpeg', quality: 0.98 },
-                    html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
+                    image:        { type: 'jpeg', quality: 1 },
+                    html2canvas:  { scale: 2, useCORS: true },
                     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak:    { mode: ['css', 'legacy'], avoid: ['img', 'p', 'li', 'h1', 'h2', 'h3'] }
+                    pagebreak:    { mode: ['css', 'legacy'] } // Gunakan CSS page-break-inside untuk cegah teks terpotong
                 };
 
                 btnText.innerText = "Menyusun PDF...";
                 
-                // Generate PDF Base64
-                currentPdfBase64 = await html2pdf().set(opt).from(captureContainer).outputPdf('datauristring');
+                // Generate PDF langsung dari layar (Menjaga semua CSS, Font, dan Format)
+                currentPdfBase64 = await html2pdf().set(opt).from(exportArea).outputPdf('datauristring');
                 
-                // Sembunyikan kembali
-                captureContainer.style.display = 'none';
-
+                // Kembalikan posisi scroll
+                window.scrollTo(0, originalScrollY);
+                
                 // Tampilkan di Iframe
                 document.getElementById('preview-loading').style.display = 'none';
                 document.getElementById('preview-iframe').src = currentPdfBase64;
@@ -344,6 +368,7 @@
                         kelas: userData.kelas || userData.tingkat || "-",
                         id_materi: idMateri,
                         judul: decodeURIComponent(titleParam),
+                        tipe: urlParams.get('tipe') || "Editor",
                         filename: userData.nama.split(" ")[0] + "_" + idMateri + "_Tugas_Editor.pdf",
                         base64: currentPdfBase64
                     }
@@ -375,7 +400,7 @@
 
             } catch (error) {
                 console.error(error);
-                alert("Terjadi kesalahan saat mengunggah. Silakan coba lagi.");
+                alert("Gagal mengunggah: " + (error.message || "Kesalahan jaringan."));
                 btn.innerHTML = originalBtnHtml;
                 btn.disabled = false;
                 lucide.createIcons();
