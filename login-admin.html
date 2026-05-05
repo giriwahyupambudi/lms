@@ -263,7 +263,8 @@
                     <label class="form-label">Password</label>
                     <div class="input-wrapper">
                         <i class="fas fa-lock"></i>
-                        <input type="password" id="password" placeholder="••••••••">
+                        <input type="password" id="password" placeholder="••••••••" style="padding-right: 40px;">
+                        <i class="fas fa-eye" onclick="togglePasswordVisibility('password', this)" style="left: auto; right: 14px; cursor: pointer; pointer-events: auto;"></i>
                     </div>
                 </div>
 
@@ -273,6 +274,10 @@
                 </button>
 
                 <div id="error-msg"></div>
+            </div>
+
+            <div id="syncStatus" style="font-size: 0.75rem; color: var(--slate-500); margin-bottom: 16px; display: none; align-items: center; justify-content: center; gap: 6px;">
+                <i class="fas fa-sync-alt fa-spin"></i> <span>Memuat data admin...</span>
             </div>
 
             <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Kembali ke Login Siswa</a>
@@ -295,12 +300,19 @@
                 return;
             }
 
+            const syncStatus = document.getElementById("syncStatus");
+            syncStatus.style.display = "flex";
+
             try {
                 // Ambil data dari sheet khusus admin
                 const res = await fetch(API_URL + "?sheet=admin");
                 allAdmins = await res.json();
+                
+                syncStatus.innerHTML = `<i class="fas fa-check-circle" style="color: #10b981;"></i> <span>Sistem siap.</span>`;
+                setTimeout(() => { syncStatus.style.display = "none"; }, 2000);
             } catch (e) {
                 console.error("Gagal memuat data admin", e);
+                syncStatus.innerHTML = `<i class="fas fa-wifi" style="color: #ef4444;"></i> <span style="color: #ef4444;">Sistem offline.</span>`;
                 updateMsg("Sistem offline. Pastikan koneksi internet stabil.", "#e11d48", "wifi");
             }
         };
@@ -393,6 +405,19 @@
                 handleLogin();
             }
         });
+
+        function togglePasswordVisibility(inputId, icon) {
+            const input = document.getElementById(inputId);
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.remove("fa-eye");
+                icon.classList.add("fa-eye-slash");
+            } else {
+                input.type = "password";
+                icon.classList.remove("fa-eye-slash");
+                icon.classList.add("fa-eye");
+            }
+        }
     </script>
 </body>
 </html>

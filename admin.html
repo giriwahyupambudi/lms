@@ -179,6 +179,7 @@
     <button class="nav-item active" id="tabDashboardD" onclick="showTab('dashboard')"><i data-lucide="layout-dashboard"></i> Dashboard</button>
     <button class="nav-item" id="tabMateriD" onclick="showTab('materi')"><i data-lucide="book-open"></i> Kelola Materi</button>
     <button class="nav-item" id="tabNilaiD" onclick="showTab('nilai')"><i data-lucide="graduation-cap"></i> Input Nilai</button>
+    <button class="nav-item" id="tabTugasD" onclick="showTab('tugas')"><i data-lucide="file-text"></i> Tugas</button>
     <button class="nav-item" id="tabUsersD" onclick="showTab('users')"><i data-lucide="users"></i> Pengguna</button>
     <button class="nav-item" id="tabSettingsD" onclick="showTab('settings')"><i data-lucide="settings"></i> Pengaturan</button>
     <div style="flex:1"></div>
@@ -189,6 +190,7 @@
     <button class="nav-item active" id="tabDashboard" onclick="showTab('dashboard')"><i data-lucide="layout-dashboard"></i> Dasbor</button>
     <button class="nav-item" id="tabMateri" onclick="showTab('materi')"><i data-lucide="book-open"></i> Materi</button>
     <button class="nav-item" id="tabNilai" onclick="showTab('nilai')"><i data-lucide="graduation-cap"></i> Nilai</button>
+    <button class="nav-item" id="tabTugas" onclick="showTab('tugas')"><i data-lucide="file-text"></i> Tugas</button>
     <button class="nav-item" id="tabUsers" onclick="showTab('users')"><i data-lucide="users"></i> Pengguna</button>
     <button class="nav-item" id="tabSettings" onclick="showTab('settings')"><i data-lucide="settings"></i> Pengaturan</button>
   </nav>
@@ -384,6 +386,46 @@
         </div>
       </section>
 
+      <!-- ================= SECTION: TUGAS ================= -->
+      <section id="tugasSection" style="display:none">
+        <div class="header-section">
+          <div>
+            <h1>Pengumpulan Tugas</h1>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Lihat dan cari seluruh riwayat pengumpulan tugas siswa.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="filter-bar" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+            <div class="form-group" style="flex:1; min-width:150px; margin-bottom: 0;">
+              <label>Filter Kelas</label>
+              <select class="form-control" id="filterKelasTugas" onchange="renderTableTugas()"></select>
+            </div>
+            <div class="form-group" style="flex:2; min-width:200px; margin-bottom: 0;">
+              <label>Cari Nama atau Materi</label>
+              <input type="text" id="searchTugas" class="form-control" placeholder="Ketik nama atau tugas..." onkeyup="renderTableTugas()">
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 50px;">No</th>
+                  <th style="cursor:pointer; user-select:none;" onclick="handleSort('tugas', 'nama')">Siswa <span id="sort_tugas_nama" class="sort-icon-tugas"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
+                  <th style="cursor:pointer; user-select:none;" onclick="handleSort('tugas', 'kelas')">Kelas <span id="sort_tugas_kelas" class="sort-icon-tugas"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
+                  <th style="cursor:pointer; user-select:none;" onclick="handleSort('tugas', 'materi')">Materi / Tugas <span id="sort_tugas_materi" class="sort-icon-tugas"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
+                  <th style="cursor:pointer; user-select:none;" onclick="handleSort('tugas', 'waktu')">Waktu <span id="sort_tugas_waktu" class="sort-icon-tugas"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
+                  <th style="text-align:center">File Tugas</th>
+                </tr>
+              </thead>
+              <tbody id="tabelTugasBody">
+                <tr><td colspan="6" style="text-align:center;">Memuat data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <!-- ================= SECTION: PENGGUNA ================= -->
       <section id="usersSection" style="display:none">
         <div class="header-section">
@@ -522,7 +564,8 @@
     let sortState = {
       materi: { col: '', asc: true },
       nilai: { col: '', asc: true },
-      user: { col: '', asc: true }
+      user: { col: '', asc: true },
+      tugas: { col: '', asc: true }
     };
 
     function handleSort(table, col) {
@@ -536,10 +579,11 @@
       if (table === 'materi') renderTableMateri();
       if (table === 'nilai') renderTableNilai();
       if (table === 'user') renderTableUser();
+      if (table === 'tugas') renderTableTugas();
     }
 
     function restoreSortIcons() {
-       ['materi', 'nilai', 'user'].forEach(table => {
+       ['materi', 'nilai', 'user', 'tugas'].forEach(table => {
           document.querySelectorAll('.sort-icon-' + table).forEach(el => {
               el.innerHTML = '<i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i>';
           });
@@ -570,10 +614,10 @@
     };
 
     function showTab(tabName) {
-      ['dashboardSection', 'materiSection', 'nilaiSection', 'usersSection', 'settingsSection'].forEach(s => document.getElementById(s).style.display = 'none');
+      ['dashboardSection', 'materiSection', 'nilaiSection', 'usersSection', 'settingsSection', 'tugasSection'].forEach(s => document.getElementById(s).style.display = 'none');
       document.getElementById(tabName + 'Section').style.display = 'block';
       
-      ['tabDashboard', 'tabMateri', 'tabNilai', 'tabUsers', 'tabSettings'].forEach(id => {
+      ['tabDashboard', 'tabMateri', 'tabNilai', 'tabUsers', 'tabSettings', 'tabTugas'].forEach(id => {
         let el = document.getElementById(id); if(el) el.classList.remove('active');
         let elD = document.getElementById(id+'D'); if(elD) elD.classList.remove('active');
       });
@@ -618,6 +662,8 @@
         renderTableMateri();
         renderTableUser();
         populateFilterNilai();
+        populateFilterTugas();
+        renderTableTugas();
         
         hideOverlay();
       } catch (e) {
@@ -986,6 +1032,112 @@
       
       closeModal('userModal');
       await postData({ action: "saveData", sheet: "user", rowNumber: rowNum, data: JSON.stringify(data) });
+    }
+
+    // ============================================
+    // RENDER TUGAS
+    // ============================================
+    function populateFilterTugas() {
+      let selKelas = document.getElementById('filterKelasTugas');
+      if (!selKelas) return;
+      let oldKelas = selKelas.value;
+      
+      let kls = new Set();
+      (Array.isArray(dataLogTugas) ? dataLogTugas : []).forEach(t => {
+         let k = getVal(t, ['kelas', 'tingkat']);
+         if(k) kls.add(k.toString().trim());
+      });
+      dataUser.forEach(u => {
+         let k = getVal(u, ['kelas', 'tingkat']);
+         if(k) kls.add(k.toString().trim());
+      });
+      
+      selKelas.innerHTML = '<option value="">Semua Kelas</option>';
+      Array.from(kls).sort().forEach(k => {
+         selKelas.innerHTML += `<option value="${k}">${k}</option>`;
+      });
+      
+      if (oldKelas) selKelas.value = oldKelas;
+    }
+
+    function renderTableTugas() {
+      let searchInput = document.getElementById('searchTugas');
+      let filterKelas = document.getElementById('filterKelasTugas');
+      if (!searchInput || !filterKelas) return;
+      
+      let q = searchInput.value.toLowerCase();
+      let selKelas = filterKelas.value;
+      
+      let validLogTugas = Array.isArray(dataLogTugas) ? dataLogTugas.filter(n => getVal(n, ['username', 'nisn', 'nama'])) : [];
+
+      let filtered = validLogTugas.filter(t => {
+        let nama = (getVal(t, ['nama', 'username']) || "").toLowerCase();
+        let materi = (getVal(t, ['materi', 'judul']) || "").toLowerCase();
+        let kelas = (getVal(t, ['kelas', 'tingkat']) || "").trim();
+        
+        let matchSearch = nama.includes(q) || materi.includes(q);
+        let matchKelas = selKelas === "" || kelas === selKelas;
+        
+        return matchSearch && matchKelas;
+      });
+
+      filtered.forEach(t => {
+         let w = getVal(t, ['waktu', 'timestamp', 'tanggal']);
+         let d = w ? new Date(w).getTime() : 0;
+         t.rawDate = isNaN(d) ? 0 : d;
+      });
+
+      if (sortState.tugas.col) {
+          filtered.sort((a, b) => {
+              let valA = '', valB = '';
+              let asc = sortState.tugas.asc;
+              if (sortState.tugas.col === 'nama') {
+                  valA = (getVal(a, ['nama', 'username']) || "").toLowerCase();
+                  valB = (getVal(b, ['nama', 'username']) || "").toLowerCase();
+              } else if (sortState.tugas.col === 'kelas') {
+                  valA = (getVal(a, ['kelas', 'tingkat']) || "").toLowerCase();
+                  valB = (getVal(b, ['kelas', 'tingkat']) || "").toLowerCase();
+              } else if (sortState.tugas.col === 'materi') {
+                  valA = (getVal(a, ['materi', 'judul']) || "").toLowerCase();
+                  valB = (getVal(b, ['materi', 'judul']) || "").toLowerCase();
+              } else if (sortState.tugas.col === 'waktu') {
+                  return asc ? a.rawDate - b.rawDate : b.rawDate - a.rawDate;
+              }
+              if (valA < valB) return asc ? -1 : 1;
+              if (valA > valB) return asc ? 1 : -1;
+              return 0;
+          });
+      } else {
+          filtered.sort((a, b) => b.rawDate - a.rawDate);
+      }
+
+      let html = '';
+      filtered.forEach((t, i) => {
+        let userNama = getVal(t, ['nama', 'username']) || "-";
+        let kelas = getVal(t, ['kelas', 'tingkat']) || "-";
+        let materi = getVal(t, ['materi', 'judul']) || "-";
+        let waktu = getVal(t, ['waktu', 'timestamp']) || "-";
+        
+        if(waktu !== "-") {
+            try {
+                let d = new Date(waktu);
+                if(!isNaN(d.getTime())) waktu = d.toLocaleString('id-ID', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+            } catch(e) {}
+        }
+        
+        let fileUrl = getVal(t, ['link_tugas', 'file']) || "#";
+        
+        html += `<tr>
+          <td>${i+1}</td>
+          <td style="font-weight:500;">${userNama}</td>
+          <td>${kelas}</td>
+          <td>${materi}</td>
+          <td style="font-size:0.85rem; color:var(--text-muted)">${waktu}</td>
+          <td style="text-align:center"><a href="${fileUrl}" target="_blank" class="btn btn-outline" style="padding:6px 10px; font-size:0.75rem;"><i data-lucide="external-link" style="width:14px; height:14px;"></i> Buka</a></td>
+        </tr>`;
+      });
+      document.getElementById('tabelTugasBody').innerHTML = html || '<tr><td colspan="6" style="text-align:center">Tidak ada data tugas yang sesuai.</td></tr>';
+      restoreSortIcons();
     }
 
     // ============================================
