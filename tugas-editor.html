@@ -103,14 +103,14 @@
                     <!-- Quill akan otomatis mengisi div ini -->
                 </div>
 
-                <!-- Container Bisa di-Scroll secara Horizontal di HP -->
-                <div class="w-full py-8 flex flex-col items-center overflow-x-auto">
-                    <div class="w-full max-w-[210mm] mb-4 text-center">
-                        <p class="text-sm font-medium text-slate-500">Lembar Kerja A4 (Geser ke samping jika di layar HP)</p>
+                <!-- Container Bisa di-Scroll secara Horizontal di HP jika perlu, tapi kita buat responsif -->
+                <div class="w-full py-4 sm:py-8 flex flex-col items-center">
+                    <div class="w-full max-w-[210mm] mb-4 text-center px-4">
+                        <p class="text-sm font-medium text-slate-500">Lembar Kerja Tugas (Otomatis menyesuaikan layar)</p>
                     </div>
 
-                    <!-- Kertas A4 Virtual -->
-                    <div id="pdf-export-area" class="bg-white shadow-lg shrink-0" style="width: 210mm; min-height: 297mm; padding: 25.4mm; box-sizing: border-box; display: flex; flex-direction: column;">
+                    <!-- Kertas A4 Virtual Responsif -->
+                    <div id="pdf-export-area" class="bg-white shadow-lg shrink-0" style="width: 100%; max-width: 210mm; min-height: 297mm; padding: 6%; box-sizing: border-box; display: flex; flex-direction: column;">
                     
                     <!-- Kop Surat Dinamis -->
                     <div style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
@@ -171,15 +171,15 @@
             <div class="flex-1 bg-slate-200 relative flex flex-col">
                 <iframe id="preview-iframe" class="w-full h-full border-0 bg-slate-200"></iframe>
                 
-                <!-- Fallback Mobile (Tidak Mendukung Iframe PDF) -->
+                <!-- Fallback Mobile (Menggunakan Blob URL) -->
                 <div id="mobile-pdf-fallback" class="hidden flex-col items-center justify-center p-8 text-center h-full bg-white">
                     <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6">
                         <i data-lucide="file-check" class="w-10 h-10 text-blue-600"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-slate-800 mb-3">Dokumen PDF Berhasil Disusun</h3>
-                    <p class="text-slate-500 font-medium max-w-sm mb-8 leading-relaxed">Perangkat seluler tidak mendukung pratinjau PDF secara langsung. Dokumen Anda sudah siap dikirim, atau Anda dapat mengunduhnya untuk dicek.</p>
-                    <a id="mobile-pdf-link" href="#" download="Tugas_Saya.pdf" class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl flex items-center gap-2 transition-all border border-slate-200 shadow-sm">
-                        <i data-lucide="download" class="w-5 h-5"></i> Unduh PDF
+                    <h3 class="text-xl font-bold text-slate-800 mb-3">Dokumen Berhasil Disusun</h3>
+                    <p class="text-slate-500 font-medium max-w-sm mb-8 leading-relaxed">Perangkat seluler tidak dapat merender pratinjau PDF langsung di halaman. Anda dapat membukanya untuk melihat hasilnya, atau langsung mengirimkannya ke sistem.</p>
+                    <a id="mobile-pdf-link" href="#" target="_blank" class="px-6 py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl flex items-center gap-2 transition-all shadow-md">
+                        <i data-lucide="external-link" class="w-5 h-5"></i> Buka Preview PDF
                     </a>
                 </div>
 
@@ -324,23 +324,41 @@
                 const originalScrollY = window.scrollY;
                 window.scrollTo(0, 0);
 
-                // Ambil elemen area kertas utuh (Kertas A4 Virtual di layar)
+                // Ambil elemen area kertas utuh
                 const exportArea = document.getElementById('pdf-export-area');
+
+                // Paksa ukuran menjadi A4 asli saat difoto agar format PDF tidak gepeng/rusak
+                const origWidth = exportArea.style.width;
+                const origMaxWidth = exportArea.style.maxWidth;
+                const origPadding = exportArea.style.padding;
+                exportArea.style.width = '210mm';
+                exportArea.style.maxWidth = 'none';
+                exportArea.style.padding = '25.4mm';
 
                 // 2. Generate PDF using html2pdf
                 const opt = {
                     margin:       0, // Tidak perlu margin karena kertas virtual sudah punya padding 25.4mm
                     filename:     'tugas.pdf',
                     image:        { type: 'jpeg', quality: 1 },
-                    html2canvas:  { scale: 2, useCORS: true },
+                    html2canvas:  { scale: 2, useCORS: true, windowWidth: 800 }, // windowWidth wajib untuk mencegah elemen terpotong saat overflow di HP
                     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
                     pagebreak:    { mode: ['css', 'legacy'] } // Gunakan CSS page-break-inside untuk cegah teks terpotong
                 };
 
                 btnText.innerText = "Menyusun PDF...";
                 
-                // Generate PDF langsung dari layar (Menjaga semua CSS, Font, dan Format)
-                currentPdfBase64 = await html2pdf().set(opt).from(exportArea).outputPdf('datauristring');
+                // Generate PDF langsung dari layar
+                const worker = html2pdf().set(opt).from(exportArea);
+                currentPdfBase64 = await worker.outputPdf('datauristring');
+                
+                // Hasilkan Blob URL khusus untuk melihat preview di HP
+                const pdfBlob = await worker.outputPdf('blob');
+                const blobUrl = URL.createObjectURL(pdfBlob);
+
+                // Kembalikan ukuran asli layar HP
+                exportArea.style.width = origWidth;
+                exportArea.style.maxWidth = origMaxWidth;
+                exportArea.style.padding = origPadding;
                 
                 // Kembalikan posisi scroll
                 window.scrollTo(0, originalScrollY);
@@ -354,7 +372,7 @@
                     const fallback = document.getElementById('mobile-pdf-fallback');
                     fallback.classList.remove('hidden');
                     fallback.classList.add('flex');
-                    document.getElementById('mobile-pdf-link').href = currentPdfBase64;
+                    document.getElementById('mobile-pdf-link').href = blobUrl;
                 } else {
                     document.getElementById('preview-iframe').src = currentPdfBase64;
                 }
