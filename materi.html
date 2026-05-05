@@ -252,8 +252,10 @@
         iframe.style.zIndex = '1';
         
         if (link.includes("drive.google.com") || link.toLowerCase().includes(".pdf")) {
-          iframe.style.transform = "scale(1.1)";
-          iframe.style.transformOrigin = "center center";
+          iframe.style.width = "110%";
+          iframe.style.height = "100%";
+          iframe.style.left = "-5%";
+          iframe.style.top = "0";
         }
         
         iframe.onload = () => {
