@@ -928,21 +928,28 @@
             let timeStr = pWaktu ? pWaktu.toString().replace(/^'/, '').trim() : "00:00";
             if (timeStr.includes("1899-12-29") || timeStr.includes("Z")) timeStr = "00:00";
 
+            const isTugas = rawVal.toLowerCase().includes("terkirim") || rawVal.includes("http");
+
             // Simpan nilai tertinggi jika dikerjakan berkali-kali
-            // Prioritaskan skor yang lebih besar, atau rawVal yang mengandung http jika skor sama (kasus tugas)
+            // Prioritaskan skor yang lebih besar, ATAU jika ini tugas, selalu ambil yang paling baru
             if (!quizScores.has(mid)) {
               quizScores.set(mid, score);
               quizTimes.set(mid, timeStr);
               quizRawScores.set(mid, rawVal);
+            } else if (isTugas) {
+              // JIKA TUGAS: Array berjalan dari data lama ke baru. Kita selalu timpa dengan yang terbaru!
+              quizScores.set(mid, score);
+              quizTimes.set(mid, timeStr);
+              quizRawScores.set(mid, rawVal);
             } else if (score > quizScores.get(mid)) {
+              // JIKA KUIS: Ambil skor terbesar
               quizScores.set(mid, score);
               quizTimes.set(mid, timeStr);
               quizRawScores.set(mid, rawVal);
             } else if (score === quizScores.get(mid)) {
+              // JIKA SKOR KUIS SAMA: Ambil yang waktunya paling cepat (terkecil)
               if (timeStr < quizTimes.get(mid)) {
                 quizTimes.set(mid, timeStr);
-                quizRawScores.set(mid, rawVal);
-              } else if (rawVal.includes("http") && !quizRawScores.get(mid).includes("http")) {
                 quizRawScores.set(mid, rawVal);
               }
             }
