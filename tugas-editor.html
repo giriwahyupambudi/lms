@@ -445,21 +445,24 @@
 
                 // Ambil elemen area kertas utuh
                 const exportArea = document.getElementById('pdf-export-area');
-
-                // Paksa ukuran menjadi area cetak asli (tanpa margin) saat difoto agar margin tiap halaman merata
-                const origWidth = exportArea.style.width;
-                const origMaxWidth = exportArea.style.maxWidth;
-                const origPadding = exportArea.style.padding;
-                exportArea.style.width = '184.6mm'; // Lebar A4 (210) - Margin Kiri Kanan (12.7*2)
-                exportArea.style.maxWidth = 'none';
-                exportArea.style.padding = '0px'; // Nol-kan padding fisik agar margin PDF yang mengambil alih
-
                 // 2. Generate PDF using html2pdf
                 const opt = {
-                    margin:       12.7, // Margin Narrow otomatis berulang di setiap halaman (Atas, Kiri, Bawah, Kanan)
+                    margin:       8, // Margin diperkecil menjadi 8mm agar area ketik lebih lega
                     filename:     'tugas.pdf',
                     image:        { type: 'jpeg', quality: 1 },
-                    html2canvas:  { scale: 2, useCORS: true, windowWidth: 800 }, // windowWidth wajib untuk mencegah elemen terpotong saat overflow di HP
+                    html2canvas:  { 
+                        scale: 2, 
+                        useCORS: true, 
+                        windowWidth: 800, // windowWidth wajib untuk mencegah elemen terpotong saat overflow di HP
+                        onclone: function(doc) {
+                            const el = doc.getElementById('pdf-export-area');
+                            if (el) {
+                                el.style.width = '194mm'; // Lebar A4 (210) - Margin Kiri Kanan (8*2)
+                                el.style.maxWidth = 'none';
+                                el.style.padding = '0px'; // Nol-kan padding fisik agar margin PDF yang mengambil alih
+                            }
+                        }
+                    }, 
                     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
                     pagebreak:    { mode: ['css', 'legacy'] } // Gunakan CSS page-break-inside untuk cegah teks terpotong
                 };
@@ -473,11 +476,6 @@
                 // Hasilkan Blob URL khusus untuk melihat preview di HP
                 const pdfBlob = await worker.outputPdf('blob');
                 const blobUrl = URL.createObjectURL(pdfBlob);
-
-                // Kembalikan ukuran asli layar HP
-                exportArea.style.width = origWidth;
-                exportArea.style.maxWidth = origMaxWidth;
-                exportArea.style.padding = origPadding;
                 
                 // Kembalikan posisi scroll dan viewport
                 window.scrollTo(0, originalScrollY);
@@ -489,9 +487,20 @@
                 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                 if (isMobile) {
                     document.getElementById('preview-iframe').classList.add('hidden');
-                    
                     // Gunakan html2canvas untuk mengambil foto langsung untuk preview HP
-                    const canvas = await html2canvas(exportArea, { scale: 1.5, useCORS: true, windowWidth: 800 });
+                    const canvas = await html2canvas(exportArea, { 
+                        scale: 1.5, 
+                        useCORS: true, 
+                        windowWidth: 800,
+                        onclone: function(doc) {
+                            const el = doc.getElementById('pdf-export-area');
+                            if (el) {
+                                el.style.width = '194mm';
+                                el.style.maxWidth = 'none';
+                                el.style.padding = '0px';
+                            }
+                        }
+                    });
                     const imgData = canvas.toDataURL('image/jpeg', 0.8);
                     
                     document.getElementById('mobile-preview-img').src = imgData;
