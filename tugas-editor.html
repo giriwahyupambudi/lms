@@ -227,7 +227,7 @@
                         <a id="mobile-pdf-link" href="#" target="_blank" class="text-xs font-bold text-blue-600 hover:text-blue-800 underline">Unduh PDF Asli</a>
                     </div>
                     <!-- Gambar Pratinjau akan disisipkan ke sini -->
-                    <img id="mobile-preview-img" class="w-full h-auto shadow-md bg-white mb-8" src="" alt="Pratinjau Dokumen" />
+                    <img id="mobile-preview-img" class="w-full h-auto shadow-md bg-white mb-8 p-2 sm:p-4" src="" alt="Pratinjau Dokumen" />
                 </div>
 
                 <!-- Animasi Loading Premium -->
@@ -437,17 +437,28 @@
                 document.getElementById('preview-loading').style.display = 'flex';
                 document.getElementById('preview-iframe').src = "";
                 
+                // Sembunyikan footer action bar sementara agar tidak ngebug
+                const actionContainer = document.getElementById('action-container');
+                if (actionContainer) {
+                    actionContainer.classList.add('hidden');
+                    actionContainer.classList.remove('flex');
+                }
+                
                 // Amankan posisi scroll (Cegah html2canvas memotong bagian atas)
                 const originalScrollY = window.scrollY;
-                const originalBodyOverflow = document.body.style.overflow;
-                document.body.style.overflow = 'hidden'; // Mencegah viewport HP melebar secara liar saat kertas A4 digambar
+                
+                // Kunci layar sekuat mungkin menggunakan injeksi CSS agar tidak melebar
+                const styleLock = document.createElement('style');
+                styleLock.id = 'pdf-lock-style';
+                styleLock.innerHTML = 'html, body { overflow: hidden !important; width: 100vw !important; max-width: 100vw !important; }';
+                document.head.appendChild(styleLock);
                 window.scrollTo(0, 0);
 
                 // Ambil elemen area kertas utuh
                 const exportArea = document.getElementById('pdf-export-area');
                 // 2. Generate PDF using html2pdf
                 const opt = {
-                    margin:       8, // Margin diperkecil menjadi 8mm agar area ketik lebih lega
+                    margin:       4, // Margin diperkecil menjadi 4mm
                     filename:     'tugas.pdf',
                     image:        { type: 'jpeg', quality: 1 },
                     html2canvas:  { 
@@ -457,7 +468,7 @@
                         onclone: function(doc) {
                             const el = doc.getElementById('pdf-export-area');
                             if (el) {
-                                el.style.width = '194mm'; // Lebar A4 (210) - Margin Kiri Kanan (8*2)
+                                el.style.width = '202mm'; // Lebar A4 (210) - Margin Kiri Kanan (4*2)
                                 el.style.maxWidth = 'none';
                                 el.style.padding = '0px'; // Nol-kan padding fisik agar margin PDF yang mengambil alih
                             }
@@ -479,7 +490,8 @@
                 
                 // Kembalikan posisi scroll dan viewport
                 window.scrollTo(0, originalScrollY);
-                document.body.style.overflow = originalBodyOverflow;
+                const lockStyle = document.getElementById('pdf-lock-style');
+                if (lockStyle) lockStyle.remove();
                 
                 // Tampilkan di Iframe atau Mobile Fallback
                 document.getElementById('preview-loading').style.display = 'none';
@@ -495,7 +507,7 @@
                         onclone: function(doc) {
                             const el = doc.getElementById('pdf-export-area');
                             if (el) {
-                                el.style.width = '194mm';
+                                el.style.width = '202mm';
                                 el.style.maxWidth = 'none';
                                 el.style.padding = '0px';
                             }
@@ -527,6 +539,11 @@
 
         window.closePreview = function() {
             document.getElementById('preview-modal').classList.add('hidden');
+            const actionContainer = document.getElementById('action-container');
+            if (actionContainer) {
+                actionContainer.classList.remove('hidden');
+                actionContainer.classList.add('flex');
+            }
         };
 
         async function sendTaskFromPreview() {
