@@ -78,11 +78,10 @@
             break-inside: avoid !important;
         }
 
-        /* Auto Full Width untuk Gambar agar otomatis proporsional di HP */
+        /* Batasi gambar agar tidak melewati layar, tapi tetap bisa dikecilkan */
         .ql-editor img {
-            width: 100% !important;
-            max-width: 100% !important;
-            height: auto !important;
+            max-width: 100%;
+            height: auto;
             display: block;
             margin: 10px auto;
         }
