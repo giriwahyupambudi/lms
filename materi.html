@@ -87,6 +87,7 @@
       right: 0;
       background: var(--bg-color);
       transition: all 0.3s ease;
+      overflow: hidden;
     }
 
     .viewer:fullscreen {
@@ -249,6 +250,11 @@
         iframe.style.width = '100%';
         iframe.style.height = '100%';
         iframe.style.zIndex = '1';
+        
+        if (link.includes("drive.google.com") || link.toLowerCase().includes(".pdf")) {
+          iframe.style.transform = "scale(1.1)";
+          iframe.style.transformOrigin = "center center";
+        }
         
         iframe.onload = () => {
           const loader = document.getElementById('iframeLoader');
