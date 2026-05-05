@@ -129,8 +129,8 @@
             </div>
             
             <!-- Hidden element for PDF generation to include student info header -->
-            <!-- Dibuat absolute agar tidak terpengaruh scroll saat html2pdf memfoto layar -->
-            <div id="pdf-capture-container" style="position: absolute; top: -9999px; left: -9999px; width: 800px; background: white;">
+            <!-- Dibuat absolute dengan z-index di bawah untuk rendering html2pdf tanpa terpotong (menghindari left negative) -->
+            <div id="pdf-capture-container" style="display: none; position: absolute; top: 0; left: 0; z-index: -100; width: 800px; background: white; pointer-events: none;">
                 <div id="pdf-content-wrapper" style="padding: 40px; background: white;">
                     <div class="pdf-header" style="display: block;">
                         <h2 id="pdf-title">Judul Tugas</h2>
@@ -270,8 +270,13 @@
                 document.getElementById('preview-loading').style.display = 'flex';
                 document.getElementById('preview-iframe').src = "";
                 
-                // 1. Prepare HTML content for PDF
+                // Siapkan konten HTML
+                const captureContainer = document.getElementById('pdf-capture-container');
                 const pdfWrapper = document.getElementById('pdf-content-wrapper');
+                
+                // Tampilkan sementara di background agar html2canvas bisa merender penuh
+                captureContainer.style.display = 'block';
+
                 document.getElementById('pdf-title').innerText = decodeURIComponent(titleParam);
                 document.getElementById('pdf-student-info').innerText = `Nama: ${userData.nama || '-'} | Kelas: ${userData.kelas || userData.tingkat || '-'}`;
                 
@@ -296,8 +301,11 @@
                 btnText.innerText = "Menyusun PDF...";
                 
                 // Generate PDF Base64
-                currentPdfBase64 = await html2pdf().set(opt).from(pdfWrapper).outputPdf('datauristring');
+                currentPdfBase64 = await html2pdf().set(opt).from(captureContainer).outputPdf('datauristring');
                 
+                // Sembunyikan kembali
+                captureContainer.style.display = 'none';
+
                 // Tampilkan di Iframe
                 document.getElementById('preview-loading').style.display = 'none';
                 document.getElementById('preview-iframe').src = currentPdfBase64;
