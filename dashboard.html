@@ -1364,18 +1364,8 @@
           }
           newTabBtn.href = tabUrl;
       }
-      
-      // Workaround untuk PPTX/DOCX di Google Drive yang diblokir (meminta akses) di iframe
-      if (url.includes('drive.google.com')) {
-          let match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-          if (match) {
-              let fileId = match[1];
-              // Gunakan Google Docs Viewer API untuk membypass pemblokiran iframe
-              // dan generate direct download link untuk gview
-              let dlUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-              iframeUrl = `https://docs.google.com/gview?url=${encodeURIComponent(dlUrl)}&embedded=true`;
-          }
-      }
+      // Gunakan URL bawaan, iframe url sudah dikonversi menjadi /preview sebelumnya
+      // Jika error cookie/akses muncul, siswa harus menggunakan tombol "Buka di Tab Baru"
 
       iframe.onload = function () {
         loader.style.display = 'none';
