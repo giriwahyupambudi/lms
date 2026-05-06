@@ -123,9 +123,9 @@
             break-inside: avoid !important;
         }
 
-        /* Garis Panduan Batas Halaman A4 (Visual Only) */
+        /* Area Panduan Batas Halaman A4 (Visual Only) */
         .page-guide-bg {
-            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='100%25' x2='100%25' y2='100%25' stroke='%23ef4444' stroke-width='4' stroke-dasharray='10,10' /%3E%3Ctext x='50%25' y='calc(100%25 - 8px)' fill='%23ef4444' font-size='14' font-weight='bold' font-family='sans-serif' text-anchor='middle'%3E--- BATAS HALAMAN ---%3C/text%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='calc(100%25 - 50px)' width='100%25' height='50px' fill='rgba(239, 68, 68, 0.08)' /%3E%3Cline x1='0' y1='calc(100%25 - 50px)' x2='100%25' y2='calc(100%25 - 50px)' stroke='rgba(239, 68, 68, 0.5)' stroke-width='2' stroke-dasharray='6,6' /%3E%3Ctext x='50%25' y='calc(100%25 - 20px)' fill='%23ef4444' font-size='13' font-weight='bold' font-family='sans-serif' text-anchor='middle' letter-spacing='1'%3E%E2%9A%A0%EF%B8%8F AREA BATAS HALAMAN - PASTIKAN KOSONG %E2%9A%A0%EF%B8%8F%3C/text%3E%3Cline x1='0' y1='calc(100%25 - 1px)' x2='100%25' y2='calc(100%25 - 1px)' stroke='%23ef4444' stroke-width='2' /%3E%3C/svg%3E");
             background-size: 100% 297mm; /* Sesuai persis dengan ukuran PDF margin 0 */
             background-repeat: repeat-y;
             background-position: top center;
@@ -607,6 +607,8 @@
                 // Beri waktu sejenak agar browser benar-benar melakukan render tinggi yang asli
                 await new Promise(resolve => setTimeout(resolve, 150));
 
+                const exportHeight = exportArea.scrollHeight;
+                
                 const opt = {
                     margin:       0, // Bebas margin, karena #pdf-export-area sudah memiliki padding 12.7mm
                     filename:     'tugas.pdf',
@@ -615,10 +617,25 @@
                         scale: 2, 
                         useCORS: true, 
                         windowWidth: window.innerWidth > 800 ? window.innerWidth : 800, 
+                        windowHeight: exportHeight,
                         onclone: function(doc) {
                             const el = doc.getElementById('pdf-export-area');
                             if (el) {
                                 el.classList.remove('page-guide-bg'); // Hapus garis batas merah
+                                
+                                // Buka semua kuncian flex dan tinggi dari element parent di DOM kloningan
+                                let parent = el.parentElement;
+                                while (parent && parent !== doc.body && parent !== doc.documentElement) {
+                                    parent.style.display = 'block';
+                                    parent.style.height = 'auto';
+                                    parent.style.maxHeight = 'none';
+                                    parent.style.overflow = 'visible';
+                                    parent = parent.parentElement;
+                                }
+                                doc.body.style.display = 'block';
+                                doc.body.style.height = 'auto';
+                                doc.documentElement.style.display = 'block';
+                                doc.documentElement.style.height = 'auto';
                             }
                         }
                     }, 
@@ -665,28 +682,31 @@
                             const pageHeightPx = 297 * 3.7795275591; // 297mm ke px
                             const totalPages = Math.floor(el.scrollHeight / pageHeightPx);
                             for(let i=1; i<=totalPages; i++) {
-                                const line = doc.createElement('div');
-                                line.style.position = 'absolute';
-                                line.style.top = (i * pageHeightPx) + 'px';
-                                line.style.left = '0';
-                                line.style.width = '100%';
-                                line.style.borderTop = '3px dashed #ef4444';
-                                line.style.zIndex = '50';
+                                const boundaryArea = doc.createElement('div');
+                                boundaryArea.style.position = 'absolute';
+                                boundaryArea.style.top = (i * pageHeightPx - 50) + 'px';
+                                boundaryArea.style.left = '0';
+                                boundaryArea.style.width = '100%';
+                                boundaryArea.style.height = '50px';
+                                boundaryArea.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
+                                boundaryArea.style.borderTop = '2px dashed rgba(239, 68, 68, 0.5)';
+                                boundaryArea.style.borderBottom = '2px solid #ef4444';
+                                boundaryArea.style.boxSizing = 'border-box';
+                                boundaryArea.style.zIndex = '50';
+                                boundaryArea.style.display = 'flex';
+                                boundaryArea.style.alignItems = 'center';
+                                boundaryArea.style.justifyContent = 'center';
+                                boundaryArea.style.pointerEvents = 'none';
                                 
                                 const label = doc.createElement('span');
-                                label.innerText = '--- BATAS HALAMAN ---';
-                                label.style.position = 'absolute';
-                                label.style.top = '-12px';
-                                label.style.left = '50%';
-                                label.style.transform = 'translateX(-50%)';
+                                label.innerText = '⚠️ AREA BATAS HALAMAN - PASTIKAN KOSONG ⚠️';
                                 label.style.color = '#ef4444';
                                 label.style.fontWeight = 'bold';
-                                label.style.fontSize = '14px';
-                                label.style.backgroundColor = 'white';
-                                label.style.padding = '0 10px';
+                                label.style.fontSize = '13px';
+                                label.style.letterSpacing = '1px';
                                 
-                                line.appendChild(label);
-                                el.appendChild(line);
+                                boundaryArea.appendChild(label);
+                                el.appendChild(boundaryArea);
                             }
                         }
                     }
