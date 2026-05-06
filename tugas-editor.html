@@ -71,9 +71,10 @@
         /* Matikan scroll internal agar kertas memanjang ke bawah */
         .ql-container.ql-snow {
             height: auto !important;
+            border: none !important;
         }
         .ql-editor {
-            overflow-y: visible !important;
+            overflow-y: hidden !important; /* Paksa memanjang ke bawah, bukan scroll */
             height: auto !important;
             min-height: 400px;
         }
@@ -125,7 +126,7 @@
         /* Garis Panduan Batas Halaman A4 (Visual Only) */
         .page-guide-bg {
             background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='100%25' x2='100%25' y2='100%25' stroke='%23ef4444' stroke-width='4' stroke-dasharray='10,10' /%3E%3Ctext x='50%25' y='calc(100%25 - 8px)' fill='%23ef4444' font-size='14' font-weight='bold' font-family='sans-serif' text-anchor='middle'%3E--- BATAS HALAMAN ---%3C/text%3E%3C/svg%3E");
-            background-size: 100% 289mm; /* 297mm - 8mm (margin atas+bawah 4mm) */
+            background-size: 100% 297mm; /* Sesuai persis dengan ukuran PDF margin 0 */
             background-repeat: repeat-y;
             background-position: top center;
         }
@@ -593,29 +594,23 @@
                 window.scrollTo(0, 0);
 
                 const exportArea = document.getElementById('pdf-export-area');
-                
-                // Deteksi Mobile
-                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                
-                // KUNCI PERBAIKAN: Jika laptop/desktop, JANGAN batasi windowWidth. Jika HP, gunakan 800 agar font tidak raksasa.
-                const dynamicWindowWidth = isMobile ? 800 : window.innerWidth;
+
+                // Lepaskan sementara transform scale HP agar rendering berukuran asli
+                const originalTransform = exportArea.style.transform;
+                exportArea.style.transform = 'none';
 
                 const opt = {
-                    margin:       4,
+                    margin:       0, // Bebas margin, karena #pdf-export-area sudah memiliki padding 12.7mm
                     filename:     'tugas.pdf',
                     image:        { type: 'jpeg', quality: 1 },
                     html2canvas:  { 
                         scale: 2, 
                         useCORS: true, 
-                        windowWidth: dynamicWindowWidth, 
+                        windowWidth: window.innerWidth > 800 ? window.innerWidth : 800, 
                         onclone: function(doc) {
                             const el = doc.getElementById('pdf-export-area');
                             if (el) {
-                                el.classList.remove('page-guide-bg'); // Wajib: Hapus pembatas merah agar tidak masuk ke PDF file tugas!
-                                el.style.width = '202mm';
-                                el.style.maxWidth = 'none';
-                                el.style.padding = '0px'; 
-                                el.style.margin = '0px'; 
+                                el.classList.remove('page-guide-bg'); // Hapus garis batas merah
                             }
                         }
                     }, 
@@ -636,23 +631,18 @@
 
                 document.getElementById('preview-loading').style.display = 'none';
 
-                // Gunakan JPG untuk preview di semua perangkat (menghindari bug iframe PDF viewer)
+                // Gunakan JPG untuk preview di semua perangkat
                 document.getElementById('preview-iframe').classList.add('hidden');
                 
                 const canvas = await html2canvas(exportArea, { 
                     scale: 1.5, 
                     useCORS: true, 
-                    windowWidth: dynamicWindowWidth,
+                    windowWidth: window.innerWidth > 800 ? window.innerWidth : 800,
                     onclone: function(doc) {
                         const el = doc.getElementById('pdf-export-area');
                         if (el) {
-                            el.style.width = '202mm';
-                            el.style.maxWidth = 'none';
-                            el.style.padding = '0px';
-                            el.style.margin = '0px';
-                            
                             // Injeksi elemen DOM fisik agar html2canvas pasti memfotonya
-                            const pageHeightPx = 289 * 3.7795275591; // 289mm ke px
+                            const pageHeightPx = 297 * 3.7795275591; // 297mm ke px
                             const totalPages = Math.floor(el.scrollHeight / pageHeightPx);
                             for(let i=1; i<=totalPages; i++) {
                                 const line = doc.createElement('div');
@@ -681,6 +671,10 @@
                         }
                     }
                 });
+                
+                // Kembalikan ukuran tampilan ke versi layar HP
+                exportArea.style.transform = originalTransform;
+
                 const imgData = canvas.toDataURL('image/jpeg', 0.8);
                 
                 document.getElementById('mobile-preview-img').src = imgData;
