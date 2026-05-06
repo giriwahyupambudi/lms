@@ -634,10 +634,13 @@
                 // Gunakan JPG untuk preview di semua perangkat
                 document.getElementById('preview-iframe').classList.add('hidden');
                 
+                const exportHeight = exportArea.scrollHeight;
+                
                 const canvas = await html2canvas(exportArea, { 
-                    scale: 1.5, 
+                    scale: 1, // Turunkan scale ke 1 untuk menghindari limit ukuran kanvas memori HP
                     useCORS: true, 
                     windowWidth: window.innerWidth > 800 ? window.innerWidth : 800,
+                    windowHeight: exportHeight, // Paksa tinggi jendela kloning ke tinggi penuh agar tidak terpotong
                     onclone: function(doc) {
                         const el = doc.getElementById('pdf-export-area');
                         if (el) {
