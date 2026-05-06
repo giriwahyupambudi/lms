@@ -234,7 +234,7 @@
                         </div>
 
                         <div id="editor-container"
-                            style="flex: 1; border: none !important; font-family: 'Inter', sans-serif;"></div>
+                            style="border: none !important; font-family: 'Inter', sans-serif;"></div>
                     </div>
                     </div> <!-- End of scale-wrapper -->
                 </div> <!-- End of scrollable container -->
@@ -536,9 +536,9 @@
                 quill.on('text-change', adjustScale);
             }
             
-            // Observer untuk gambar loading
+            // Observer untuk gambar loading dan perubahan struktur DOM internal
             const observer = new MutationObserver(adjustScale);
-            observer.observe(area, { childList: true, subtree: true, attributes: true });
+            observer.observe(area, { childList: true, subtree: true, characterData: true });
         }
 
         function showError(msg) {
@@ -643,6 +643,9 @@
                     height: exportHeight,
                     windowWidth: window.innerWidth > 800 ? window.innerWidth : 800,
                     windowHeight: exportHeight, // Paksa tinggi jendela kloning ke tinggi penuh agar tidak terpotong
+                    scrollY: 0,
+                    scrollX: 0,
+                    y: 0,
                     onclone: function(doc) {
                         const el = doc.getElementById('pdf-export-area');
                         if (el) {
