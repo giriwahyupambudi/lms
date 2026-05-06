@@ -237,14 +237,51 @@ function doPost(e) {
       
       try {
          var folder = DriveApp.getFolderById(folderId);
-         
-         // Decode Base64
-         var splitBase = pData.base64.split(',');
-         var type = splitBase[0].split(';')[0].replace('data:', '');
-         var byteCharacters = Utilities.base64Decode(splitBase[1]);
-         var blob = Utilities.newBlob(byteCharacters, type, pData.filename);
-         
-         var file = folder.createFile(blob);
+         var file;
+         if (pData.htmlContent) {
+             // Konversi HTML murni ke PDF via GAS
+             var htmlTemplate = `
+                 <!DOCTYPE html>
+                 <html>
+                 <head>
+                     <meta charset="UTF-8">
+                     <style>
+                         body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.5; color: #111; word-wrap: break-word; overflow-wrap: break-word; }
+                         .kop { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+                         .kop h1 { margin: 0; font-size: 22px; font-weight: bold; }
+                         .kop p { margin: 5px 0 0 0; font-size: 14px; color: #333; }
+                         img { max-width: 100%; height: auto; display: block; margin: 10px 0; }
+                         p { margin-bottom: 1em; word-break: break-word; white-space: pre-wrap; }
+                         ul, ol { margin-bottom: 1em; padding-left: 20px; word-break: break-word; }
+                     </style>
+                 </head>
+                 <body>
+                     <div class="kop">
+                         <h1>${pData.judul || "Tugas"}</h1>
+                         <p><b>Nama:</b> ${pData.nama || "-"}</p>
+                         <p><b>Kelas:</b> ${pData.kelas || "-"}</p>
+                         <p><b>Waktu Pengumpulan:</b> ${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm")}</p>
+                     </div>
+                     <div class="content">
+                         ${pData.htmlContent}
+                     </div>
+                 </body>
+                 </html>
+             `;
+             var blobHtml = Utilities.newBlob(htmlTemplate, MimeType.HTML, "tugas.html");
+             var pdfBlob = blobHtml.getAs(MimeType.PDF);
+             pdfBlob.setName(pData.filename);
+             file = folder.createFile(pdfBlob);
+         } else if (pData.base64) {
+             // Decode Base64 (Untuk backward compatibility jika ada fitur lain yang masih pakai base64)
+             var splitBase = pData.base64.split(',');
+             var type = splitBase[0].split(';')[0].replace('data:', '');
+             var byteCharacters = Utilities.base64Decode(splitBase[1]);
+             var blob = Utilities.newBlob(byteCharacters, type, pData.filename);
+             file = folder.createFile(blob);
+         } else {
+             throw new Error("Tidak ada data file yang dikirim.");
+         }
          
          // Atur izin file agar bisa dilihat oleh siapa saja yang memiliki link (tanpa harus login Google)
          try {
