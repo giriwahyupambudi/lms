@@ -207,10 +207,12 @@
                         </p>
                     </div>
 
-                    <!-- Kertas A4 Virtual (Full width di HP, A4 di Desktop dengan Margin Narrow) -->
-                    <div id="pdf-export-area"
-                        class="bg-white shadow-none sm:shadow-lg shrink-0 w-full sm:w-[210mm] sm:p-[12.7mm] page-guide-bg"
-                        style="position: relative; max-width: 210mm; min-height: 297mm; padding: 1rem; box-sizing: border-box; display: flex; flex-direction: column;">
+                    <!-- WRAPPER UNTUK SCALE -->
+                    <div id="scale-wrapper" class="w-full flex justify-center origin-top">
+                        <!-- Kertas A4 Virtual (Selalu 210mm, discale di HP agar proporsi sama dengan PDF) -->
+                        <div id="pdf-export-area"
+                            class="bg-white shadow-lg shrink-0 page-guide-bg"
+                            style="position: relative; width: 210mm; max-width: 210mm; min-height: 297mm; padding: 12.7mm; box-sizing: border-box; display: flex; flex-direction: column;">
 
                         <!-- Kop Surat Dinamis -->
                         <div id="dynamic-kop"
@@ -229,6 +231,7 @@
                         <div id="editor-container"
                             style="flex: 1; border: none !important; font-family: 'Inter', sans-serif;"></div>
                     </div>
+                    </div> <!-- End of scale-wrapper -->
                 </div> <!-- End of scrollable container -->
             </div>
 
@@ -490,7 +493,45 @@
             // -------------------------------
 
             document.getElementById('preview-btn').addEventListener('click', generatePreview);
+            
+            // Inisialisasi Skala Layar HP
+            initMobileScale();
         };
+
+        function initMobileScale() {
+            const area = document.getElementById('pdf-export-area');
+            const wrapper = document.getElementById('scale-wrapper');
+            
+            const adjustScale = () => {
+                const screenWidth = window.innerWidth;
+                const a4Width = 794; // approx 210mm in pixels at 96dpi
+                
+                if (screenWidth < a4Width) {
+                    const scale = screenWidth / (a4Width + 24); // 24px safety margin
+                    area.style.transform = `scale(${scale})`;
+                    area.style.transformOrigin = 'top center';
+                    
+                    if (wrapper) {
+                        wrapper.style.height = (area.scrollHeight * scale) + 'px';
+                    }
+                } else {
+                    area.style.transform = 'none';
+                    if (wrapper) wrapper.style.height = 'auto';
+                }
+            };
+
+            // Run initial scale
+            setTimeout(adjustScale, 100);
+            window.addEventListener('resize', adjustScale);
+            
+            if (quill) {
+                quill.on('text-change', adjustScale);
+            }
+            
+            // Observer untuk gambar loading
+            const observer = new MutationObserver(adjustScale);
+            observer.observe(area, { childList: true, subtree: true, attributes: true });
+        }
 
         function showError(msg) {
             const errBox = document.getElementById('error-box');
