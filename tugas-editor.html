@@ -383,7 +383,7 @@
                 if (docDate) docDate.innerText = `Waktu Pengumpulan: ${new Date().toLocaleString('id-ID')}`;
             };
             updateTime();
-            setInterval(updateTime, 1000);
+            //setInterval(updateTime, 1000);
 
             // Initialize Quill editor
             quill = new Quill('#editor-container', {
@@ -524,13 +524,8 @@
                 area.style.transform = `scale(${scale})`;
                 area.style.transformOrigin = 'top center';
                 
-                // ✅ FIX: Hanya sesuaikan tinggi wrapper jika di mobile (scale < 1)
-                // Di desktop (scale >= 1), biarkan tinggi wrapper mengikuti konten secara alami
-                if (scale < 1) {
-                    scaleWrapper.style.height = (area.scrollHeight * scale) + 'px';
-                } else {
-                    scaleWrapper.style.height = 'auto';
-                }
+                // Sesuaikan tinggi wrapper agar bingkai abu-abu ikut memanjang ke bawah
+                scaleWrapper.style.height = (area.scrollHeight * scale) + 'px';
             };
 
             // Run initial scale
