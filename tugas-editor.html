@@ -604,6 +604,9 @@
                 if (scaleWrapper) scaleWrapper.style.height = 'auto';
                 if (editorWrapper) editorWrapper.classList.remove('overflow-hidden');
 
+                // Beri waktu sejenak agar browser benar-benar melakukan render tinggi yang asli
+                await new Promise(resolve => setTimeout(resolve, 150));
+
                 const opt = {
                     margin:       0, // Bebas margin, karena #pdf-export-area sudah memiliki padding 12.7mm
                     filename:     'tugas.pdf',
@@ -644,6 +647,20 @@
                     onclone: function(doc) {
                         const el = doc.getElementById('pdf-export-area');
                         if (el) {
+                            // Buka semua kuncian flex dan tinggi dari element parent di DOM kloningan
+                            let parent = el.parentElement;
+                            while (parent && parent !== doc.body && parent !== doc.documentElement) {
+                                parent.style.display = 'block';
+                                parent.style.height = 'auto';
+                                parent.style.maxHeight = 'none';
+                                parent.style.overflow = 'visible';
+                                parent = parent.parentElement;
+                            }
+                            doc.body.style.display = 'block';
+                            doc.body.style.height = 'auto';
+                            doc.documentElement.style.display = 'block';
+                            doc.documentElement.style.height = 'auto';
+
                             // Injeksi elemen DOM fisik agar html2canvas pasti memfotonya
                             const pageHeightPx = 297 * 3.7795275591; // 297mm ke px
                             const totalPages = Math.floor(el.scrollHeight / pageHeightPx);
