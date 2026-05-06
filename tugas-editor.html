@@ -202,7 +202,7 @@
         <main class="flex-1 sm:px-4 py-0 sm:py-6 flex flex-col">
 
             <div id="editor-wrapper"
-                class="bg-white border-0 sm:border border-slate-300 animate-fade-in flex flex-col items-center relative overflow-hidden">
+                class="bg-white sm:bg-slate-200 rounded-none sm:rounded-xl shadow-none sm:shadow-inner border-0 sm:border border-slate-300 animate-fade-in flex flex-col items-center relative">
 
                 <!-- Custom Sticky Toolbar -->
                 <div id="toolbar-container"
@@ -211,7 +211,11 @@
                 </div>
 
                 <!-- Container Utama -->
-                <div class="w-full py-0 sm:py-4 pb-16 sm:pb-8 flex flex-col items-center bg-white">
+                <div class="w-full py-0 pb-16 sm:py-8 sm:pb-8 flex flex-col items-center">
+                    <div class="w-full max-w-[210mm] mb-4 text-center px-4 hidden sm:block">
+                        <p class="text-sm font-medium text-slate-500">Lembar Kerja Tugas (Otomatis menyesuaikan layar)
+                        </p>
+                    </div>
 
                     <!-- WRAPPER UNTUK SCALE -->
                     <div id="scale-wrapper" class="w-full flex justify-center origin-top">
@@ -512,14 +516,17 @@
                 const screenWidth = window.innerWidth;
                 const a4Width = 794; // approx 210mm in pixels at 96dpi
                 
-                // Fit to Width (Fullscreen) untuk semua perangkat, baik HP maupun Laptop
-                // Menjaga proporsi A4 tetapi membesarkannya agar memenuhi layar
-                const scale = screenWidth / (a4Width + 16); // 16px safety margin agar tidak mepet edge
-                area.style.transform = `scale(${scale})`;
-                area.style.transformOrigin = 'top center';
-                
-                if (wrapper) {
-                    wrapper.style.height = (area.scrollHeight * scale) + 'px';
+                if (screenWidth < a4Width) {
+                    const scale = screenWidth / (a4Width + 24); // 24px safety margin
+                    area.style.transform = `scale(${scale})`;
+                    area.style.transformOrigin = 'top center';
+                    
+                    if (wrapper) {
+                        wrapper.style.height = (area.scrollHeight * scale) + 'px';
+                    }
+                } else {
+                    area.style.transform = 'none';
+                    if (wrapper) wrapper.style.height = 'auto';
                 }
             };
 
