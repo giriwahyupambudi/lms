@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Editor Tugas LMS</title>
+<title>Editor Tugas</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
@@ -11,29 +11,24 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <style>
-body {
-    background:#f1f5f9;
-    font-family:sans-serif;
-}
+body { background:#f1f5f9; }
 
-/* Editor */
+/* Editor full */
 #editor {
-    height:300px;
+    height: calc(100vh - 100px);
     background:white;
 }
 
-/* A4 Preview */
-#print-area {
+/* A4 */
+.a4 {
     width:210mm;
     min-height:297mm;
     padding:12.7mm;
     background:white;
     margin:auto;
-    display:none;
 }
 
-/* Biar gambar rapi */
-#print-area img {
+.a4 img {
     max-width:100%;
 }
 </style>
@@ -41,45 +36,66 @@ body {
 
 <body class="p-4">
 
-<h1 class="text-xl font-bold mb-4">Editor Tugas</h1>
+<h1 class="text-xl font-bold mb-3">Editor Tugas</h1>
 
 <!-- EDITOR -->
 <div id="editor"></div>
 
 <!-- BUTTON -->
-<div class="mt-4 flex gap-2">
-    <button onclick="preview()" class="bg-blue-500 text-white px-4 py-2 rounded">Preview</button>
-    <button onclick="downloadPDF()" class="bg-green-500 text-white px-4 py-2 rounded">Download PDF</button>
-    <button onclick="send()" class="bg-purple-500 text-white px-4 py-2 rounded">Kirim</button>
+<div class="mt-3 flex gap-2">
+    <button onclick="openPreview()" class="bg-blue-600 text-white px-4 py-2 rounded">
+        Preview
+    </button>
+    <button onclick="send()" class="bg-purple-600 text-white px-4 py-2 rounded">
+        Kirim
+    </button>
 </div>
 
-<!-- PREVIEW -->
-<div id="print-area" class="mt-6 shadow">
+<!-- MODAL -->
+<div id="modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50">
 
-    <div id="kop" style="border-bottom:2px solid black; margin-bottom:20px;"></div>
+    <div class="bg-white w-full max-w-4xl h-[90vh] rounded-xl overflow-hidden flex flex-col">
 
-    <div id="content"></div>
+        <!-- HEADER -->
+        <div class="p-3 border-b flex justify-between items-center">
+            <h2 class="font-bold">Preview PDF</h2>
+            <button onclick="closePreview()">✕</button>
+        </div>
+
+        <!-- CONTENT -->
+        <div class="flex-1 overflow-auto bg-gray-200 p-4">
+
+            <div id="print-area" class="a4 shadow">
+                <div id="kop" style="border-bottom:2px solid black; margin-bottom:20px;"></div>
+                <div id="content"></div>
+            </div>
+
+        </div>
+
+        <!-- FOOTER -->
+        <div class="p-3 border-t flex justify-end gap-2">
+            <button onclick="downloadPDF()" class="bg-green-600 text-white px-4 py-2 rounded">
+                Download
+            </button>
+            <button onclick="send()" class="bg-blue-600 text-white px-4 py-2 rounded">
+                Kirim
+            </button>
+        </div>
+
+    </div>
 
 </div>
 
 <script>
-const GAS_URL = "URL_GAS_KAMU"; // GANTI INI
+const GAS_URL = "URL_GAS_KAMU";
 
 const quill = new Quill('#editor', {
     theme: 'snow',
     placeholder: 'Tulis tugas di sini...',
-    modules: {
-        toolbar: [
-            [{header:[1,2,3,false]}],
-            ['bold','italic','underline'],
-            [{list:'ordered'},{list:'bullet'}],
-            ['link','image']
-        ]
-    }
 });
 
-/* ===== PREVIEW ===== */
-function preview(){
+/* ===== OPEN PREVIEW ===== */
+function openPreview(){
 
     const html = quill.root.innerHTML;
 
@@ -91,41 +107,40 @@ function preview(){
         <p>Waktu: ${new Date().toLocaleString('id-ID')}</p>
     `;
 
-    document.getElementById("print-area").style.display = "block";
-
-    window.scrollTo(0,document.body.scrollHeight);
+    document.getElementById("modal").classList.remove("hidden");
+    document.getElementById("modal").classList.add("flex");
 }
 
-/* ===== GENERATE PDF ===== */
-async function generatePDF(){
+/* ===== CLOSE ===== */
+function closePreview(){
+    document.getElementById("modal").classList.add("hidden");
+}
 
-    const element = document.getElementById("print-area");
+/* ===== PDF ===== */
+async function generatePDF(){
+    const el = document.getElementById("print-area");
 
     const opt = {
         margin: 0,
         filename: 'tugas.pdf',
-        image: { type: 'jpeg', quality: 1 },
         html2canvas: { scale: 2 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        jsPDF: { unit: 'mm', format: 'a4' }
     };
 
-    const worker = html2pdf().set(opt).from(element);
-
-    const base64 = await worker.outputPdf('datauristring');
-
-    return base64;
+    const worker = html2pdf().set(opt).from(el);
+    return await worker.outputPdf('datauristring');
 }
 
 /* ===== DOWNLOAD ===== */
 async function downloadPDF(){
-    await generatePDF(); // otomatis download
+    await html2pdf().from(document.getElementById("print-area")).save();
 }
 
-/* ===== KIRIM KE GAS ===== */
+/* ===== SEND ===== */
 async function send(){
 
     if(quill.getText().trim().length === 0){
-        alert("Tugas masih kosong!");
+        alert("Tugas kosong!");
         return;
     }
 
@@ -142,21 +157,21 @@ async function send(){
     };
 
     try{
-        const res = await fetch(GAS_URL, {
-            method: "POST",
-            body: JSON.stringify(payload)
+        const res = await fetch(GAS_URL,{
+            method:"POST",
+            body:JSON.stringify(payload)
         });
 
         const result = await res.json();
 
-        if(result.status === "success"){
+        if(result.status==="success"){
             alert("Berhasil dikirim!");
         }else{
             throw new Error(result.message);
         }
 
     }catch(err){
-        alert("Gagal: " + err.message);
+        alert("Error: "+err.message);
     }
 }
 </script>
