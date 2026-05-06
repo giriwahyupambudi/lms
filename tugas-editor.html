@@ -383,7 +383,7 @@
                 if (docDate) docDate.innerText = `Waktu Pengumpulan: ${new Date().toLocaleString('id-ID')}`;
             };
             updateTime();
-            //setInterval(updateTime, 1000);
+            setInterval(updateTime, 1000);
 
             // Initialize Quill editor
             quill = new Quill('#editor-container', {
