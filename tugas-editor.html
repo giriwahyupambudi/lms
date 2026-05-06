@@ -592,10 +592,17 @@
                 window.scrollTo(0, 0);
 
                 const exportArea = document.getElementById('pdf-export-area');
+                const scaleWrapper = document.getElementById('scale-wrapper');
+                const editorWrapper = document.getElementById('editor-wrapper');
 
                 // Lepaskan sementara transform scale HP agar rendering berukuran asli
                 const originalTransform = exportArea.style.transform;
                 exportArea.style.transform = 'none';
+                
+                // Bebaskan tinggi wrapper agar tidak memotong isi kertas yang sudah kembali ke ukuran asli
+                const originalWrapperHeight = scaleWrapper ? scaleWrapper.style.height : 'auto';
+                if (scaleWrapper) scaleWrapper.style.height = 'auto';
+                if (editorWrapper) editorWrapper.classList.remove('overflow-hidden');
 
                 const opt = {
                     margin:       0, // Bebas margin, karena #pdf-export-area sudah memiliki padding 12.7mm
@@ -623,20 +630,17 @@
                 const pdfBlob = await worker.outputPdf('blob');
                 const blobUrl = URL.createObjectURL(pdfBlob);
 
-                window.scrollTo(0, originalScrollY);
-                const lockStyle = document.getElementById('pdf-lock-style');
-                if (lockStyle) lockStyle.remove();
-
-                document.getElementById('preview-loading').style.display = 'none';
-
                 // Gunakan JPG untuk preview di semua perangkat
                 document.getElementById('preview-iframe').classList.add('hidden');
                 
                 const exportHeight = exportArea.scrollHeight;
+                const exportWidth = exportArea.scrollWidth;
                 
                 const canvas = await html2canvas(exportArea, { 
-                    scale: 1, // Turunkan scale ke 1 untuk menghindari limit ukuran kanvas memori HP
+                    scale: 1.2, // scale moderat agar jernih namun tidak memberatkan HP
                     useCORS: true, 
+                    width: exportWidth,
+                    height: exportHeight,
                     windowWidth: window.innerWidth > 800 ? window.innerWidth : 800,
                     windowHeight: exportHeight, // Paksa tinggi jendela kloning ke tinggi penuh agar tidak terpotong
                     onclone: function(doc) {
@@ -675,6 +679,14 @@
                 
                 // Kembalikan ukuran tampilan ke versi layar HP
                 exportArea.style.transform = originalTransform;
+                if (scaleWrapper) scaleWrapper.style.height = originalWrapperHeight;
+                if (editorWrapper) editorWrapper.classList.add('overflow-hidden');
+
+                window.scrollTo(0, originalScrollY);
+                const lockStyle = document.getElementById('pdf-lock-style');
+                if (lockStyle) lockStyle.remove();
+
+                document.getElementById('preview-loading').style.display = 'none';
 
                 const imgData = canvas.toDataURL('image/jpeg', 0.8);
                 
