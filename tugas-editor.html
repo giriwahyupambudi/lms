@@ -5,62 +5,27 @@
     <meta charset="UTF-8">
     <meta name="theme-color" content="#ffffff">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor Tugas Pro</title>
+    <title>Editor Tugas Pro - Fixed</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
-    <script>window.Quill = Quill;</script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
+        body { font-family: 'Inter', sans-serif; }
 
-        .animate-fade-in {
-            animation: fadeIn 0.5s ease-out forwards;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .spinner {
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top: 3px solid #2563eb;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        #editor-container {
-            min-height: 400px;
-            background: transparent;
-            font-size: 14px;
-        }
-
-        /* Matikan scroll internal agar kertas memanjang ke bawah */
-        .ql-container.ql-snow {
-            height: auto !important;
-            border: none !important;
-        }
-        .ql-editor {
-            overflow-y: hidden !important;
-            height: auto !important;
-            min-height: 400px;
-            padding: 0 !important;
+        /* Matikan Scroll di dalam Editor */
+        .ql-container.ql-snow { height: auto !important; border: none !important; }
+        .ql-editor { 
+            overflow-y: hidden !important; 
+            height: auto !important; 
+            min-height: 400px; 
+            padding: 0 !important; 
         }
 
         .ql-toolbar.ql-snow {
@@ -70,7 +35,7 @@
             background: #f8fafc;
         }
 
-        /* Garis Panduan Batas Halaman A4 */
+        /* Garis Panduan Batas Halaman */
         .page-guide-bg {
             background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='100%25' x2='100%25' y2='100%25' stroke='%23ef4444' stroke-width='4' stroke-dasharray='10,10' /%3E%3Ctext x='50%25' y='calc(100%25 - 8px)' fill='%23ef4444' font-size='14' font-weight='bold' font-family='sans-serif' text-anchor='middle'%3E--- BATAS HALAMAN ---%3C/text%3E%3C/svg%3E");
             background-size: 100% 297mm;
@@ -78,42 +43,11 @@
             background-position: top center;
         }
 
-        .ql-editor img {
-            max-width: 100%;
-            height: auto;
-            display: block;
-            margin: 10px auto;
-        }
+        .ql-editor img { max-width: 100%; height: auto; display: block; margin: 10px auto; }
 
-        .ql-editor img.img-selected {
-            outline: 3px solid #3b82f6;
-            outline-offset: 2px;
-        }
-
-        .img-resize-overlay {
-            position: fixed;
-            bottom: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(8px);
-            border-radius: 16px;
-            padding: 10px 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            z-index: 1000;
-            color: white;
-        }
-
-        .img-resize-overlay button {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.15);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        /* PENTING: Jangan ada transition pada height di scale-wrapper */
+        #scale-wrapper {
+            transition: none !important; 
         }
     </style>
 </head>
@@ -122,15 +56,14 @@
 
     <div class="max-w-4xl mx-auto pb-24 min-h-screen flex flex-col">
         <main class="flex-1 sm:px-4 py-0 sm:py-6 flex flex-col">
-            <div id="editor-wrapper" class="bg-white sm:bg-slate-200 rounded-none sm:rounded-xl shadow-none sm:shadow-inner border-0 sm:border border-slate-300 animate-fade-in flex flex-col items-center relative overflow-hidden">
+            <div id="editor-wrapper" class="bg-white sm:bg-slate-200 rounded-none sm:rounded-xl shadow-none sm:shadow-inner border-0 sm:border border-slate-300 flex flex-col items-center relative overflow-hidden">
                 
-                <div id="toolbar-container" class="w-full bg-slate-50 border-b border-slate-300 sticky top-0 z-30 shadow-sm flex justify-center py-2 px-2 overflow-x-auto">
-                </div>
+                <div id="toolbar-container" class="w-full bg-slate-50 border-b border-slate-300 sticky top-0 z-30 flex justify-center py-2 px-2 overflow-x-auto"></div>
 
                 <div class="w-full py-0 sm:py-4 pb-16 sm:pb-8 flex flex-col items-center">
-                    <div id="scale-wrapper" class="w-full flex justify-center origin-top transition-[height] duration-200">
+                    <div id="scale-wrapper" class="w-full flex justify-center origin-top">
                         <div id="pdf-export-area" class="bg-white shadow-lg shrink-0 page-guide-bg"
-                            style="position: relative; width: 210mm; max-width: 210mm; min-height: 297mm; padding: 12.7mm; box-sizing: border-box; display: flex; flex-direction: column;">
+                            style="position: relative; width: 210mm; padding: 12.7mm; box-sizing: border-box; display: flex; flex-direction: column;">
 
                             <div id="dynamic-kop" style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
                                 <h2 id="doc-title" style="margin: 0; font-size: 22px; font-weight: bold;">Judul Tugas</h2>
@@ -145,179 +78,112 @@
             </div>
 
             <div id="action-container" class="fixed bottom-0 w-full max-w-4xl mx-auto p-4 bg-white border-t border-slate-200 z-40 flex justify-end gap-3 left-1/2 transform -translate-x-1/2">
-                <button onclick="window.history.back()" class="flex-1 sm:flex-none px-6 py-3 rounded-xl font-semibold text-slate-600 bg-slate-100">Batal</button>
-                <button id="preview-btn" class="flex-[2] sm:flex-none px-8 py-3 bg-blue-600 text-white rounded-xl font-semibold shadow-md flex items-center justify-center gap-2">
-                    <i id="btn-icon" data-lucide="send" class="w-5 h-5"></i> 
-                    <span id="btn-text">Kirim</span>
-                    <div id="btn-loader" class="spinner hidden border-t-white"></div>
+                <button id="preview-btn" class="px-8 py-3 bg-blue-600 text-white rounded-xl font-semibold shadow-md flex items-center gap-2">
+                    <i data-lucide="send" class="w-5 h-5"></i> Kirim
                 </button>
-            </div>
-
-            <div id="success-container" class="hidden fixed inset-0 z-[60] bg-slate-50 flex-col items-center justify-center p-6 animate-fade-in">
-                <div class="w-full max-w-md text-center bg-white p-8 rounded-3xl shadow-xl">
-                    <div class="w-20 h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <i data-lucide="check-circle" class="w-10 h-10"></i>
-                    </div>
-                    <h2 class="text-2xl font-bold mb-2">Tugas Terkirim!</h2>
-                    <p class="text-slate-500 mb-8">Dokumen Anda telah berhasil dikonversi ke PDF.</p>
-                    <button onclick="location.reload()" class="w-full bg-slate-800 text-white py-4 rounded-xl font-bold">Selesai</button>
-                </div>
             </div>
         </main>
     </div>
 
-    <div id="preview-modal" class="fixed inset-0 bg-slate-900/90 z-50 hidden flex items-center justify-center sm:p-4">
-        <div class="bg-white sm:rounded-2xl w-full max-w-4xl h-full sm:h-[90vh] flex flex-col overflow-hidden">
-            <div class="p-4 border-b flex justify-between items-center bg-slate-50">
-                <h3 class="font-bold flex items-center gap-2"><i data-lucide="file-check" class="text-blue-600"></i> Preview PDF</h3>
-                <button onclick="closePreview()" class="p-2 hover:bg-slate-200 rounded-lg"><i data-lucide="x"></i></button>
+    <div id="preview-modal" class="fixed inset-0 bg-slate-900/90 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="font-bold">Pratinjau PDF</h3>
+                <button onclick="document.getElementById('preview-modal').classList.add('hidden')" class="p-2 hover:bg-slate-100 rounded-lg"><i data-lucide="x"></i></button>
             </div>
-            <div class="flex-1 bg-slate-200 overflow-y-auto p-4 flex flex-col items-center">
-                <img id="mobile-preview-img" class="max-w-full shadow-lg bg-white mb-8" src="" alt="Preview" />
-                <div id="preview-loading" class="flex flex-col items-center py-20">
-                    <div class="spinner w-12 h-12 mb-4"></div>
-                    <p class="font-medium text-slate-600">Menyusun dokumen...</p>
-                </div>
-            </div>
-            <div class="p-4 border-t bg-white flex justify-end gap-3">
-                <button onclick="closePreview()" class="px-6 py-2 border rounded-xl font-medium">Edit Lagi</button>
-                <button onclick="sendTaskFromPreview()" id="confirm-send-btn" class="px-6 py-2 bg-blue-600 text-white rounded-xl font-medium">Kirim Sekarang</button>
+            <div class="flex-1 bg-slate-200 overflow-y-auto p-4 flex justify-center">
+                <img id="preview-img" class="shadow-lg bg-white h-fit" src="" alt="Preview" />
             </div>
         </div>
     </div>
 
     <script>
-        const API_URL = "URL_API_ANDA_DI_SINI";
-        const urlParams = new URLSearchParams(window.location.search);
-        const idMateri = urlParams.get('id') || "test";
-        const titleParam = urlParams.get('title') || "Tugas Mandiri";
-        const userData = JSON.parse(localStorage.getItem('user') || '{"username":"User","nama":"Siswa Demo","kelas":"X-1"}');
-
+        const userData = { nama: "Siswa Demo", kelas: "X-1" };
         let quill;
 
         window.onload = () => {
             lucide.createIcons();
             
-            // Inisialisasi Kop
-            document.getElementById('doc-title').innerText = decodeURIComponent(titleParam);
             document.getElementById('doc-student').innerText = `Nama: ${userData.nama} | Kelas: ${userData.kelas}`;
-            
-            const timer = setInterval(() => {
-                const el = document.getElementById('doc-date');
-                if(el) el.innerText = `Waktu: ${new Date().toLocaleString('id-ID')}`;
+            setInterval(() => {
+                document.getElementById('doc-date').innerText = `Waktu: ${new Date().toLocaleString('id-ID')}`;
             }, 1000);
 
-            // Init Quill
             quill = new Quill('#editor-container', {
                 theme: 'snow',
-                placeholder: 'Tulis tugas anda di sini...',
-                modules: {
-                    toolbar: [
-                        [{ 'header': [1, 2, false] }],
-                        ['bold', 'italic', 'underline'],
-                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                        ['image', 'clean']
-                    ]
-                }
+                modules: { toolbar: [[{ 'header': [1, 2, false] }], ['bold', 'italic', 'underline'], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['image']] }
             });
 
-            // Pindah Toolbar
             const qlToolbar = document.querySelector('.ql-toolbar');
             if (qlToolbar) document.getElementById('toolbar-container').appendChild(qlToolbar);
 
-            initMobileScale();
+            initLayoutManager();
             document.getElementById('preview-btn').onclick = generatePreview;
         };
 
-        function initMobileScale() {
+        function initLayoutManager() {
             const area = document.getElementById('pdf-export-area');
             const wrapper = document.getElementById('scale-wrapper');
             
-            const adjustScale = () => {
+            const adjustLayout = () => {
                 if (!area || !wrapper) return;
-                const a4WidthPx = 793.7; // 210mm konversi ke px @96dpi
-                const targetWidth = wrapper.offsetWidth;
-                if (targetWidth === 0) return;
+                
+                const a4WidthPx = 793.7; // Lebar standar A4
+                const containerWidth = wrapper.offsetWidth;
+                
+                // 1. Hitung Skala
+                let scale = containerWidth / a4WidthPx;
+                
+                // Mencegah scale berlebihan di desktop agar tidak pecah/loop
+                if (scale > 1.1) scale = 1.1; 
 
-                const scale = targetWidth / a4WidthPx;
                 area.style.transform = `scale(${scale})`;
                 area.style.transformOrigin = 'top center';
                 
-                // Kalkulasi Tinggi dengan Threshold
-                const rawHeight = area.scrollHeight * scale;
-                const currentWrapperHeight = parseInt(wrapper.style.height) || 0;
-
-                // Hanya update jika perbedaan > 3px untuk mencegah "creeping length"
-                if (Math.abs(rawHeight - currentWrapperHeight) > 3) {
-                    wrapper.style.height = Math.ceil(rawHeight) + 'px';
+                // 2. Update Tinggi Wrapper (Tanpa Transisi CSS untuk cegah loop)
+                const newHeight = Math.ceil(area.getBoundingClientRect().height);
+                
+                // Gunakan threshold lebih besar (5px) untuk cegah getaran perhitungan
+                const currentHeight = wrapper.offsetHeight;
+                if (Math.abs(newHeight - currentHeight) > 5) {
+                    wrapper.style.height = newHeight + "px";
                 }
             };
 
-            // ResizeObserver lebih stabil daripada MutationObserver
-            const ro = new ResizeObserver(() => adjustScale());
+            // Gunakan debouncing agar tidak terlalu sering menghitung
+            let resizeTimeout;
+            const debouncedAdjust = () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(adjustLayout, 50);
+            };
+
+            window.addEventListener('resize', debouncedAdjust);
+            quill.on('text-change', debouncedAdjust);
+            
+            // Observer untuk gambar atau perubahan konten dinamis
+            const ro = new ResizeObserver(debouncedAdjust);
             ro.observe(area);
 
-            window.addEventListener('resize', adjustScale);
-            quill.on('text-change', adjustScale);
-            setTimeout(adjustScale, 300);
+            setTimeout(adjustLayout, 500);
         }
 
         async function generatePreview() {
-            if (quill.getText().trim().length < 2) return alert("Isi tugas dulu!");
+            const area = document.getElementById('pdf-export-area');
+            const modal = document.getElementById('preview-modal');
+            const img = document.getElementById('preview-img');
 
-            const btn = document.getElementById('preview-btn');
-            btn.disabled = true;
-            document.getElementById('preview-modal').classList.remove('hidden');
-            document.getElementById('preview-loading').classList.remove('hidden');
-            document.getElementById('mobile-preview-img').src = "";
+            // Sembunyikan garis panduan saat difoto
+            area.classList.remove('page-guide-bg');
+            
+            const canvas = await html2canvas(area, {
+                scale: 2,
+                useCORS: true,
+                windowWidth: 800 // Kunci lebar window saat foto agar konsisten
+            });
 
-            try {
-                const area = document.getElementById('pdf-export-area');
-                
-                // Render ke Canvas untuk Image Preview
-                const canvas = await html2canvas(area, {
-                    scale: 1.5,
-                    useCORS: true,
-                    logging: false,
-                    onclone: (clonedDoc) => {
-                        clonedDoc.getElementById('pdf-export-area').classList.remove('page-guide-bg');
-                    }
-                });
-
-                document.getElementById('mobile-preview-img').src = canvas.toDataURL('image/jpeg', 0.8);
-                
-                // Simpan Base64 PDF (Hidden)
-                const pdfWorker = html2pdf().set({
-                    margin: 0,
-                    filename: 'tugas.pdf',
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                }).from(area);
-                
-                window.currentPdfBase64 = await pdfWorker.outputPdf('datauristring');
-                document.getElementById('preview-loading').classList.add('hidden');
-            } catch (e) {
-                console.error(e);
-                alert("Gagal memproses pratinjau.");
-                closePreview();
-            } finally {
-                btn.disabled = false;
-            }
-        }
-
-        function closePreview() {
-            document.getElementById('preview-modal').classList.add('hidden');
-        }
-
-        async function sendTaskFromPreview() {
-            const btn = document.getElementById('confirm-send-btn');
-            btn.innerText = "Mengirim...";
-            btn.disabled = true;
-
-            // Simulasi pengiriman
-            setTimeout(() => {
-                document.getElementById('preview-modal').classList.add('hidden');
-                document.getElementById('success-container').classList.remove('hidden');
-            }, 1500);
+            area.classList.add('page-guide-bg');
+            img.src = canvas.toDataURL('image/jpeg', 0.9);
+            modal.classList.remove('hidden');
         }
     </script>
 </body>
