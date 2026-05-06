@@ -503,29 +503,35 @@
             initMobileScale();
         };
 
-        function initMobileScale() {
+function initMobileScale() {
             const area = document.getElementById('pdf-export-area');
-            const wrapper = document.getElementById('scale-wrapper');
+            const scaleWrapper = document.getElementById('scale-wrapper');
             
             const adjustScale = () => {
-                const area = document.getElementById('pdf-export-area');
-                const scaleWrapper = document.getElementById('scale-wrapper');
-                
                 if (!area || !scaleWrapper) return;
 
                 // Lebar asli A4 dalam pixel (96 DPI)
                 const a4Width = 794; 
                 // Lebar bingkai yang tersedia
                 const targetWidth = scaleWrapper.offsetWidth; 
+                if (targetWidth === 0) return;
                 
-                // Paskan skala kertas agar persis memenuhi bingkai (baik di HP maupun Laptop)
+                // Paskan skala kertas
                 const scale = targetWidth / a4Width; 
                 
                 area.style.transform = `scale(${scale})`;
                 area.style.transformOrigin = 'top center';
                 
-                // Sesuaikan tinggi wrapper agar bingkai abu-abu ikut memanjang ke bawah
-                scaleWrapper.style.height = (area.scrollHeight * scale) + 'px';
+                // PERBAIKAN 1: Hitung tinggi dan gunakan Threshold (Batas Toleransi)
+                // Math.ceil untuk membulatkan ke atas agar tidak ada masalah desimal
+                const newHeight = Math.ceil(area.scrollHeight * scale);
+                const currentHeight = parseInt(scaleWrapper.style.height) || 0;
+
+                // Hanya ubah tinggi wrapper JIKA selisihnya lebih dari 3 pixel
+                // Ini akan memutus "lingkaran setan" penambahan tinggi setiap detik
+                if (Math.abs(newHeight - currentHeight) > 3) {
+                    scaleWrapper.style.height = newHeight + 'px';
+                }
             };
 
             // Run initial scale
@@ -536,9 +542,15 @@
                 quill.on('text-change', adjustScale);
             }
             
-            // Observer untuk gambar loading dan perubahan struktur DOM internal
-            const observer = new MutationObserver(adjustScale);
-            observer.observe(area, { childList: true, subtree: true, characterData: true });
+            // PERBAIKAN 2: Gunakan ResizeObserver alih-alih MutationObserver.
+            // ResizeObserver HANYA bereaksi jika ukuran elemen berubah, 
+            // TIDAK bereaksi saat teks jam berdetik, sehingga jauh lebih ringan.
+            if (typeof ResizeObserver !== 'undefined') {
+                const resizeObserver = new ResizeObserver(() => {
+                    adjustScale();
+                });
+                resizeObserver.observe(area);
+            }
         }
 
         function showError(msg) {
