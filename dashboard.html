@@ -1030,7 +1030,8 @@
             }
           }
 
-          let scoreBadge = hasScore ? `<span style="font-size:0.7rem; font-weight:700; color:#059669; background:#d1fae5; padding:4px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="check-circle" style="width:14px; height:14px;"></i> Point: ${sVal}</span>` : '';
+          let scoreBadge = hasScore ? `<span style="font-size:0.7rem; font-weight:700; color:#059669; background:#d1fae5; padding:4px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="check-circle" style="width:14px; height:14px;"></i> Point: ${sVal}</span>` 
+            : `<span style="font-size:0.7rem; font-weight:700; color:#94a3b8; background:#f1f5f9; padding:4px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="circle" style="width:14px; height:14px;"></i> Belum Ada Point</span>`;
 
           let timeBadge = '';
           if (hasScore && timeValue) {
@@ -1039,6 +1040,8 @@
             } else {
               timeBadge = `<span class="course-tag" style="background:#f1f5f9; color:#64748b; font-size:0.65rem; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="clock" style="width:12px; height:12px;"></i> ${timeValue}</span>`;
             }
+          } else {
+            timeBadge = `<span class="course-tag" style="background:#f1f5f9; color:#cbd5e1; font-size:0.65rem; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="clock" style="width:12px; height:12px;"></i> -</span>`;
           }
 
           let isKuisLocked = isMateriLocked || (!openedMaterials.has(mid.toString()) && !hasScore);
@@ -1388,19 +1391,22 @@
     <div
       style="background:white; border-radius:16px; width:100%; max-width:800px; height:85vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);">
       <div
-        style="padding:16px 20px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; background:#f8fafc;">
-        <h3
-          style="margin:0; font-size:1.1rem; font-weight:600; display:flex; align-items:center; gap:8px; color:#1e293b;">
-          <i data-lucide="file-check" style="color:#2563eb; width:20px; height:20px;"></i> Dokumen Tugas Anda</h3>
-        <div style="display:flex; align-items:center; gap:12px;">
-          <a id="viewFileNewTabBtn" href="#" target="_blank" style="display:flex; align-items:center; gap:6px; background:#f1f5f9; color:#334155; padding:6px 12px; border-radius:8px; font-size:0.85rem; font-weight:600; text-decoration:none; border:1px solid #e2e8f0; transition:all 0.2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
-            <i data-lucide="external-link" style="width:16px; height:16px;"></i> Buka di Tab Baru
-          </a>
+        style="padding:16px 20px; border-bottom:1px solid #e2e8f0; display:flex; flex-direction:column; gap:12px; background:#f8fafc;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h3
+            style="margin:0; font-size:1.1rem; font-weight:600; display:flex; align-items:center; gap:8px; color:#1e293b;">
+            <i data-lucide="file-check" style="color:#2563eb; width:20px; height:20px;"></i> Dokumen Tugas Anda
+          </h3>
           <button onclick="document.getElementById('viewFileModal').style.display='none'"
             style="background:none; border:none; cursor:pointer; color:#64748b; padding:6px; border-radius:8px; display:flex; align-items:center; justify-content:center; transition: background 0.2s;"
             onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='none'">
             <i data-lucide="x" style="width:20px; height:20px;"></i>
           </button>
+        </div>
+        <div>
+          <a id="viewFileNewTabBtn" href="#" target="_blank" style="display:inline-flex; align-items:center; gap:6px; background:#f1f5f9; color:#334155; padding:6px 12px; border-radius:8px; font-size:0.85rem; font-weight:600; text-decoration:none; border:1px solid #e2e8f0; transition:all 0.2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+            <i data-lucide="external-link" style="width:16px; height:16px;"></i> Buka di Tab Baru
+          </a>
         </div>
       </div>
       <div style="flex:1; background:#f1f5f9; position:relative;">
