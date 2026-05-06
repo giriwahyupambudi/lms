@@ -125,7 +125,7 @@
 
         /* Area Panduan Batas Halaman A4 (Visual Only) */
         .page-guide-bg {
-            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='calc(100%25 - 50px)' width='100%25' height='50px' fill='rgba(239, 68, 68, 0.08)' /%3E%3Cline x1='0' y1='calc(100%25 - 50px)' x2='100%25' y2='calc(100%25 - 50px)' stroke='rgba(239, 68, 68, 0.5)' stroke-width='2' stroke-dasharray='6,6' /%3E%3Ctext x='50%25' y='calc(100%25 - 20px)' fill='%23ef4444' font-size='13' font-weight='bold' font-family='sans-serif' text-anchor='middle' letter-spacing='1'%3E%E2%9A%A0%EF%B8%8F AREA BATAS HALAMAN - PASTIKAN KOSONG %E2%9A%A0%EF%B8%8F%3C/text%3E%3Cline x1='0' y1='calc(100%25 - 1px)' x2='100%25' y2='calc(100%25 - 1px)' stroke='%23ef4444' stroke-width='2' /%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' viewBox='0 0 794 1123' preserveAspectRatio='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='1073' width='794' height='50' fill='rgba(239, 68, 68, 0.08)' /%3E%3Cline x1='0' y1='1073' x2='794' y2='1073' stroke='rgba(239, 68, 68, 0.5)' stroke-width='2' stroke-dasharray='6,6' /%3E%3Ctext x='397' y='1103' fill='%23ef4444' font-size='13' font-weight='bold' font-family='sans-serif' text-anchor='middle' letter-spacing='1'%3E%E2%9A%A0%EF%B8%8F AREA BATAS HALAMAN - PASTIKAN KOSONG %E2%9A%A0%EF%B8%8F%3C/text%3E%3Cline x1='0' y1='1121' x2='794' y2='1121' stroke='%23ef4444' stroke-width='2' /%3E%3C/svg%3E");
             background-size: 100% 297mm; /* Sesuai persis dengan ukuran PDF margin 0 */
             background-repeat: repeat-y;
             background-position: top center;
@@ -734,6 +734,19 @@
 
             } catch (error) {
                 console.error(error);
+                // Pastikan UI dikembalikan ke semula jika gagal agar layout tidak berantakan
+                try {
+                    if (document.getElementById('pdf-export-area')) document.getElementById('pdf-export-area').style.transform = 'none'; // Fallback
+                    const lockStyle = document.getElementById('pdf-lock-style');
+                    if (lockStyle) lockStyle.remove();
+                    const scaleWrapper = document.getElementById('scale-wrapper');
+                    if (scaleWrapper) scaleWrapper.style.height = 'auto';
+                    const editorWrapper = document.getElementById('editor-wrapper');
+                    if (editorWrapper) editorWrapper.classList.add('overflow-hidden');
+                    document.getElementById('preview-loading').style.display = 'none';
+                    initMobileScale(); // Panggil ulang inisialisasi agar layar kembali rapi
+                } catch(e) {}
+                
                 showError("Gagal memproses pratinjau: " + error.message);
                 closePreview();
             } finally {
