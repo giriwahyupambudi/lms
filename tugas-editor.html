@@ -639,13 +639,8 @@
                 const canvas = await html2canvas(exportArea, { 
                     scale: 1.2, // scale moderat agar jernih namun tidak memberatkan HP
                     useCORS: true, 
-                    width: exportWidth,
-                    height: exportHeight,
                     windowWidth: window.innerWidth > 800 ? window.innerWidth : 800,
                     windowHeight: exportHeight, // Paksa tinggi jendela kloning ke tinggi penuh agar tidak terpotong
-                    scrollY: 0,
-                    scrollX: 0,
-                    y: 0,
                     onclone: function(doc) {
                         const el = doc.getElementById('pdf-export-area');
                         if (el) {
