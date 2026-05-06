@@ -202,7 +202,7 @@
         <main class="flex-1 sm:px-4 py-0 sm:py-6 flex flex-col">
 
             <div id="editor-wrapper"
-                class="bg-white sm:bg-slate-200 rounded-none sm:rounded-xl shadow-none sm:shadow-inner border-0 sm:border border-slate-300 animate-fade-in flex flex-col items-center relative">
+                class="bg-white sm:bg-slate-200 rounded-none sm:rounded-xl shadow-none sm:shadow-inner border-0 sm:border border-slate-300 animate-fade-in flex flex-col items-center relative overflow-hidden">
 
                 <!-- Custom Sticky Toolbar -->
                 <div id="toolbar-container"
@@ -211,12 +211,7 @@
                 </div>
 
                 <!-- Container Utama -->
-                <div class="w-full py-0 pb-16 sm:py-8 sm:pb-8 flex flex-col items-center">
-                    <div class="w-full max-w-[210mm] mb-4 text-center px-4 hidden sm:block">
-                        <p class="text-sm font-medium text-slate-500">Lembar Kerja Tugas (Otomatis menyesuaikan layar)
-                        </p>
-                    </div>
-
+                <div class="w-full py-0 sm:py-4 pb-16 sm:pb-8 flex flex-col items-center">
                     <!-- WRAPPER UNTUK SCALE -->
                     <div id="scale-wrapper" class="w-full flex justify-center origin-top">
                         <!-- Kertas A4 Virtual (Selalu 210mm, discale di HP agar proporsi sama dengan PDF) -->
@@ -513,21 +508,24 @@
             const wrapper = document.getElementById('scale-wrapper');
             
             const adjustScale = () => {
-                const screenWidth = window.innerWidth;
-                const a4Width = 794; // approx 210mm in pixels at 96dpi
+                const area = document.getElementById('pdf-export-area');
+                const scaleWrapper = document.getElementById('scale-wrapper');
                 
-                if (screenWidth < a4Width) {
-                    const scale = screenWidth / (a4Width + 24); // 24px safety margin
-                    area.style.transform = `scale(${scale})`;
-                    area.style.transformOrigin = 'top center';
-                    
-                    if (wrapper) {
-                        wrapper.style.height = (area.scrollHeight * scale) + 'px';
-                    }
-                } else {
-                    area.style.transform = 'none';
-                    if (wrapper) wrapper.style.height = 'auto';
-                }
+                if (!area || !scaleWrapper) return;
+
+                // Lebar asli A4 dalam pixel (96 DPI)
+                const a4Width = 794; 
+                // Lebar bingkai yang tersedia
+                const targetWidth = scaleWrapper.offsetWidth; 
+                
+                // Paskan skala kertas agar persis memenuhi bingkai (baik di HP maupun Laptop)
+                const scale = targetWidth / a4Width; 
+                
+                area.style.transform = `scale(${scale})`;
+                area.style.transformOrigin = 'top center';
+                
+                // Sesuaikan tinggi wrapper agar bingkai abu-abu ikut memanjang ke bawah
+                scaleWrapper.style.height = (area.scrollHeight * scale) + 'px';
             };
 
             // Run initial scale
