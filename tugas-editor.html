@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Editor Tugas - Docs Style</title>
+<title>Editor Tugas - Docs Pro</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
@@ -11,123 +11,218 @@
 
 <style>
 body {
-    background: #e5e7eb;
+    background:#e5e7eb;
     font-family: sans-serif;
 }
 
-/* Container semua halaman */
-#document-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 24px;
-    padding: 24px;
+/* container semua halaman */
+#document-container{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:24px;
+    padding:24px;
 }
 
-/* A4 Page */
-.page {
-    width: 210mm;
-    min-height: 297mm;
-    background: white;
-    padding: 12.7mm;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    box-sizing: border-box;
-    position: relative;
+/* halaman A4 */
+.page{
+    width:210mm;
+    min-height:297mm;
+    background:white;
+    padding:12.7mm;
+    box-shadow:0 0 10px rgba(0,0,0,0.1);
+    box-sizing:border-box;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
 }
 
-/* Konten halaman */
-.page-content {
-    width: 100%;
+/* konten utama */
+.page-body{
+    flex:1;
 }
 
-/* Editor */
-.ql-container {
-    border: none !important;
-    height: auto !important;
+/* footer */
+.page-footer{
+    border-top:1px solid #ddd;
+    padding-top:6px;
+    font-size:12px;
+    text-align:center;
+    color:#666;
 }
 
-.ql-editor {
-    min-height: 200px;
-    overflow: hidden;
+/* editor */
+.ql-container{
+    border:none !important;
+    height:auto !important;
+}
+.ql-editor{
+    min-height:200px;
+    overflow:hidden;
 }
 </style>
 </head>
 
 <body>
 
-<div id="document-container">
-
-    <!-- HALAMAN PERTAMA -->
-    <div class="page">
-        <div class="page-content">
-            
-            <!-- Header -->
-            <div style="border-bottom:2px solid black; margin-bottom:20px;">
-                <h2 id="doc-title">Judul Tugas</h2>
-                <p id="doc-student">Nama: - | Kelas: -</p>
-                <p id="doc-date">Waktu: -</p>
-            </div>
-
-            <div id="editor-container"></div>
-
-        </div>
-    </div>
-
-</div>
+<div id="document-container"></div>
 
 <script>
-const quill = new Quill('#editor-container', {
-    theme: 'snow',
-    placeholder: 'Tulis tugas di sini...',
-    modules: {
-        toolbar: [
-            [{ 'header': [1,2,3,false] }],
-            ['bold','italic','underline'],
-            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-            ['link','image']
-        ]
-    }
-});
+let quill;
 
-/* ==== UPDATE WAKTU ==== */
-function updateTime(){
-    document.getElementById('doc-date').innerText =
-        "Waktu: " + new Date().toLocaleString('id-ID');
-}
-updateTime();
-setInterval(updateTime, 60000);
+/* ===== INIT ===== */
+window.onload = () => {
+    createFirstPage();
 
-/* ==== AUTO PAGE BREAK ==== */
-function splitPages() {
-    const container = document.getElementById('document-container');
-    const pages = container.querySelectorAll('.page');
-    const lastPage = pages[pages.length - 1];
-    const content = lastPage.querySelector('.page-content');
-
-    const maxHeight = 1122; // A4 px
-
-    if (content.scrollHeight > maxHeight) {
-        const newPage = document.createElement('div');
-        newPage.className = 'page';
-
-        const newContent = document.createElement('div');
-        newContent.className = 'page-content';
-
-        newPage.appendChild(newContent);
-        container.appendChild(newPage);
-
-        // pindahkan elemen terakhir
-        const lastNode = content.lastChild;
-        if (lastNode) {
-            newContent.prepend(lastNode);
+    quill = new Quill('#editor-root', {
+        theme: 'snow',
+        placeholder: 'Tulis tugas di sini...',
+        modules:{
+            toolbar:[
+                [{header:[1,2,3,false]}],
+                ['bold','italic','underline'],
+                [{list:'ordered'},{list:'bullet'}],
+                ['link','image']
+            ]
         }
+    });
+
+    quill.on('text-change', debounce(splitPages, 200));
+
+    updateTime();
+    setInterval(updateTime,60000);
+};
+
+/* ===== HEADER ===== */
+function getHeaderHTML(){
+    return `
+    <div style="border-bottom:2px solid black; margin-bottom:20px;">
+        <h2>Judul Tugas</h2>
+        <p>Nama: - | Kelas: -</p>
+        <p id="doc-date">Waktu: -</p>
+    </div>
+    `;
+}
+
+/* ===== FOOTER ===== */
+function getFooterHTML(pageNumber){
+    return `<div class="page-footer">Halaman ${pageNumber}</div>`;
+}
+
+/* ===== BUAT HALAMAN ===== */
+function createPage(pageNumber, withHeader=false){
+    const page = document.createElement('div');
+    page.className = 'page';
+
+    const body = document.createElement('div');
+    body.className = 'page-body';
+
+    if(withHeader){
+        body.innerHTML = getHeaderHTML();
+    }
+
+    const footer = document.createElement('div');
+    footer.innerHTML = getFooterHTML(pageNumber);
+
+    page.appendChild(body);
+    page.appendChild(footer);
+
+    return page;
+}
+
+/* ===== HALAMAN PERTAMA ===== */
+function createFirstPage(){
+    const container = document.getElementById('document-container');
+    container.innerHTML = '';
+
+    const page = createPage(1,true);
+
+    const editorRoot = document.createElement('div');
+    editorRoot.id = 'editor-root';
+
+    page.querySelector('.page-body').appendChild(editorRoot);
+
+    container.appendChild(page);
+}
+
+/* ===== SPLIT HALAMAN PRO ===== */
+function splitPages(){
+
+    const container = document.getElementById('document-container');
+
+    // ambil semua konten dari editor
+    const editorHTML = quill.root.innerHTML;
+
+    // pecah jadi blok (paragraf/list/gambar)
+    const temp = document.createElement('div');
+    temp.innerHTML = editorHTML;
+
+    const blocks = Array.from(temp.childNodes);
+
+    // reset halaman
+    container.innerHTML = '';
+    let pageNumber = 1;
+    let page = createPage(pageNumber,true);
+    let body = page.querySelector('.page-body');
+
+    container.appendChild(page);
+
+    let contentWrapper = document.createElement('div');
+    body.appendChild(contentWrapper);
+
+    const MAX = 1122; // tinggi A4 px
+
+    blocks.forEach(block=>{
+        contentWrapper.appendChild(block);
+
+        if(body.scrollHeight > MAX){
+
+            // keluarkan block terakhir
+            contentWrapper.removeChild(block);
+
+            // halaman baru
+            pageNumber++;
+            page = createPage(pageNumber,false);
+            body = page.querySelector('.page-body');
+
+            contentWrapper = document.createElement('div');
+            body.appendChild(contentWrapper);
+
+            container.appendChild(page);
+
+            // masukkan block ke halaman baru
+            contentWrapper.appendChild(block);
+        }
+    });
+
+    updatePageNumbers();
+}
+
+/* ===== UPDATE NOMOR HALAMAN ===== */
+function updatePageNumbers(){
+    const pages = document.querySelectorAll('.page');
+    pages.forEach((p,i)=>{
+        const footer = p.querySelector('.page-footer');
+        footer.innerText = "Halaman " + (i+1);
+    });
+}
+
+/* ===== WAKTU ===== */
+function updateTime(){
+    const el = document.getElementById('doc-date');
+    if(el){
+        el.innerText = "Waktu: " + new Date().toLocaleString('id-ID');
     }
 }
 
-/* ==== TRIGGER ==== */
-quill.on('text-change', function(){
-    setTimeout(splitPages, 50);
-});
+/* ===== DEBOUNCE ===== */
+function debounce(fn, delay){
+    let t;
+    return function(){
+        clearTimeout(t);
+        t = setTimeout(fn, delay);
+    }
+}
 </script>
 
 </body>
