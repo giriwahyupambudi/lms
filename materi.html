@@ -230,7 +230,11 @@
       } 
       else if (link.includes("drive.google.com")) {
         let match = link.match(/[-\w]{25,}/);
-        if (match) embed = `<iframe src="https://drive.google.com/file/d/${match[0]}/preview"></iframe>`;
+        if (match) {
+            let fileId = match[0];
+            let dlUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+            embed = `<iframe src="https://docs.google.com/gview?url=${encodeURIComponent(dlUrl)}&embedded=true"></iframe>`;
+        }
       } 
       else if (link.toLowerCase().includes(".pdf")) {
         embed = `<iframe src="${link}#view=FitH&toolbar=0"></iframe>`;

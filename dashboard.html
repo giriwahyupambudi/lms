@@ -1364,8 +1364,16 @@
           }
           newTabBtn.href = tabUrl;
       }
-      // Gunakan URL bawaan, iframe url sudah dikonversi menjadi /preview sebelumnya
-      // Jika error cookie/akses muncul, siswa harus menggunakan tombol "Buka di Tab Baru"
+      // Gunakan Google Docs Viewer (gview) karena file terbukti publik
+      // Ini mengatasi bug Google Drive yang error jika user login banyak akun
+      if (url.includes('drive.google.com')) {
+          let match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+          if (match) {
+              let fileId = match[1];
+              let dlUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+              iframeUrl = `https://docs.google.com/gview?url=${encodeURIComponent(dlUrl)}&embedded=true`;
+          }
+      }
 
       iframe.onload = function () {
         loader.style.display = 'none';
