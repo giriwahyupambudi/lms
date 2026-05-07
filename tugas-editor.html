@@ -520,17 +520,20 @@
 
                 // Lebar asli A4 dalam pixel (96 DPI)
                 const a4Width = 794;
-                // Lebar bingkai yang tersedia
                 const targetWidth = scaleWrapper.offsetWidth;
 
-                // Paskan skala kertas agar persis memenuhi bingkai (baik di HP maupun Laptop)
-                const scale = targetWidth / a4Width;
-
-                area.style.transform = `scale(${scale})`;
-                area.style.transformOrigin = 'top center';
-
-                // Sesuaikan tinggi wrapper agar bingkai abu-abu ikut memanjang ke bawah
-                scaleWrapper.style.height = (area.scrollHeight * scale) + 'px';
+                if (targetWidth < a4Width) {
+                    // Di Layar HP (Kecil): Lakukan scale down (perkecil) kertas agar pas di layar
+                    const scale = targetWidth / a4Width;
+                    area.style.transform = `scale(${scale})`;
+                    area.style.transformOrigin = 'top center';
+                    scaleWrapper.style.height = (area.scrollHeight * scale) + 'px';
+                } else {
+                    // Di Layar Laptop/PC: Biarkan kertas ukuran murni 100% tanpa di-scale!
+                    // Ini 100% mencegah bug Chrome "infinite layout melar" saat mengetik.
+                    area.style.transform = 'none';
+                    scaleWrapper.style.height = 'auto';
+                }
             };
 
             // Run initial scale
