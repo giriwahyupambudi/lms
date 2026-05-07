@@ -701,8 +701,11 @@
                 // Karena PDF sudah digenerate tanpa garis batas, sekarang kita bisa menggambar 
                 // garis batas di atas canvas ini KHUSUS untuk ditampilkan di preview layar.
                 const ctx = canvas.getContext('2d');
+                ctx.setTransform(1, 0, 0, 1, 0, 0); // RESET matrix transform dari html2canvas!
+                
                 const pageHeightPx = canvas.width * (297 / 210);
-                const totalPages = Math.floor(canvas.height / pageHeightPx);
+                // Kita kurangi sedikit toleransi agar jika pas di batas, tidak terhitung halaman baru
+                const totalPages = Math.floor((canvas.height - 5) / pageHeightPx);
                 
                 // Canvas scale factor (canvas width aktual dibagi lebar A4 794px)
                 const scaleF = canvas.width / 794; 
