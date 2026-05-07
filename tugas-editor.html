@@ -68,13 +68,16 @@
             font-family: 'Inter', sans-serif;
             font-size: 14px;
         }
+
         /* Matikan scroll internal agar kertas memanjang ke bawah */
         .ql-container.ql-snow {
             height: auto !important;
             border: none !important;
         }
+
         .ql-editor {
-            overflow-y: hidden !important; /* Paksa memanjang ke bawah, bukan scroll */
+            overflow-y: hidden !important;
+            /* Paksa memanjang ke bawah, bukan scroll */
             height: auto !important;
             min-height: 400px;
         }
@@ -123,10 +126,11 @@
             break-inside: avoid !important;
         }
 
-        /* Area Panduan Batas Halaman A4 (Visual Only) */
+        /* Garis Panduan Batas Halaman A4 (Visual Only) */
         .page-guide-bg {
-            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' viewBox='0 0 794 1123' preserveAspectRatio='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='1073' width='794' height='50' fill='rgba(239, 68, 68, 0.08)' /%3E%3Cline x1='0' y1='1073' x2='794' y2='1073' stroke='rgba(239, 68, 68, 0.5)' stroke-width='2' stroke-dasharray='6,6' /%3E%3Ctext x='397' y='1103' fill='%23ef4444' font-size='13' font-weight='bold' font-family='sans-serif' text-anchor='middle' letter-spacing='1'%3E%E2%9A%A0%EF%B8%8F AREA BATAS HALAMAN - PASTIKAN KOSONG %E2%9A%A0%EF%B8%8F%3C/text%3E%3Cline x1='0' y1='1121' x2='794' y2='1121' stroke='%23ef4444' stroke-width='2' /%3E%3C/svg%3E");
-            background-size: 100% 297mm; /* Sesuai persis dengan ukuran PDF margin 0 */
+            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='100%25' x2='100%25' y2='100%25' stroke='%23ef4444' stroke-width='4' stroke-dasharray='10,10' /%3E%3Ctext x='50%25' y='calc(100%25 - 8px)' fill='%23ef4444' font-size='14' font-weight='bold' font-family='sans-serif' text-anchor='middle'%3E--- BATAS HALAMAN ---%3C/text%3E%3C/svg%3E");
+            background-size: 100% 297mm;
+            /* Sesuai persis dengan ukuran PDF margin 0 */
             background-repeat: repeat-y;
             background-position: top center;
         }
@@ -213,29 +217,28 @@
                 <!-- Container Utama -->
                 <div class="w-full py-0 sm:py-4 pb-16 sm:pb-8 flex flex-col items-center">
                     <!-- WRAPPER UNTUK SCALE -->
-                    <div id="scale-wrapper" class="w-full flex justify-center items-start origin-top">
+                    <div id="scale-wrapper" class="w-full flex justify-center origin-top">
                         <!-- Kertas A4 Virtual (Selalu 210mm, discale di HP agar proporsi sama dengan PDF) -->
-                        <div id="pdf-export-area"
-                            class="bg-white shadow-lg shrink-0 page-guide-bg"
+                        <div id="pdf-export-area" class="bg-white shadow-lg shrink-0 page-guide-bg"
                             style="position: relative; width: 210mm; max-width: 210mm; min-height: 297mm; padding: 12.7mm; box-sizing: border-box; display: flex; flex-direction: column;">
 
-                        <!-- Kop Surat Dinamis -->
-                        <div id="dynamic-kop"
-                            style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
-                            <h2 id="doc-title"
-                                style="margin: 0; font-size: 22px; font-weight: bold; font-family: 'Inter', sans-serif;">
-                                Judul Tugas</h2>
-                            <p id="doc-student"
-                                style="margin: 6px 0 0 0; font-size: 14px; color: #333; font-family: 'Inter', sans-serif;">
-                                Nama: - | Kelas: -</p>
-                            <p id="doc-date"
-                                style="margin: 6px 0 0 0; font-size: 14px; color: #333; font-family: 'Inter', sans-serif;">
-                                Waktu: -</p>
-                        </div>
+                            <!-- Kop Surat Dinamis -->
+                            <div id="dynamic-kop"
+                                style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+                                <h2 id="doc-title"
+                                    style="margin: 0; font-size: 22px; font-weight: bold; font-family: 'Inter', sans-serif;">
+                                    Judul Tugas</h2>
+                                <p id="doc-student"
+                                    style="margin: 6px 0 0 0; font-size: 14px; color: #333; font-family: 'Inter', sans-serif;">
+                                    Nama: - | Kelas: -</p>
+                                <p id="doc-date"
+                                    style="margin: 6px 0 0 0; font-size: 14px; color: #333; font-family: 'Inter', sans-serif;">
+                                    Waktu: -</p>
+                            </div>
 
-                        <div id="editor-container"
-                            style="border: none !important; font-family: 'Inter', sans-serif;"></div>
-                    </div>
+                            <div id="editor-container"
+                                style="border: none !important; font-family: 'Inter', sans-serif;"></div>
+                        </div>
                     </div> <!-- End of scale-wrapper -->
                 </div> <!-- End of scrollable container -->
             </div>
@@ -335,7 +338,8 @@
                         tunggu sebentar, sistem sedang merakit PDF Anda...</p>
                 </div>
             </div>
-            <div class="p-4 border-t border-slate-200 bg-white flex flex-wrap justify-between items-center gap-4 mt-auto sticky bottom-0 z-30">
+            <div
+                class="p-4 border-t border-slate-200 bg-white flex flex-wrap justify-between items-center gap-4 mt-auto sticky bottom-0 z-30">
                 <p class="text-sm text-slate-500 hidden sm:block"><i data-lucide="info"
                         class="w-4 h-4 inline-block -mt-1 mr-1"></i> Pastikan halaman tidak terpotong sebelum mengirim.
                 </p>
@@ -377,7 +381,7 @@
             // Isi data kop surat dinamis di layar
             document.getElementById('doc-title').innerText = decodeURIComponent(titleParam);
             document.getElementById('doc-student').innerText = `Nama: ${userData.nama || '-'} | Kelas: ${userData.kelas || userData.tingkat || '-'}`;
-            
+
             const updateTime = () => {
                 const docDate = document.getElementById('doc-date');
                 if (docDate) docDate.innerText = `Waktu Pengumpulan: ${new Date().toLocaleString('id-ID')}`;
@@ -498,7 +502,7 @@
             // -------------------------------
 
             document.getElementById('preview-btn').addEventListener('click', generatePreview);
-            
+
             // Inisialisasi Skala Layar HP
             initMobileScale();
         };
@@ -506,24 +510,24 @@
         function initMobileScale() {
             const area = document.getElementById('pdf-export-area');
             const wrapper = document.getElementById('scale-wrapper');
-            
+
             const adjustScale = () => {
                 const area = document.getElementById('pdf-export-area');
                 const scaleWrapper = document.getElementById('scale-wrapper');
-                
+
                 if (!area || !scaleWrapper) return;
 
                 // Lebar asli A4 dalam pixel (96 DPI)
-                const a4Width = 794; 
+                const a4Width = 794;
                 // Lebar bingkai yang tersedia
-                const targetWidth = scaleWrapper.offsetWidth; 
-                
+                const targetWidth = scaleWrapper.offsetWidth;
+
                 // Paskan skala kertas agar persis memenuhi bingkai (baik di HP maupun Laptop)
-                const scale = targetWidth / a4Width; 
-                
+                const scale = targetWidth / a4Width;
+
                 area.style.transform = `scale(${scale})`;
                 area.style.transformOrigin = 'top center';
-                
+
                 // Sesuaikan tinggi wrapper agar bingkai abu-abu ikut memanjang ke bawah
                 scaleWrapper.style.height = (area.scrollHeight * scale) + 'px';
             };
@@ -531,11 +535,11 @@
             // Run initial scale
             setTimeout(adjustScale, 100);
             window.addEventListener('resize', adjustScale);
-            
+
             if (quill) {
                 quill.on('text-change', adjustScale);
             }
-            
+
             // Observer untuk gambar loading dan perubahan struktur DOM internal
             const observer = new MutationObserver(adjustScale);
             observer.observe(area, { childList: true, subtree: true, characterData: true });
@@ -576,7 +580,7 @@
                 document.getElementById('preview-modal').classList.remove('hidden');
                 document.getElementById('preview-loading').style.display = 'flex';
                 document.getElementById('preview-iframe').src = "";
-                
+
                 const actionContainer = document.getElementById('action-container');
                 if (actionContainer) {
                     actionContainer.classList.add('hidden');
@@ -598,7 +602,7 @@
                 // Lepaskan sementara transform scale HP agar rendering berukuran asli
                 const originalTransform = exportArea.style.transform;
                 exportArea.style.transform = 'none';
-                
+
                 // Bebaskan tinggi wrapper agar tidak memotong isi kertas yang sudah kembali ke ukuran asli
                 const originalWrapperHeight = scaleWrapper ? scaleWrapper.style.height : 'auto';
                 if (scaleWrapper) scaleWrapper.style.height = 'auto';
@@ -608,22 +612,24 @@
                 await new Promise(resolve => setTimeout(resolve, 150));
 
                 const exportHeight = exportArea.scrollHeight;
-                
+                const exportWidth = exportArea.scrollWidth;
+
                 const opt = {
-                    margin:       0, // Bebas margin, karena #pdf-export-area sudah memiliki padding 12.7mm
-                    filename:     'tugas.pdf',
-                    image:        { type: 'jpeg', quality: 1 },
-                    html2canvas:  { 
-                        scale: 2, 
-                        useCORS: true, 
-                        windowWidth: window.innerWidth > 800 ? window.innerWidth : 800, 
-                        windowHeight: exportHeight,
-                        onclone: function(doc) {
+                    margin: 0, // Bebas margin, karena #pdf-export-area sudah memiliki padding 12.7mm
+                    filename: 'tugas.pdf',
+                    image: { type: 'jpeg', quality: 1 },
+                    html2canvas: {
+                        scale: 2,
+                        useCORS: true,
+                        windowWidth: window.innerWidth > 800 ? window.innerWidth : 800,
+                        windowHeight: exportHeight, // Paksa setinggi kertas asli agar tidak terpotong fold browser
+                        onclone: function (doc) {
                             const el = doc.getElementById('pdf-export-area');
                             if (el) {
                                 el.classList.remove('page-guide-bg'); // Hapus garis batas merah
-                                
-                                // Buka semua kuncian flex dan tinggi dari element parent di DOM kloningan
+                                el.style.display = 'block'; // Hindari display flex memengaruhi page break
+
+                                // Buka semua kuncian parent agar seluruh elemen ikut ter-render utuh
                                 let parent = el.parentElement;
                                 while (parent && parent !== doc.body && parent !== doc.documentElement) {
                                     parent.style.display = 'block';
@@ -638,9 +644,9 @@
                                 doc.documentElement.style.height = 'auto';
                             }
                         }
-                    }, 
-                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak:    { mode: ['css', 'legacy'] }
+                    },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['css', 'legacy'] }
                 };
 
                 btnText.innerText = "Menyusun PDF...";
@@ -652,16 +658,13 @@
 
                 // Gunakan JPG untuk preview di semua perangkat
                 document.getElementById('preview-iframe').classList.add('hidden');
-                
-                const exportHeight = exportArea.scrollHeight;
-                const exportWidth = exportArea.scrollWidth;
-                
-                const canvas = await html2canvas(exportArea, { 
+
+                const canvas = await html2canvas(exportArea, {
                     scale: 1.2, // scale moderat agar jernih namun tidak memberatkan HP
-                    useCORS: true, 
+                    useCORS: true,
                     windowWidth: window.innerWidth > 800 ? window.innerWidth : 800,
                     windowHeight: exportHeight, // Paksa tinggi jendela kloning ke tinggi penuh agar tidak terpotong
-                    onclone: function(doc) {
+                    onclone: function (doc) {
                         const el = doc.getElementById('pdf-export-area');
                         if (el) {
                             // Buka semua kuncian flex dan tinggi dari element parent di DOM kloningan
@@ -681,37 +684,34 @@
                             // Injeksi elemen DOM fisik agar html2canvas pasti memfotonya
                             const pageHeightPx = 297 * 3.7795275591; // 297mm ke px
                             const totalPages = Math.floor(el.scrollHeight / pageHeightPx);
-                            for(let i=1; i<=totalPages; i++) {
-                                const boundaryArea = doc.createElement('div');
-                                boundaryArea.style.position = 'absolute';
-                                boundaryArea.style.top = (i * pageHeightPx - 50) + 'px';
-                                boundaryArea.style.left = '0';
-                                boundaryArea.style.width = '100%';
-                                boundaryArea.style.height = '50px';
-                                boundaryArea.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
-                                boundaryArea.style.borderTop = '2px dashed rgba(239, 68, 68, 0.5)';
-                                boundaryArea.style.borderBottom = '2px solid #ef4444';
-                                boundaryArea.style.boxSizing = 'border-box';
-                                boundaryArea.style.zIndex = '50';
-                                boundaryArea.style.display = 'flex';
-                                boundaryArea.style.alignItems = 'center';
-                                boundaryArea.style.justifyContent = 'center';
-                                boundaryArea.style.pointerEvents = 'none';
-                                
+                            for (let i = 1; i <= totalPages; i++) {
+                                const line = doc.createElement('div');
+                                line.style.position = 'absolute';
+                                line.style.top = (i * pageHeightPx) + 'px';
+                                line.style.left = '0';
+                                line.style.width = '100%';
+                                line.style.borderTop = '3px dashed #ef4444';
+                                line.style.zIndex = '50';
+
                                 const label = doc.createElement('span');
-                                label.innerText = '⚠️ AREA BATAS HALAMAN - PASTIKAN KOSONG ⚠️';
+                                label.innerText = '--- BATAS HALAMAN ---';
+                                label.style.position = 'absolute';
+                                label.style.top = '-12px';
+                                label.style.left = '50%';
+                                label.style.transform = 'translateX(-50%)';
                                 label.style.color = '#ef4444';
                                 label.style.fontWeight = 'bold';
-                                label.style.fontSize = '13px';
-                                label.style.letterSpacing = '1px';
-                                
-                                boundaryArea.appendChild(label);
-                                el.appendChild(boundaryArea);
+                                label.style.fontSize = '14px';
+                                label.style.backgroundColor = 'white';
+                                label.style.padding = '0 10px';
+
+                                line.appendChild(label);
+                                el.appendChild(line);
                             }
                         }
                     }
                 });
-                
+
                 // Kembalikan ukuran tampilan ke versi layar HP
                 exportArea.style.transform = originalTransform;
                 if (scaleWrapper) scaleWrapper.style.height = originalWrapperHeight;
@@ -724,9 +724,9 @@
                 document.getElementById('preview-loading').style.display = 'none';
 
                 const imgData = canvas.toDataURL('image/jpeg', 0.8);
-                
+
                 document.getElementById('mobile-preview-img').src = imgData;
-                
+
                 const fallback = document.getElementById('mobile-pdf-fallback');
                 fallback.classList.remove('hidden');
                 fallback.classList.add('flex');
@@ -734,19 +734,6 @@
 
             } catch (error) {
                 console.error(error);
-                // Pastikan UI dikembalikan ke semula jika gagal agar layout tidak berantakan
-                try {
-                    if (document.getElementById('pdf-export-area')) document.getElementById('pdf-export-area').style.transform = 'none'; // Fallback
-                    const lockStyle = document.getElementById('pdf-lock-style');
-                    if (lockStyle) lockStyle.remove();
-                    const scaleWrapper = document.getElementById('scale-wrapper');
-                    if (scaleWrapper) scaleWrapper.style.height = 'auto';
-                    const editorWrapper = document.getElementById('editor-wrapper');
-                    if (editorWrapper) editorWrapper.classList.add('overflow-hidden');
-                    document.getElementById('preview-loading').style.display = 'none';
-                    initMobileScale(); // Panggil ulang inisialisasi agar layar kembali rapi
-                } catch(e) {}
-                
                 showError("Gagal memproses pratinjau: " + error.message);
                 closePreview();
             } finally {
@@ -757,7 +744,7 @@
             }
         }
 
-        window.closePreview = function() {
+        window.closePreview = function () {
             document.getElementById('preview-modal').classList.add('hidden');
             const actionContainer = document.getElementById('action-container');
             if (actionContainer) {
@@ -768,7 +755,7 @@
 
         async function sendTaskFromPreview() {
             if (!window.currentPdfBase64) return;
-            
+
             const btn = document.getElementById('confirm-send-btn');
             const originalBtnHtml = btn.innerHTML;
             btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Mengirim...`;
