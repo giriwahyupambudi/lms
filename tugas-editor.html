@@ -17,6 +17,7 @@
 
     <!-- html2canvas & html2pdf for PDF generation (Restored for beautiful preview) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
@@ -613,59 +614,22 @@
 
                 const exportHeight = exportArea.scrollHeight;
 
-                const opt = {
-                    margin: 0, // Bebas margin, karena #pdf-export-area sudah memiliki padding 12.7mm
-                    filename: 'tugas.pdf',
-                    image: { type: 'jpeg', quality: 1 },
-                    html2canvas: {
-                        scale: 2,
-                        useCORS: true,
-                        windowWidth: window.innerWidth > 800 ? window.innerWidth : 800,
-                        windowHeight: exportHeight,
-                        onclone: function (doc) {
-                            const el = doc.getElementById('pdf-export-area');
-                            if (el) {
-                                el.classList.remove('page-guide-bg'); // Hapus garis batas merah
+                btnText.innerText = "Memproses Gambar...";
 
-                                // Buka semua kuncian flex dan tinggi dari element parent di DOM kloningan
-                                let parent = el.parentElement;
-                                while (parent && parent !== doc.body && parent !== doc.documentElement) {
-                                    parent.style.display = 'block';
-                                    parent.style.height = 'auto';
-                                    parent.style.maxHeight = 'none';
-                                    parent.style.overflow = 'visible';
-                                    parent = parent.parentElement;
-                                }
-                                doc.body.style.display = 'block';
-                                doc.body.style.height = 'auto';
-                                doc.documentElement.style.display = 'block';
-                                doc.documentElement.style.height = 'auto';
-                            }
-                        }
-                    },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: ['css', 'legacy'] }
-                };
-
-                btnText.innerText = "Menyusun PDF...";
-
-                const worker = html2pdf().set(opt).from(exportArea);
-                window.currentPdfBase64 = await worker.outputPdf('datauristring');
-                const pdfBlob = await worker.outputPdf('blob');
-                const blobUrl = URL.createObjectURL(pdfBlob);
-
-                // Gunakan JPG untuk preview di semua perangkat
+                // Sembunyikan iframe karena kita pakai fallback JPG
                 document.getElementById('preview-iframe').classList.add('hidden');
 
                 const canvas = await html2canvas(exportArea, {
-                    scale: 1.2, // scale moderat agar jernih namun tidak memberatkan HP
+                    scale: 2, // scale 2 agar PDF tajam dan tidak pecah
                     useCORS: true,
                     windowWidth: window.innerWidth > 800 ? window.innerWidth : 800,
-                    windowHeight: exportHeight, // Paksa tinggi jendela kloning ke tinggi penuh agar tidak terpotong
+                    windowHeight: exportHeight, // Paksa tinggi penuh
                     onclone: function (doc) {
                         const el = doc.getElementById('pdf-export-area');
                         if (el) {
-                            // Buka semua kuncian flex dan tinggi dari element parent di DOM kloningan
+                            el.classList.remove('page-guide-bg'); // Hapus garis batas merah dari canvas
+                            
+                            // Buka semua kuncian flex dan tinggi
                             let parent = el.parentElement;
                             while (parent && parent !== doc.body && parent !== doc.documentElement) {
                                 parent.style.display = 'block';
@@ -679,45 +643,12 @@
                             doc.documentElement.style.display = 'block';
                             doc.documentElement.style.height = 'auto';
 
-                            // Injeksi elemen DOM fisik agar html2canvas pasti memfotonya
-                            const pageHeightPx = 297 * 3.7795275591; // 297mm ke px
-                            const totalPages = Math.floor(el.scrollHeight / pageHeightPx);
-                            for (let i = 1; i <= totalPages; i++) {
-                                const boundaryArea = doc.createElement('div');
-                                boundaryArea.style.position = 'absolute';
-                                boundaryArea.style.top = (i * pageHeightPx - 50) + 'px';
-                                boundaryArea.style.left = '0';
-                                boundaryArea.style.width = '100%';
-                                boundaryArea.style.height = '50px';
-                                boundaryArea.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
-                                boundaryArea.style.borderTop = '2px dashed rgba(239, 68, 68, 0.5)';
-                                boundaryArea.style.borderBottom = '2px solid #ef4444';
-                                boundaryArea.style.boxSizing = 'border-box';
-                                boundaryArea.style.zIndex = '50';
-                                boundaryArea.style.display = 'flex';
-                                boundaryArea.style.alignItems = 'center';
-                                boundaryArea.style.justifyContent = 'center';
-                                boundaryArea.style.pointerEvents = 'none';
-
-                                const label = doc.createElement('span');
-                                label.innerText = '--- BATAS HALAMAN ---';
-                                label.style.position = 'absolute';
-                                label.style.top = '-12px';
-                                label.style.left = '50%';
-                                label.style.transform = 'translateX(-50%)';
-                                label.style.color = '#ef4444';
-                                label.style.fontWeight = 'bold';
-                                label.style.fontSize = '13px';
-                                label.style.letterSpacing = '1px';
-
-                                boundaryArea.appendChild(label);
-                                el.appendChild(boundaryArea);
-                            }
+                            // Kita TIDAK meng-injeksi garis batas merah untuk PDF asli agar bersih
                         }
                     }
                 });
 
-                // Kembalikan ukuran tampilan ke versi layar HP
+                // Kembalikan ukuran tampilan
                 exportArea.style.transform = originalTransform;
                 if (scaleWrapper) scaleWrapper.style.height = originalWrapperHeight;
                 if (editorWrapper) editorWrapper.classList.add('overflow-hidden');
@@ -726,11 +657,42 @@
                 const lockStyle = document.getElementById('pdf-lock-style');
                 if (lockStyle) lockStyle.remove();
 
+                btnText.innerText = "Menyusun PDF...";
+
+                // Konversi canvas menjadi PDF secara manual (slicing)
+                const imgData = canvas.toDataURL('image/jpeg', 0.98);
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth(); // 210mm
+                const pdfHeight = pdf.internal.pageSize.getHeight(); // 297mm
+
+                const canvasWidth = canvas.width;
+                const canvasHeight = canvas.height;
+                const ratio = pdfWidth / canvasWidth;
+                const scaledHeightMm = canvasHeight * ratio;
+
+                let heightLeftMm = scaledHeightMm;
+                let positionMm = 0;
+
+                pdf.addImage(imgData, 'JPEG', 0, positionMm, pdfWidth, scaledHeightMm);
+                heightLeftMm -= pdfHeight;
+
+                while (heightLeftMm > 0) {
+                    positionMm -= pdfHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'JPEG', 0, positionMm, pdfWidth, scaledHeightMm);
+                    heightLeftMm -= pdfHeight;
+                }
+
+                window.currentPdfBase64 = pdf.output('datauristring');
+                const pdfBlob = pdf.output('blob');
+                const blobUrl = URL.createObjectURL(pdfBlob);
+
                 document.getElementById('preview-loading').style.display = 'none';
 
-                const imgData = canvas.toDataURL('image/jpeg', 0.8);
-
-                document.getElementById('mobile-preview-img').src = imgData;
+                // Buat versi ringan dari gambar untuk preview agar hp tidak ngelag
+                const previewImgData = canvas.toDataURL('image/jpeg', 0.5);
+                document.getElementById('mobile-preview-img').src = previewImgData;
 
                 const fallback = document.getElementById('mobile-pdf-fallback');
                 fallback.classList.remove('hidden');
