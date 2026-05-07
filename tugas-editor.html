@@ -697,7 +697,51 @@
 
                 document.getElementById('preview-loading').style.display = 'none';
 
-                // Buat versi ringan dari gambar untuk preview agar hp tidak ngelag
+                // --- INJEKSI GARIS BATAS UNTUK PREVIEW ---
+                // Karena PDF sudah digenerate tanpa garis batas, sekarang kita bisa menggambar 
+                // garis batas di atas canvas ini KHUSUS untuk ditampilkan di preview layar.
+                const ctx = canvas.getContext('2d');
+                const pageHeightPx = canvas.width * (297 / 210);
+                const totalPages = Math.floor(canvas.height / pageHeightPx);
+                
+                // Canvas scale factor (canvas width aktual dibagi lebar A4 794px)
+                const scaleF = canvas.width / 794; 
+
+                for (let i = 1; i <= totalPages; i++) {
+                    const y = i * pageHeightPx;
+                    const h = 50 * scaleF;
+                    
+                    // Background merah transparan (Area bahaya potong)
+                    ctx.fillStyle = 'rgba(239, 68, 68, 0.08)';
+                    ctx.fillRect(0, y - h, canvas.width, h);
+                    
+                    // Garis atas (dashed)
+                    ctx.beginPath();
+                    ctx.setLineDash([10 * scaleF, 10 * scaleF]);
+                    ctx.moveTo(0, y - h);
+                    ctx.lineTo(canvas.width, y - h);
+                    ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
+                    ctx.lineWidth = 2 * scaleF;
+                    ctx.stroke();
+                    
+                    // Garis bawah (solid)
+                    ctx.beginPath();
+                    ctx.setLineDash([]);
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.strokeStyle = '#ef4444';
+                    ctx.lineWidth = 2 * scaleF;
+                    ctx.stroke();
+                    
+                    // Teks label
+                    ctx.fillStyle = '#ef4444';
+                    ctx.font = `bold ${13 * scaleF}px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('--- BATAS HALAMAN ---', canvas.width / 2, y - (h / 2));
+                }
+
+                // Buat versi ringan dari gambar (yang sudah ada garis batasnya) untuk preview
                 const previewImgData = canvas.toDataURL('image/jpeg', 0.5);
                 document.getElementById('mobile-preview-img').src = previewImgData;
 
