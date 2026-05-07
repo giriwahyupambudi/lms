@@ -629,21 +629,28 @@
                         if (el) {
                             el.classList.remove('page-guide-bg'); // Hapus garis batas merah dari canvas
                             
-                            // Buka semua kuncian flex dan tinggi
-                            let parent = el.parentElement;
-                            while (parent && parent !== doc.body && parent !== doc.documentElement) {
-                                parent.style.display = 'block';
-                                parent.style.height = 'auto';
-                                parent.style.maxHeight = 'none';
-                                parent.style.overflow = 'visible';
-                                parent = parent.parentElement;
-                            }
+                            // Trik Ampuh: Pindahkan elemen langsung ke body dan sembunyikan yang lain
+                            // Ini menjamin html2canvas memotret murni elemen ini tanpa bocor margin parent
+                            Array.from(doc.body.children).forEach(child => {
+                                child.style.display = 'none';
+                            });
+                            
+                            doc.body.appendChild(el);
+                            
+                            // Pastikan ukurannya utuh 210mm tanpa dipaksa parent
+                            el.style.display = 'block';
+                            el.style.position = 'absolute';
+                            el.style.top = '0';
+                            el.style.left = '0';
+                            el.style.margin = '0';
+                            el.style.transform = 'none'; // Buang segala jenis scale
+
                             doc.body.style.display = 'block';
+                            doc.body.style.margin = '0';
+                            doc.body.style.padding = '0';
                             doc.body.style.height = 'auto';
                             doc.documentElement.style.display = 'block';
                             doc.documentElement.style.height = 'auto';
-
-                            // Kita TIDAK meng-injeksi garis batas merah untuk PDF asli agar bersih
                         }
                     }
                 });
