@@ -138,21 +138,30 @@
         }
 
         /* Image resize overlay untuk mobile */
+        /* Image resize overlay untuk mobile */
         .img-resize-overlay {
             position: fixed;
-            bottom: 80px;
+            top: 50%;
             left: 50%;
-            transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(8px);
-            border-radius: 16px;
-            padding: 10px 16px;
+            transform: translate(-50%, -50%);
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column; /* Stack vertically for better mobile use */
+            align-items: center;
+            gap: 16px;
+            z-index: 1000;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .img-resize-controls {
             display: flex;
             align-items: center;
             gap: 12px;
-            z-index: 1000;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            transition: all 0.2s ease;
         }
 
         .img-resize-overlay button {
@@ -442,16 +451,58 @@
                 resizeOverlay = document.createElement('div');
                 resizeOverlay.className = 'img-resize-overlay';
                 resizeOverlay.innerHTML = `
-                    <button id="img-shrink" title="Perkecil">−</button>
-                    <span id="img-size-label">— × —</span>
-                    <button id="img-grow" title="Perbesar">+</button>
-                    <button id="img-close" title="Tutup" style="margin-left:4px; background:rgba(239,68,68,0.4);">✕</button>
+                    <div class="text-white text-xs font-bold opacity-50 uppercase tracking-widest mb-1">Pengaturan Gambar</div>
+                    <div class="img-resize-controls">
+                        <button id="img-shrink" title="Perkecil">−</button>
+                        <span id="img-size-label">— × —</span>
+                        <button id="img-grow" title="Perbesar">+</button>
+                    </div>
+                    <div class="flex gap-4 w-full border-t border-white/10 pt-4 justify-center">
+                        <button id="img-rotate" class="flex-1 !w-auto !px-4" title="Putar">
+                            <i data-lucide="rotate-cw" class="w-5 h-5 mr-2"></i> Putar
+                        </button>
+                        <button id="img-close" class="!w-12 !bg-red-500/20 hover:!bg-red-500/40 !text-red-500" title="Tutup">✕</button>
+                    </div>
                 `;
                 document.body.appendChild(resizeOverlay);
+                lucide.createIcons();
 
                 document.getElementById('img-shrink').addEventListener('click', () => resizeBy(-20));
                 document.getElementById('img-grow').addEventListener('click', () => resizeBy(20));
+                document.getElementById('img-rotate').addEventListener('click', rotateImage);
                 document.getElementById('img-close').addEventListener('click', deselectImage);
+            }
+
+            function rotateImage() {
+                if (!selectedImg) return;
+                let currentRotation = parseInt(selectedImg.getAttribute('data-rotation') || '0');
+                currentRotation = (currentRotation + 90) % 360;
+                selectedImg.setAttribute('data-rotation', currentRotation);
+                selectedImg.style.transform = `rotate(${currentRotation}deg) scale(1)`; // scale 1 untuk force repaint
+                
+                // Kompensasi layout flow agar teks tidak tertutup saat di-rotate
+                if (currentRotation === 90 || currentRotation === 270) {
+                    const w = selectedImg.naturalWidth;
+                    const h = selectedImg.naturalHeight;
+                    const displayW = selectedImg.offsetWidth;
+                    // Rasio tampilan terhadap ukuran asli
+                    const ratio = displayW / w;
+                    const displayH = h * ratio;
+                    
+                    // Hitung selisih tinggi visual vs tinggi layout
+                    // Saat rotasi 90/270, tinggi visual adalah lebar aslinya (displayW)
+                    // Ruang ekstra yang dibutuhkan = (Lebar - Tinggi) / 2
+                    const extraSpace = (displayW - displayH) / 2;
+                    
+                    selectedImg.style.marginTop = (extraSpace + 20) + 'px';
+                    selectedImg.style.marginBottom = (extraSpace + 20) + 'px';
+                } else {
+                    selectedImg.style.marginTop = '10px';
+                    selectedImg.style.marginBottom = '10px';
+                }
+
+                // Update label ukuran jika ada
+                if (typeof updateSizeLabel === 'function') updateSizeLabel();
             }
 
             function updateSizeLabel() {
