@@ -1,4 +1,4 @@
-const CACHE_NAME = 'al-ilmi-lms-v1';
+const CACHE_NAME = 'al-ilmi-lms-v2';
 const ASSETS_TO_CACHE = [
   'index.html',
   'dashboard.html',
@@ -28,6 +28,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Optional: console.log('Fetching:', event.request.url);
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request);
