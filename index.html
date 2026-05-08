@@ -9,6 +9,8 @@
     <!-- Menggunakan font Inter yang sama dengan Dashboard -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="manifest" href="manifest.json">
+    <script src="pwa-handler.js" defer></script>
 
     <style>
         :root {
@@ -584,10 +586,14 @@
             <div id="syncStatus" style="font-size: 0.75rem; color: var(--slate-500); margin-top: 16px; display: none; align-items: center; justify-content: center; gap: 6px;">
                 <i class="fas fa-sync-alt fa-spin"></i> <span>Memperbarui daftar kelas...</span>
             </div>
+
+            <a href="login-admin.html" style="display: block; text-align: center; margin-top: 20px; font-size: 0.75rem; color: var(--slate-400); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--slate-400)'">
+                <i class="fas fa-user-shield"></i> Login Guru/Admin
+            </a>
         </div>
 
         <div class="footer-text">
-            <span>"by Giri Wahyu Pambudi"</span>
+            <span>"by Giri Wahyu Pambudi, S.Pd"</span>
             &copy; 2026 SMK Gajah Mungkur 1 Wuryantoro
         </div>
     </div>
@@ -598,6 +604,13 @@
         let allUsers = [];
 
         window.onload = async () => {
+            // Check if already logged in
+            const session = localStorage.getItem("user");
+            if (session) {
+                window.location.href = "dashboard.html";
+                return;
+            }
+
             const syncStatus = document.getElementById("syncStatus");
             const cachedUser = localStorage.getItem("cache_user");
             if (cachedUser) {
