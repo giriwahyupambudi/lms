@@ -127,14 +127,7 @@
             break-inside: avoid !important;
         }
 
-        /* Garis Panduan Batas Halaman A4 (Visual Only) */
-        .page-guide-bg {
-            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' viewBox='0 0 794 1123' preserveAspectRatio='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='1073' width='794' height='50' fill='rgba(239, 68, 68, 0.08)' /%3E%3Cline x1='0' y1='1073' x2='794' y2='1073' stroke='rgba(239, 68, 68, 0.5)' stroke-width='2' stroke-dasharray='6,6' /%3E%3Ctext x='397' y='1103' fill='%23ef4444' font-size='13' font-weight='bold' font-family='sans-serif' text-anchor='middle' letter-spacing='1'%3E%E2%9A%A0%EF%B8%8F AREA BATAS HALAMAN - PASTIKAN KOSONG %E2%9A%A0%EF%B8%8F%3C/text%3E%3Cline x1='0' y1='1121' x2='794' y2='1121' stroke='%23ef4444' stroke-width='2' /%3E%3C/svg%3E");
-            background-size: 100% 297mm;
-            /* Sesuai persis dengan ukuran PDF margin 0 */
-            background-repeat: repeat-y;
-            background-position: top center;
-        }
+        /* CSS Batas Halaman digantikan dengan implementasi elemen JS dinamis agar konsisten lintas halaman */
 
         /* Batasi gambar agar tidak melewati layar, tapi tetap bisa dikecilkan */
         .ql-editor img {
@@ -522,6 +515,8 @@
                 const a4Width = 794;
                 const targetWidth = scaleWrapper.offsetWidth;
 
+                if (targetWidth === 0) return; // Mencegah infinite loop saat disembunyikan
+
                 if (targetWidth < a4Width) {
                     // Di Layar HP (Kecil): Lakukan scale down (perkecil) kertas agar pas di layar
                     const scale = targetWidth / a4Width;
@@ -534,7 +529,60 @@
                     area.style.transform = 'none';
                     scaleWrapper.style.height = 'auto';
                 }
+
+                updatePageBoundaries();
             };
+
+            function updatePageBoundaries() {
+                const area = document.getElementById('pdf-export-area');
+                const editorContainer = document.getElementById('editor-container');
+                if (!area || area.offsetWidth === 0) return;
+
+                // Matikan observer agar tidak infinite loop
+                if (window.editorObserver) window.editorObserver.disconnect();
+
+                document.querySelectorAll('.visual-page-boundary').forEach(el => el.remove());
+
+                // Tinggi aktual konten yang diketik
+                let contentHeight = area.scrollHeight;
+                if (editorContainer) {
+                    contentHeight = editorContainer.offsetTop + editorContainer.scrollHeight;
+                }
+                const pageHeightPx = area.offsetWidth * (297 / 210);
+
+                // Hitung total halaman yang "terbuka". Math.ceil membuat halaman selalu bulat.
+                // Jika konten sudah mencapai jarak 100px dari bawah, halaman baru otomatis terbuka.
+                const totalPages = Math.max(1, Math.ceil((contentHeight + 100) / pageHeightPx));
+
+                // Paksa tinggi kertas selalu dalam kelipatan halaman A4 penuh.
+                // Ini meniru fitur Ms Word, sehingga batas halaman selalu terlihat jelas di dasar kertas.
+                area.style.minHeight = (totalPages * pageHeightPx) + 'px';
+
+                for (let i = 1; i <= totalPages; i++) {
+                    const boundary = document.createElement('div');
+                    boundary.className = 'visual-page-boundary';
+                    boundary.style.position = 'absolute';
+                    // Beri offset negatif (-15px) agar batas di editor sedikit lebih naik dari aslinya, 
+                    // memberikan "safety margin" ekstra agar text benar-benar aman dari potongan PDF.
+                    boundary.style.top = (((i - 1) * pageHeightPx) + 5) + 'px';
+                    boundary.style.left = '0';
+                    boundary.style.width = '100%';
+                    boundary.style.height = pageHeightPx + 'px';
+                    // Gunakan SVG asli agar tidak terlihat cak-cakakan. Garis atas dinaikkan (ketebalan 35px) agar lebih lebar sesuai permintaan.
+                    boundary.style.backgroundImage = "url(\"data:image/svg+xml,%3Csvg width='794' height='1123' viewBox='0 0 794 1123' preserveAspectRatio='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='1086' width='794' height='35' fill='rgba(239, 68, 68, 0.08)' /%3E%3Cline x1='0' y1='1086' x2='794' y2='1086' stroke='rgba(239, 68, 68, 0.5)' stroke-width='2' stroke-dasharray='6,6' /%3E%3Ctext x='397' y='1106' fill='%23ef4444' font-size='11' font-weight='bold' font-family='sans-serif' text-anchor='middle' letter-spacing='1'%3E%E2%9A%A0%EF%B8%8F AREA BATAS HALAMAN - PASTIKAN KOSONG %E2%9A%A0%EF%B8%8F%3C/text%3E%3Cline x1='0' y1='1121' x2='794' y2='1121' stroke='%23ef4444' stroke-width='2' /%3E%3C/svg%3E\")";
+                    boundary.style.backgroundSize = '100% 100%';
+                    boundary.style.backgroundRepeat = 'no-repeat';
+                    boundary.style.pointerEvents = 'none';
+                    boundary.style.zIndex = '10';
+
+                    area.appendChild(boundary);
+                }
+
+                // Nyalakan kembali observer
+                if (window.editorObserver) {
+                    window.editorObserver.observe(area, { childList: true, subtree: true, characterData: true });
+                }
+            }
 
             // Run initial scale
             setTimeout(adjustScale, 100);
@@ -545,8 +593,8 @@
             }
 
             // Observer untuk gambar loading dan perubahan struktur DOM internal
-            const observer = new MutationObserver(adjustScale);
-            observer.observe(area, { childList: true, subtree: true, characterData: true });
+            window.editorObserver = new MutationObserver(adjustScale);
+            window.editorObserver.observe(area, { childList: true, subtree: true, characterData: true });
         }
 
         function showError(msg) {
@@ -631,15 +679,19 @@
                         const el = doc.getElementById('pdf-export-area');
                         if (el) {
                             el.classList.remove('page-guide-bg'); // Hapus garis batas merah dari canvas
-                            
+                            el.classList.remove('shadow-lg'); // Hapus bayangan agar tidak menciptakan halaman kosong ekstra di PDF
+
+                            // Sembunyikan elemen batas JS agar tidak terfoto ke PDF
+                            Array.from(doc.querySelectorAll('.visual-page-boundary')).forEach(b => b.style.display = 'none');
+
                             // Trik Ampuh: Pindahkan elemen langsung ke body dan sembunyikan yang lain
                             // Ini menjamin html2canvas memotret murni elemen ini tanpa bocor margin parent
                             Array.from(doc.body.children).forEach(child => {
                                 child.style.display = 'none';
                             });
-                            
+
                             doc.body.appendChild(el);
-                            
+
                             // Pastikan ukurannya utuh 210mm tanpa dipaksa parent
                             el.style.display = 'block';
                             el.style.position = 'absolute';
@@ -687,7 +739,8 @@
                 pdf.addImage(imgData, 'JPEG', 0, positionMm, pdfWidth, scaledHeightMm);
                 heightLeftMm -= pdfHeight;
 
-                while (heightLeftMm > 0) {
+                // Toleransi sisa tinggi 1mm untuk mengabaikan pembulatan sub-piksel atau sisa margin kecil
+                while (heightLeftMm > 1) {
                     positionMm -= pdfHeight;
                     pdf.addPage();
                     pdf.addImage(imgData, 'JPEG', 0, positionMm, pdfWidth, scaledHeightMm);
@@ -705,22 +758,23 @@
                 // garis batas di atas canvas ini KHUSUS untuk ditampilkan di preview layar.
                 const ctx = canvas.getContext('2d');
                 ctx.setTransform(1, 0, 0, 1, 0, 0); // RESET matrix transform dari html2canvas!
-                
+
                 const pageHeightPx = canvas.width * (297 / 210);
                 // Kita kurangi sedikit toleransi agar jika pas di batas, tidak terhitung halaman baru
                 const totalPages = Math.floor((canvas.height - 5) / pageHeightPx);
-                
+
                 // Canvas scale factor (canvas width aktual dibagi lebar A4 794px)
-                const scaleF = canvas.width / 794; 
+                const scaleF = canvas.width / 794;
 
                 for (let i = 1; i <= totalPages; i++) {
-                    const y = i * pageHeightPx;
-                    const h = 50 * scaleF;
-                    
+                    // Beri sedikit offset ke bawah (+15px) agar posisi visual di preview benar-benar selaras dengan editor
+                    const y = (i * pageHeightPx) + (15 * scaleF);
+                    const h = 35 * scaleF; // Ketebalan 35px agar garis atas lebih naik sesuai permintaan
+
                     // Background merah transparan (Area bahaya potong)
                     ctx.fillStyle = 'rgba(239, 68, 68, 0.08)';
                     ctx.fillRect(0, y - h, canvas.width, h);
-                    
+
                     // Garis atas (dashed)
                     ctx.beginPath();
                     ctx.setLineDash([10 * scaleF, 10 * scaleF]);
@@ -729,7 +783,7 @@
                     ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
                     ctx.lineWidth = 2 * scaleF;
                     ctx.stroke();
-                    
+
                     // Garis bawah (solid)
                     ctx.beginPath();
                     ctx.setLineDash([]);
@@ -738,13 +792,13 @@
                     ctx.strokeStyle = '#ef4444';
                     ctx.lineWidth = 2 * scaleF;
                     ctx.stroke();
-                    
+
                     // Teks label
                     ctx.fillStyle = '#ef4444';
-                    ctx.font = `bold ${13 * scaleF}px sans-serif`;
+                    ctx.font = `bold ${11 * scaleF}px sans-serif`; // Disamakan dengan font editor
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText('--- BATAS HALAMAN ---', canvas.width / 2, y - (h / 2));
+                    ctx.fillText('⚠️ BATAS HALAMAN ⚠️', canvas.width / 2, y - (h / 2));
                 }
 
                 // Buat versi ringan dari gambar (yang sudah ada garis batasnya) untuk preview
