@@ -6,13 +6,14 @@ window.addEventListener('beforeinstallprompt', (e) => {
   // Stash the event so it can be triggered later.
   deferredPrompt = e;
   
-  // Optionally, show a custom install button or notification
-  console.log('PWA install prompt is ready');
+  console.log('✅ PWA beforeinstallprompt event fired and stashed.');
   
   // If you want to automatically show it after a delay
+  // We increase it slightly to ensure the page is fully loaded and stable
   setTimeout(() => {
+    console.log('Attempting to show install promotion...');
     showInstallPromotion();
-  }, 5000);
+  }, 6000);
 });
 
 function showInstallPromotion() {
