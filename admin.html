@@ -1214,6 +1214,7 @@
       let tugasLog = dataLogTugas.find(t => t.rowNumber === rowNumber);
       if (tugasLog) {
          tugasLog.status_periksa = newStatus;
+         if (tugasLog._norm) tugasLog._norm['statusperiksa'] = newStatus; // Update cache
          renderTableTugas();
          renderDashboard(); // Refresh widget 10 tugas terakhir jika ada di dashboard
       }
