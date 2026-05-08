@@ -853,9 +853,11 @@
           }
           
           let fileUrl = getVal(r, ['link_tugas', 'file']) || "#";
+          let isRead = getVal(r, ['status_periksa']) === "Sudah";
+          let rowStyle = isRead ? 'opacity: 0.6; background-color: #f8fafc;' : '';
           
-          tugasHtml += `<tr>
-            <td style="font-weight:500;">${userNama}</td>
+          tugasHtml += `<tr style="${rowStyle}">
+            <td style="font-weight:500;">${userNama} ${isRead ? '<i data-lucide="check-circle-2" style="color:#22c55e; width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i>' : ''}</td>
             <td>${materi}</td>
             <td style="font-size:0.8rem; color:var(--text-muted)">${waktu}</td>
             <td><a href="${fileUrl}" target="_blank" class="btn-icon" style="color:var(--primary); border-color:var(--primary-light); background:var(--primary-light);"><i data-lucide="external-link"></i></a></td>
@@ -1174,19 +1176,63 @@
         }
         
         let fileUrl = getVal(t, ['link_tugas', 'file']) || "#";
+        let isRead = getVal(t, ['status_periksa']) === "Sudah";
+        let rowStyle = isRead ? 'opacity: 0.6; background-color: #f8fafc;' : '';
+        let btnIcon = isRead ? 'check-circle-2' : 'circle';
+        let btnColor = isRead ? '#22c55e' : 'var(--text-muted)';
         
-        html += `<tr>
+        html += `<tr style="${rowStyle}">
           <td>${i+1}</td>
-          <td style="font-weight:500;">${userNama}</td>
+          <td style="font-weight:500;">${userNama} ${isRead ? '<i data-lucide="check-circle-2" style="color:#22c55e; width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i>' : ''}</td>
           <td>${kelas}</td>
           <td>${materi}</td>
           <td style="font-size:0.85rem; color:var(--text-muted)">${waktu}</td>
-          <td style="text-align:center"><a href="${fileUrl}" target="_blank" class="btn btn-outline" style="padding:6px 10px; font-size:0.75rem;"><i data-lucide="external-link" style="width:14px; height:14px;"></i> Buka</a></td>
+          <td style="text-align:center; white-space:nowrap;">
+            <a href="${fileUrl}" target="_blank" onclick="markAsReadAutomatically(${t.rowNumber})" class="btn btn-outline" style="padding:6px 10px; font-size:0.75rem;"><i data-lucide="external-link" style="width:14px; height:14px;"></i> Buka</a>
+            <button onclick="toggleTugasChecked(${t.rowNumber}, '${isRead ? 'Belum' : 'Sudah'}')" class="btn btn-outline" style="padding:6px 10px; font-size:0.75rem; margin-left:4px; border-color:${isRead ? '#22c55e' : ''}; color:${btnColor};" title="Tandai Sudah Diperiksa">
+              <i data-lucide="${btnIcon}" style="width:14px; height:14px;"></i>
+            </button>
+          </td>
         </tr>`;
       });
       document.getElementById('tabelTugasBody').innerHTML = html || '<tr><td colspan="6" style="text-align:center">Tidak ada data tugas yang sesuai.</td></tr>';
       restoreSortIcons();
     }
+
+    // Fungsi tambahan untuk menandai tugas otomatis jika di-"Buka"
+    window.markAsReadAutomatically = function(rowNumber) {
+        let tugasLog = dataLogTugas.find(t => t.rowNumber === rowNumber);
+        if (tugasLog && getVal(tugasLog, ['status_periksa']) !== "Sudah") {
+            toggleTugasChecked(rowNumber, 'Sudah');
+        }
+    };
+
+    window.toggleTugasChecked = async function(rowNumber, newStatus) {
+      if (!rowNumber) return;
+      
+      // Optimistic UI Update
+      let tugasLog = dataLogTugas.find(t => t.rowNumber === rowNumber);
+      if (tugasLog) {
+         tugasLog.status_periksa = newStatus;
+         renderTableTugas();
+         renderDashboard(); // Refresh widget 10 tugas terakhir jika ada di dashboard
+      }
+      
+      // Request ke server tanpa blocking
+      try {
+        await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+                action: 'markTugasRead',
+                rowNumber: rowNumber,
+                status: newStatus
+            })
+        });
+      } catch (e) {
+        console.error("Gagal menyimpan status tugas:", e);
+      }
+    };
 
     // ============================================
     // RENDER RANKING ADMIN

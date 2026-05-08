@@ -592,6 +592,39 @@ function doPost(e) {
                               .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // ===============================================
+    // ACTION 7: MARK TUGAS READ (ADMIN PANEL)
+    // ===============================================
+    if (action === "markTugasRead") {
+      var sheetTugas = ss.getSheetByName("logTugas");
+      if (!sheetTugas) throw new Error("Sheet logTugas tidak ditemukan");
+      
+      var rowNum = parseInt(postData.rowNumber);
+      if (!rowNum || rowNum < 2) throw new Error("Nomor baris tidak valid");
+      
+      var newStatus = postData.status; // "Sudah" atau "Belum"
+      
+      var headers = sheetTugas.getRange(1, 1, 1, sheetTugas.getLastColumn()).getValues()[0];
+      var statusCol = -1;
+      
+      for (var i = 0; i < headers.length; i++) {
+         if (headers[i].toString().toLowerCase() === "status_periksa") {
+            statusCol = i + 1;
+            break;
+         }
+      }
+      
+      // Jika kolom status_periksa belum ada, buat otomatis di kanan
+      if (statusCol === -1) {
+         statusCol = headers.length + 1;
+         sheetTugas.getRange(1, statusCol).setValue("status_periksa");
+      }
+      
+      sheetTugas.getRange(rowNum, statusCol).setValue(newStatus);
+      return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Status tugas diperbarui" }))
+                           .setMimeType(ContentService.MimeType.JSON);
+    }
+
     throw new Error("Aksi tidak dikenali: " + action);
 
   } catch (error) {
