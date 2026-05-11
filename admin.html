@@ -1832,43 +1832,50 @@
         bodyHtml += `<tr><td style="position: sticky; left: 0; background: #fff; z-index: 9; font-weight: 600; border-right: 2px solid #e2e8f0;">${nama}<br><small style="color:var(--text-muted)">${username}</small></td><td>${kelas}</td>`;
         
         materials.forEach(m => {
-          // ID Materi harus konsisten dengan yang ada di dashboard (rowNumber atau index+2)
-          let mid = m.rowNumber || (dataMateri.indexOf(m) + 2);
+          let mid = parseInt(m.rowNumber || (dataMateri.indexOf(m) + 2));
+          let mJudul = (getVal(m, ['judul', 'materi']) || "").toString().trim().toLowerCase();
           let tipe = (getVal(m, ['tipe']) || "Praktik").toLowerCase();
           
-          let score = "-";
+          let scoreValue = -1; // Default jika belum ada nilai
+          let scoreText = "-";
           let cellStyle = "text-align:center;";
           
           if (tipe === "materi") {
-            score = '<i data-lucide="check" style="color:#22c55e; width:16px;"></i>';
+            scoreText = '<i data-lucide="check" style="color:#22c55e; width:16px;"></i>';
           } else {
-            // Cari di listNilai (Case Insensitive username matching)
-            let res = dataNilai.find(n => {
+            // Pencocokan Nilai yang lebih fleksibel
+            let filteredNilai = dataNilai.filter(n => {
                 let nUser = (getVal(n, ['username', 'nisn']) || "").toString().trim().toLowerCase();
-                let nMid = getVal(n, ['id_materi', 'idmateri']);
-                return nUser === username && nMid == mid;
+                let nMid = parseInt(getVal(n, ['id_materi', 'idmateri']) || 0);
+                let nJudul = (getVal(n, ['judul', 'materi']) || "").toString().trim().toLowerCase();
+                
+                // Cocokkan berdasarkan Username DAN (ID Materi ATAU Judul)
+                return nUser === username && (nMid === mid || (mJudul !== "" && nJudul === mJudul));
             });
 
-            if (res) {
-              score = getVal(res, ['nilai']) || "0";
+            if (filteredNilai.length > 0) {
+              // Ambil nilai tertinggi jika ada beberapa percobaan
+              let maxScore = Math.max(...filteredNilai.map(n => parseInt(getVal(n, ['nilai', 'skor']) || 0)));
+              scoreText = maxScore.toString();
               cellStyle += "font-weight:bold; color:var(--primary);";
             } else {
-              // Cek di logTugas
+              // Cek di logTugas jika belum ada nilai
               let upload = dataLogTugas.find(t => {
                   let tUser = (getVal(t, ['username']) || "").toString().trim().toLowerCase();
-                  let tMid = getVal(t, ['id_materi', 'materi']);
-                  return tUser === username && tMid == mid;
+                  let tMid = parseInt(getVal(t, ['id_materi', 'materi']) || 0);
+                  let tJudul = (getVal(t, ['materi', 'judul']) || "").toString().trim().toLowerCase();
+                  return tUser === username && (tMid === mid || (mJudul !== "" && tJudul === mJudul));
               });
 
               if (upload) {
-                score = '<span style="font-size:0.7rem; color:#d97706; background:#fffbeb; padding:2px 6px; border-radius:4px; border:1px solid #fef3c7;">Terkirim</span>';
+                scoreText = '<span style="font-size:0.7rem; color:#d97706; background:#fffbeb; padding:2px 6px; border-radius:4px; border:1px solid #fef3c7;">Terkirim</span>';
               } else {
-                score = '<span style="color:#ef4444; opacity:0.2;">-</span>';
+                scoreText = '<span style="color:#ef4444; opacity:0.2;">-</span>';
               }
             }
           }
           
-          bodyHtml += `<td style="${cellStyle}">${score}</td>`;
+          bodyHtml += `<td style="${cellStyle}">${scoreText}</td>`;
         });
         bodyHtml += `</tr>`;
       });
