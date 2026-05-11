@@ -183,6 +183,7 @@
     <button class="nav-item" id="tabNilaiD" onclick="showTab('nilai')"><i data-lucide="graduation-cap"></i> Input Nilai</button>
     <button class="nav-item" id="tabTugasD" onclick="showTab('tugas')"><i data-lucide="file-text"></i> Tugas</button>
     <button class="nav-item" id="tabRankingD" onclick="showTab('ranking')"><i data-lucide="award"></i> Peringkat</button>
+    <button class="nav-item" id="tabRekapD" onclick="showTab('rekap')"><i data-lucide="clipboard-list"></i> Rekap Nilai</button>
     <button class="nav-item" id="tabUsersD" onclick="showTab('users')"><i data-lucide="users"></i> Pengguna</button>
     <button class="nav-item" id="tabSettingsD" onclick="showTab('settings')"><i data-lucide="settings"></i> Pengaturan</button>
     <div style="flex:1"></div>
@@ -195,8 +196,7 @@
     <button class="nav-item" id="tabNilai" onclick="showTab('nilai')"><i data-lucide="graduation-cap"></i> Nilai</button>
     <button class="nav-item" id="tabTugas" onclick="showTab('tugas')"><i data-lucide="file-text"></i> Tugas</button>
     <button class="nav-item" id="tabRanking" onclick="showTab('ranking')"><i data-lucide="award"></i> Peringkat</button>
-    <button class="nav-item" id="tabUsers" onclick="showTab('users')"><i data-lucide="users"></i> Pengguna</button>
-    <button class="nav-item" id="tabSettings" onclick="showTab('settings')"><i data-lucide="settings"></i> Pengaturan</button>
+    <button class="nav-item" id="tabRekap" onclick="showTab('rekap')"><i data-lucide="clipboard-list"></i> Rekap</button>
   </nav>
 
   <main class="main-content">
@@ -506,6 +506,36 @@
         </div>
       </section>
 
+      <!-- ================= SECTION: REKAP NILAI ================= -->
+      <section id="rekapSection" style="display:none">
+        <div class="header-section">
+          <div>
+            <h1>Rekap Nilai & Progres</h1>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Lihat seluruh progres pengerjaan materi siswa per kelas.</p>
+          </div>
+          <button class="btn btn-primary" onclick="downloadRekap()"><i data-lucide="download"></i> Download CSV</button>
+        </div>
+
+        <div class="card">
+          <div class="filter-bar" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+            <div class="form-group" style="flex:1; min-width:150px; margin-bottom: 0;">
+              <label>Pilih Kelas</label>
+              <select class="form-control" id="filterKelasRekap" onchange="renderRekapAdmin()"></select>
+            </div>
+          </div>
+          <div class="table-responsive" style="max-height: 70vh; overflow: auto;">
+            <table style="min-width: 1000px; border-collapse: separate; border-spacing: 0;">
+              <thead id="rekapTableHeader" style="position: sticky; top: 0; z-index: 10;">
+                <tr><th style="position: sticky; left: 0; background: #f1f5f9; z-index: 11;">Nama Siswa</th><th>Kelas</th><th>Materi...</th></tr>
+              </thead>
+              <tbody id="rekapTableBody">
+                <tr><td colspan="3" style="text-align:center;">Pilih kelas terlebih dahulu.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
     </div>
   </main>
 
@@ -662,10 +692,10 @@
     };
 
     function showTab(tabName) {
-      ['dashboardSection', 'materiSection', 'nilaiSection', 'usersSection', 'settingsSection', 'tugasSection', 'rankingSection'].forEach(s => document.getElementById(s).style.display = 'none');
+      ['dashboardSection', 'materiSection', 'nilaiSection', 'usersSection', 'settingsSection', 'tugasSection', 'rankingSection', 'rekapSection'].forEach(s => document.getElementById(s).style.display = 'none');
       document.getElementById(tabName + 'Section').style.display = 'block';
       
-      ['tabDashboard', 'tabMateri', 'tabNilai', 'tabUsers', 'tabSettings', 'tabTugas', 'tabRanking'].forEach(id => {
+      ['tabDashboard', 'tabMateri', 'tabNilai', 'tabUsers', 'tabSettings', 'tabTugas', 'tabRanking', 'tabRekap'].forEach(id => {
         let el = document.getElementById(id); if(el) el.classList.remove('active');
         let elD = document.getElementById(id+'D'); if(elD) elD.classList.remove('active');
       });
@@ -714,6 +744,7 @@
         renderTableTugas();
         populateFilterRanking();
         renderRankingAdmin();
+        populateFilterRekap();
         
         hideOverlay();
       } catch (e) {
@@ -1743,6 +1774,112 @@
       dataToSave.forEach(d => {
          delete draftNilai[`${d.id_materi}_${d.username}`];
       });
+    }
+
+    // ============================================
+    // REKAP NILAI & PROGRES
+    // ============================================
+    function populateFilterRekap() {
+      let kelasList = [...new Set(dataUser.map(u => (getVal(u, ['kelas', 'tingkat']) || "").toString().trim()))].filter(k => k !== "").sort();
+      let sel = document.getElementById('filterKelasRekap');
+      if (sel) sel.innerHTML = '<option value="">Pilih Kelas</option>' + kelasList.map(k => `<option value="${k}">${k}</option>`).join('');
+    }
+
+    function renderRekapAdmin() {
+      let selKelas = document.getElementById('filterKelasRekap').value;
+      let header = document.getElementById('rekapTableHeader');
+      let body = document.getElementById('rekapTableBody');
+      
+      if (!selKelas) {
+        body.innerHTML = '<tr><td colspan="3" style="text-align:center;">Pilih kelas terlebih dahulu.</td></tr>';
+        return;
+      }
+
+      // 1. Ambil Siswa di Kelas Ini
+      let students = dataUser.filter(u => (getVal(u, ['kelas', 'tingkat']) || "").toString().trim() === selKelas);
+      
+      // 2. Ambil Materi yang Sesuai (Filter by Tingkat)
+      let tingkatSiswa = getTingkatFromKelas(selKelas);
+      let materials = dataMateri.filter(m => {
+        let mk = getVal(m, ['kelas', 'tingkat']) || "SEMUA";
+        let mt = getTingkatFromKelas(mk);
+        return mt === tingkatSiswa || mt === "SEMUA";
+      });
+
+      // 3. Render Header
+      let headerHtml = `<tr><th style="position: sticky; left: 0; background: #f1f5f9; z-index: 11; min-width: 200px;">Nama Siswa</th><th style="min-width: 100px;">Kelas</th>`;
+      materials.forEach(m => {
+        let judul = getVal(m, ['judul', 'materi']) || "Materi";
+        headerHtml += `<th style="min-width: 120px; text-align:center; font-size: 0.75rem;">${judul}</th>`;
+      });
+      headerHtml += `</tr>`;
+      header.innerHTML = headerHtml;
+
+      // 4. Render Body
+      let bodyHtml = '';
+      students.sort((a, b) => (getVal(a, ['nama']) || "").localeCompare(getVal(b, ['nama']) || "")).forEach(s => {
+        let username = (getVal(s, ['username', 'nisn']) || "").toString().trim();
+        let nama = getVal(s, ['nama']) || username;
+        let kelas = getVal(s, ['kelas']) || "-";
+        
+        bodyHtml += `<tr><td style="position: sticky; left: 0; background: #fff; z-index: 9; font-weight: 600; border-right: 2px solid #e2e8f0;">${nama}<br><small style="color:var(--text-muted)">${username}</small></td><td>${kelas}</td>`;
+        
+        materials.forEach(m => {
+          let mid = getVal(m, ['id', 'rowNumber']);
+          let tipe = (getVal(m, ['tipe']) || "Praktik").toLowerCase();
+          
+          let score = "-";
+          let cellStyle = "text-align:center;";
+          
+          if (tipe === "materi") {
+            score = '<i data-lucide="check" style="color:#22c55e; width:16px;"></i>';
+          } else {
+            // Cari di listNilai
+            let res = dataNilai.find(n => (getVal(n, ['username', 'nisn']) || "").toString().trim() === username && getVal(n, ['id_materi', 'idmateri']) == mid);
+            if (res) {
+              score = getVal(res, ['nilai']) || "0";
+              cellStyle += "font-weight:bold; color:var(--primary);";
+            } else {
+              // Cek di logTugas
+              let upload = dataLogTugas.find(t => (getVal(t, ['username']) || "").toString().trim() === username && getVal(t, ['id_materi', 'materi']) == mid);
+              if (upload) {
+                score = '<span style="font-size:0.7rem; color:#d97706;">Terkirim</span>';
+              } else {
+                score = '<span style="color:#ef4444; opacity:0.3;">-</span>';
+              }
+            }
+          }
+          
+          bodyHtml += `<td style="${cellStyle}">${score}</td>`;
+        });
+        bodyHtml += `</tr>`;
+      });
+      
+      body.innerHTML = bodyHtml || '<tr><td colspan="3" style="text-align:center">Tidak ada siswa di kelas ini.</td></tr>';
+      lucide.createIcons();
+    }
+
+    function downloadRekap() {
+      let selKelas = document.getElementById('filterKelasRekap').value;
+      if(!selKelas) return alert("Pilih kelas terlebih dahulu!");
+      
+      let table = document.querySelector("#rekapSection table");
+      let rows = table.querySelectorAll("tr");
+      let csv = [];
+      for (let i = 0; i < rows.length; i++) {
+        let row = [], cols = rows[i].querySelectorAll("td, th");
+        for (let j = 0; j < cols.length; j++) row.push('"' + cols[j].innerText.replace(/"/g, '""').split('\n')[0] + '"');
+        csv.push(row.join(","));
+      }
+      let csvContent = "\ufeff" + csv.join("\n"); // Add BOM for Excel UTF-8
+      let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      let url = URL.createObjectURL(blob);
+      let link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", "Rekap_Nilai_" + selKelas + ".csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
 
     // ============================================
