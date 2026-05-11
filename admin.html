@@ -1798,15 +1798,26 @@
       // Helper: Normalisasi string untuk pencocokan
       const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
 
+      // Fungsi getTingkat yang identik dengan dashboard.html
+      const getTingkatSync = (obj) => {
+        let t = (obj.tingkat || obj.Tingkat || "").toString().trim().toUpperCase();
+        let k = (obj.kelas || obj.Kelas || "").toString().trim().toUpperCase();
+        if (!t || (t === "X" && (k.startsWith("XI") || k.startsWith("XII")))) {
+          if (k.startsWith("XII")) return "XII";
+          if (k.startsWith("XI")) return "XI";
+          if (k.startsWith("X")) return "X";
+        }
+        return t || "X";
+      };
+
       // 1. Ambil Siswa di Kelas Ini
       const students = dataUser.filter(u => norm(getVal(u, ['kelas', 'tingkat'])) === norm(selKelas));
       
-      // 2. Ambil Materi yang Sesuai (Filter by Tingkat)
-      const tingkatSiswa = getTingkatFromKelas(selKelas);
+      // 2. Ambil Materi yang Sesuai (Filter by Tingkat) - DISINKRONKAN DENGAN dashboard.html
+      const myTingkat = getTingkatSync({ kelas: selKelas });
       const materials = dataMateri.filter(m => {
-        const mk = getVal(m, ['kelas', 'tingkat']) || "SEMUA";
-        const mt = getTingkatFromKelas(mk);
-        return mt === tingkatSiswa || mt === "SEMUA";
+        const mTingkat = getTingkatSync(m);
+        return mTingkat === myTingkat || mTingkat === "SEMUA";
       });
 
       // 3. Render Header
@@ -1833,10 +1844,9 @@
         let totalScore = 0;
         let countScored = 0;
 
-        materials.forEach(m => {
-          // PENTING: Sisi siswa menggunakan index + 1 sebagai ID (Materi pertama = ID 1)
-          // Kita harus samakan agar pencocokan nilai (id_materi) sukses
-          const mid = dataMateri.indexOf(m) + 1; 
+        materials.forEach((m, idx) => {
+          // PENTING: Sisi siswa menghitung ID dari index materi yang SUDAH DIFILTER per tingkat
+          const mid = (idx + 1).toString(); 
           const mJudul = norm(getVal(m, ['judul', 'materi']));
           const tipe = (getVal(m, ['tipe']) || "Praktik").toLowerCase();
           
@@ -1846,13 +1856,12 @@
           if (tipe === "materi") {
             scoreText = '<i data-lucide="check" style="color:#22c55e; width:14px;"></i>';
           } else {
-            // Filter data nilai untuk siswa ini dan materi ini
+            // Pencocokan Nilai menggunakan mid yang sudah disinkronkan
             const filteredNilai = dataNilai.filter(n => {
                 const nUser = norm(getVal(n, ['username', 'nisn']));
-                const nMid = parseInt(getVal(n, ['id_materi', 'idmateri']) || 0);
+                const nMid = (getVal(n, ['id_materi', 'idmateri']) || "").toString().trim();
                 const nJudul = norm(getVal(n, ['judul', 'materi', 'judul_materi']));
                 
-                // Cocok jika Username sama DAN (ID cocok ATAU Judul cocok)
                 return nUser === username && (nMid === mid || (mJudul !== "" && nJudul === mJudul));
             });
 
@@ -1866,10 +1875,10 @@
                   cellStyle += "font-weight:bold; color:var(--primary);";
               }
             } else {
-              // Cek di logTugas jika belum ada nilai
+              // Cek di logTugas
               const upload = dataLogTugas.find(t => {
                   const tUser = norm(getVal(t, ['username']));
-                  const tMid = parseInt(getVal(t, ['id_materi', 'materi']) || 0);
+                  const tMid = (getVal(t, ['id_materi', 'materi']) || "").toString().trim();
                   const tJudul = norm(getVal(t, ['materi', 'judul']));
                   return tUser === username && (tMid === mid || (mJudul !== "" && tJudul === mJudul));
               });
