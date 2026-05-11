@@ -1781,106 +1781,114 @@
     // ============================================
     function populateFilterRekap() {
       let kelasList = [...new Set(dataUser.map(u => (getVal(u, ['kelas', 'tingkat']) || "").toString().trim()))].filter(k => k !== "").sort();
-      let sel = document.getElementById('filterKelasRekap');
+           let sel = document.getElementById('filterKelasRekap');
       if (sel) sel.innerHTML = '<option value="">Pilih Kelas</option>' + kelasList.map(k => `<option value="${k}">${k}</option>`).join('');
     }
 
     function renderRekapAdmin() {
-      let selKelas = document.getElementById('filterKelasRekap').value;
-      let header = document.getElementById('rekapTableHeader');
-      let body = document.getElementById('rekapTableBody');
+      const selKelas = document.getElementById('filterKelasRekap').value;
+      const header = document.getElementById('rekapTableHeader');
+      const body = document.getElementById('rekapTableBody');
       
       if (!selKelas) {
         body.innerHTML = '<tr><td colspan="3" style="text-align:center;">Pilih kelas terlebih dahulu.</td></tr>';
         return;
       }
 
+      // Helper: Normalisasi string untuk pencocokan (lowercase & alphanumeric only)
+      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+
       // 1. Ambil Siswa di Kelas Ini
-      let students = dataUser.filter(u => {
-          let k = (getVal(u, ['kelas', 'tingkat']) || "").toString().trim();
-          return k === selKelas;
-      });
+      const students = dataUser.filter(u => norm(getVal(u, ['kelas', 'tingkat'])) === norm(selKelas));
       
       // 2. Ambil Materi yang Sesuai (Filter by Tingkat)
-      let tingkatSiswa = getTingkatFromKelas(selKelas);
-      let materials = dataMateri.filter(m => {
-        let mk = getVal(m, ['kelas', 'tingkat']) || "SEMUA";
-        let mt = getTingkatFromKelas(mk);
+      const tingkatSiswa = getTingkatFromKelas(selKelas);
+      const materials = dataMateri.filter(m => {
+        const mk = getVal(m, ['kelas', 'tingkat']) || "SEMUA";
+        const mt = getTingkatFromKelas(mk);
         return mt === tingkatSiswa || mt === "SEMUA";
       });
 
       // 3. Render Header
-      let headerHtml = `<tr><th style="position: sticky; left: 0; background: #f1f5f9; z-index: 11; min-width: 200px; border-right: 2px solid #e2e8f0;">Nama Siswa</th><th style="min-width: 100px;">Kelas</th>`;
+      let headerHtml = `<tr><th style="position: sticky; left: 0; background: #f1f5f9; z-index: 11; min-width: 200px; border-right: 2px solid #e2e8f0;">Nama Siswa</th>`;
       materials.forEach(m => {
-        let judul = getVal(m, ['judul', 'materi']) || "Materi";
-        headerHtml += `<th style="min-width: 120px; text-align:center; font-size: 0.75rem;">${judul}</th>`;
+        const judul = getVal(m, ['judul', 'materi']) || "Materi";
+        headerHtml += `<th style="min-width: 100px; text-align:center; font-size: 0.7rem;">${judul}</th>`;
       });
+      headerHtml += `<th style="min-width: 80px; text-align:center; background: #f1f5f9; font-weight:bold;">Total</th>`;
+      headerHtml += `<th style="min-width: 80px; text-align:center; background: #f1f5f9; font-weight:bold;">Rata2</th>`;
       headerHtml += `</tr>`;
       header.innerHTML = headerHtml;
 
       // 4. Render Body
       let bodyHtml = '';
-      
-      // Sort students alphabetically
       students.sort((a, b) => (getVal(a, ['nama']) || "").localeCompare(getVal(b, ['nama']) || ""));
 
       students.forEach(s => {
-        let username = (getVal(s, ['username', 'nisn']) || "").toString().trim().toLowerCase();
-        let nama = getVal(s, ['nama']) || username;
-        let kelas = getVal(s, ['kelas']) || "-";
+        const username = norm(getVal(s, ['username', 'nisn']));
+        const nama = getVal(s, ['nama']) || username;
         
-        bodyHtml += `<tr><td style="position: sticky; left: 0; background: #fff; z-index: 9; font-weight: 600; border-right: 2px solid #e2e8f0;">${nama}<br><small style="color:var(--text-muted)">${username}</small></td><td>${kelas}</td>`;
+        bodyHtml += `<tr><td style="position: sticky; left: 0; background: #fff; z-index: 9; font-weight: 600; border-right: 2px solid #e2e8f0;">${nama}</td>`;
         
+        let totalScore = 0;
+        let countScored = 0;
+
         materials.forEach(m => {
-          let mid = parseInt(m.rowNumber || (dataMateri.indexOf(m) + 2));
-          let mJudul = (getVal(m, ['judul', 'materi']) || "").toString().trim().toLowerCase();
-          let tipe = (getVal(m, ['tipe']) || "Praktik").toLowerCase();
+          const mid = parseInt(m.rowNumber || (dataMateri.indexOf(m) + 2));
+          const mJudul = norm(getVal(m, ['judul', 'materi']));
+          const tipe = (getVal(m, ['tipe']) || "Praktik").toLowerCase();
           
-          let scoreValue = -1; // Default jika belum ada nilai
           let scoreText = "-";
           let cellStyle = "text-align:center;";
           
           if (tipe === "materi") {
-            scoreText = '<i data-lucide="check" style="color:#22c55e; width:16px;"></i>';
+            scoreText = '<i data-lucide="check" style="color:#22c55e; width:14px;"></i>';
           } else {
-            // Pencocokan Nilai yang lebih fleksibel
-            let filteredNilai = dataNilai.filter(n => {
-                let nUser = (getVal(n, ['username', 'nisn']) || "").toString().trim().toLowerCase();
-                let nMid = parseInt(getVal(n, ['id_materi', 'idmateri']) || 0);
-                let nJudul = (getVal(n, ['judul', 'materi']) || "").toString().trim().toLowerCase();
+            // Pencocokan Nilai Super Fleksibel
+            const filteredNilai = dataNilai.filter(n => {
+                const nUser = norm(getVal(n, ['username', 'nisn']));
+                const nMid = parseInt(getVal(n, ['id_materi', 'idmateri']) || 0);
+                const nJudul = norm(getVal(n, ['judul', 'materi', 'judul_materi']));
                 
-                // Cocokkan berdasarkan Username DAN (ID Materi ATAU Judul)
+                // Cocok jika Username sama DAN (ID cocok ATAU Judul cocok)
                 return nUser === username && (nMid === mid || (mJudul !== "" && nJudul === mJudul));
             });
 
             if (filteredNilai.length > 0) {
-              // Ambil nilai tertinggi jika ada beberapa percobaan
-              let maxScore = Math.max(...filteredNilai.map(n => parseInt(getVal(n, ['nilai', 'skor']) || 0)));
-              scoreText = maxScore.toString();
-              cellStyle += "font-weight:bold; color:var(--primary);";
+              const scores = filteredNilai.map(n => parseInt(getVal(n, ['nilai', 'skor']) || 0)).filter(val => !isNaN(val));
+              if (scores.length > 0) {
+                  const maxS = Math.max(...scores);
+                  scoreText = maxS;
+                  totalScore += maxS;
+                  countScored++;
+                  cellStyle += "font-weight:bold; color:var(--primary);";
+              }
             } else {
-              // Cek di logTugas jika belum ada nilai
-              let upload = dataLogTugas.find(t => {
-                  let tUser = (getVal(t, ['username']) || "").toString().trim().toLowerCase();
-                  let tMid = parseInt(getVal(t, ['id_materi', 'materi']) || 0);
-                  let tJudul = (getVal(t, ['materi', 'judul']) || "").toString().trim().toLowerCase();
+              // Cek di logTugas
+              const upload = dataLogTugas.find(t => {
+                  const tUser = norm(getVal(t, ['username']));
+                  const tMid = parseInt(getVal(t, ['id_materi', 'materi']) || 0);
+                  const tJudul = norm(getVal(t, ['materi', 'judul']));
                   return tUser === username && (tMid === mid || (mJudul !== "" && tJudul === mJudul));
               });
 
               if (upload) {
-                scoreText = '<span style="font-size:0.7rem; color:#d97706; background:#fffbeb; padding:2px 6px; border-radius:4px; border:1px solid #fef3c7;">Terkirim</span>';
+                scoreText = '<span style="font-size:0.65rem; color:#d97706; background:#fffbeb; padding:2px 4px; border-radius:4px; border:1px solid #fef3c7;">Terkirim</span>';
               } else {
                 scoreText = '<span style="color:#ef4444; opacity:0.2;">-</span>';
               }
             }
           }
-          
           bodyHtml += `<td style="${cellStyle}">${scoreText}</td>`;
         });
+        
+        const avg = countScored > 0 ? Math.round(totalScore / countScored) : 0;
+        bodyHtml += `<td style="text-align:center; font-weight:bold; background:#f8fafc;">${totalScore}</td>`;
+        bodyHtml += `<td style="text-align:center; font-weight:bold; background:#f8fafc; color:var(--primary);">${avg}</td>`;
         bodyHtml += `</tr>`;
       });
       
-      body.innerHTML = bodyHtml || '<tr><td colspan="3" style="text-align:center">Tidak ada siswa di kelas ini.</td></tr>';
+      body.innerHTML = bodyHtml || '<tr><td colspan="5" style="text-align:center">Tidak ada siswa di kelas ini.</td></tr>';
       lucide.createIcons();
     }
 
