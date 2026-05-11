@@ -1795,7 +1795,7 @@
         return;
       }
 
-      // Helper: Normalisasi string untuk pencocokan (lowercase & alphanumeric only)
+      // Helper: Normalisasi string untuk pencocokan
       const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
 
       // 1. Ambil Siswa di Kelas Ini
@@ -1834,7 +1834,9 @@
         let countScored = 0;
 
         materials.forEach(m => {
-          const mid = parseInt(m.rowNumber || (dataMateri.indexOf(m) + 2));
+          // PENTING: Sisi siswa menggunakan index + 1 sebagai ID (Materi pertama = ID 1)
+          // Kita harus samakan agar pencocokan nilai (id_materi) sukses
+          const mid = dataMateri.indexOf(m) + 1; 
           const mJudul = norm(getVal(m, ['judul', 'materi']));
           const tipe = (getVal(m, ['tipe']) || "Praktik").toLowerCase();
           
@@ -1844,7 +1846,7 @@
           if (tipe === "materi") {
             scoreText = '<i data-lucide="check" style="color:#22c55e; width:14px;"></i>';
           } else {
-            // Pencocokan Nilai Super Fleksibel
+            // Filter data nilai untuk siswa ini dan materi ini
             const filteredNilai = dataNilai.filter(n => {
                 const nUser = norm(getVal(n, ['username', 'nisn']));
                 const nMid = parseInt(getVal(n, ['id_materi', 'idmateri']) || 0);
@@ -1864,7 +1866,7 @@
                   cellStyle += "font-weight:bold; color:var(--primary);";
               }
             } else {
-              // Cek di logTugas
+              // Cek di logTugas jika belum ada nilai
               const upload = dataLogTugas.find(t => {
                   const tUser = norm(getVal(t, ['username']));
                   const tMid = parseInt(getVal(t, ['id_materi', 'materi']) || 0);
