@@ -981,8 +981,9 @@
           <td><span class="badge ${isDraft ? 'draft' : 'active'}">${isDraft ? 'Draft' : 'Aktif'}</span></td>
           <td>
             <div class="action-group" style="justify-content:center">
-              <button class="btn-icon" style="color:#0ea5e9; border-color:#bae6fd; background:#f0f9ff;" onclick='previewMateri(${JSON.stringify(m)})' title="Preview"><i data-lucide="eye"></i></button>
-              <button class="btn-icon edit" onclick='editMateri(${JSON.stringify(m)})' title="Edit"><i data-lucide="edit-2"></i></button>
+              <button class="btn-icon" style="color:#0ea5e9; border-color:#bae6fd; background:#f0f9ff;" onclick="previewContent(${dataMateri.indexOf(m)})" title="Preview Materi"><i data-lucide="play-circle"></i></button>
+              <button class="btn-icon" style="color:#f59e0b; border-color:#fef3c7; background:#fffbeb;" onclick="previewSoal(${dataMateri.indexOf(m)})" title="Preview Soal"><i data-lucide="help-circle"></i></button>
+              <button class="btn-icon edit" onclick="editMateriByIdx(${dataMateri.indexOf(m)})" title="Edit"><i data-lucide="edit-2"></i></button>
               <button class="btn-icon delete" onclick="deleteData('materi', ${mid})" title="Hapus"><i data-lucide="trash-2"></i></button>
             </div>
           </td>
@@ -1794,18 +1795,59 @@
     }
 
     // ============================================
-    // PREVIEW MATERI & SOAL (ALL-IN-ONE)
+    // PREVIEW MATERI & SOAL (DIPISAH)
     // ============================================
-    async function previewMateri(m) {
+    function previewContent(idx) {
+      const m = dataMateri[idx];
       const modal = document.getElementById('previewModal');
       const title = document.getElementById('previewModalTitle');
       const content = document.getElementById('previewModalContent');
       
       const judul = getVal(m, ['judul', 'materi']) || "Materi";
-      const tipe = (getVal(m, ['tipe']) || "Praktik");
       const link = (getVal(m, ['link', 'url']) || "").toString().trim();
       
-      // Hitung ID Modul sesuai logika dashboard siswa untuk filter soal
+      title.innerText = `Preview Materi: ${judul}`;
+      modal.style.display = 'flex';
+
+      if (!link) {
+          content.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-muted);"><i data-lucide="link-2-off" style="width:40px; height:40px; margin-bottom:10px; opacity:0.5;"></i><p>Materi ini tidak memiliki link konten terlampir.</p></div>';
+      } else {
+          let embed = "";
+          if (link.includes("youtube.com") || link.includes("youtu.be")) {
+            let id = link.includes("watch?v=") ? link.split("v=")[1].split("&")[0] : link.split("youtu.be/")[1];
+            embed = `<iframe src="https://www.youtube.com/embed/${id}" style="width:100%; height:450px; border-radius:12px; border:none;" allowfullscreen></iframe>`;
+          } else if (link.includes("drive.google.com")) {
+            let match = link.match(/[-\w]{25,}/);
+            if (match) {
+                let dlUrl = `https://drive.google.com/uc?export=download&id=${match[0]}`;
+                embed = `<iframe src="https://docs.google.com/gview?url=${encodeURIComponent(dlUrl)}&embedded=true" style="width:100%; height:450px; border-radius:12px; border:none;"></iframe>`;
+            }
+          } else {
+            embed = `<iframe src="${link}" style="width:100%; height:450px; border-radius:12px; border:none; background:white;"></iframe>`;
+          }
+          
+          content.innerHTML = `
+            <div style="padding:5px;">
+              <div style="margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:0.85rem; color:var(--text-muted)">Media: ${link.substring(0, 50)}...</span>
+                <a href="${link}" target="_blank" style="color:var(--primary); text-decoration:none; font-size:0.85rem; font-weight:600; background:var(--primary-light); padding:6px 12px; border-radius:8px;"><i data-lucide="external-link" style="width:14px; vertical-align:middle;"></i> Buka Tab Baru</a>
+              </div>
+              <div style="box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius:12px; overflow:hidden; border:1px solid #eee;">
+                ${embed || '<p style="text-align:center; padding:20px;">Konten ini tidak mendukung preview langsung.</p>'}
+              </div>
+            </div>
+          `;
+      }
+      lucide.createIcons();
+    }
+
+    async function previewSoal(idx) {
+      const m = dataMateri[idx];
+      const modal = document.getElementById('previewModal');
+      const title = document.getElementById('previewModalTitle');
+      const content = document.getElementById('previewModalContent');
+      
+      const judul = getVal(m, ['judul', 'materi']) || "Materi";
       const myTingkat = getTingkatSync(m);
       const materialsForThisTingkat = dataMateri.filter(item => {
           const itemTingkat = getTingkatSync(item);
@@ -1813,106 +1855,64 @@
       });
       const studentMid = (materialsForThisTingkat.indexOf(m) + 1).toString();
       
-      title.innerText = `Preview: ${judul} (${tipe})`;
-      content.innerHTML = '<div style="text-align:center; padding:40px;"><i data-lucide="refresh-cw" class="spin-anim" style="width:30px; height:30px; color:var(--primary); margin-bottom:10px;"></i><p>Menyiapkan Preview...</p></div>';
+      title.innerText = `Preview Soal: ${judul}`;
+      content.innerHTML = '<div style="text-align:center; padding:40px;"><i data-lucide="refresh-cw" class="spin-anim" style="width:30px; height:30px; color:var(--primary); margin-bottom:10px;"></i><p>Mencari soal...</p></div>';
       modal.style.display = 'flex';
       lucide.createIcons();
 
-      let htmlContent = '<div style="padding:5px;">';
-
-      // 1. BAGIAN PREVIEW LINK MATERI
-      htmlContent += `<h4 style="margin:0 0 15px 0; font-size:1rem; border-left:4px solid var(--primary); padding-left:10px; color:var(--primary);">1. Konten Materi (Link)</h4>`;
-      if (link) {
-          let embed = "";
-          if (link.includes("youtube.com") || link.includes("youtu.be")) {
-            let id = link.includes("watch?v=") ? link.split("v=")[1].split("&")[0] : link.split("youtu.be/")[1];
-            embed = `<iframe src="https://www.youtube.com/embed/${id}" style="width:100%; height:400px; border-radius:12px; border:none;" allowfullscreen></iframe>`;
-          } else if (link.includes("drive.google.com")) {
-            let match = link.match(/[-\w]{25,}/);
-            if (match) {
-                let dlUrl = `https://drive.google.com/uc?export=download&id=${match[0]}`;
-                embed = `<iframe src="https://docs.google.com/gview?url=${encodeURIComponent(dlUrl)}&embedded=true" style="width:100%; height:400px; border-radius:12px; border:none;"></iframe>`;
-            }
-          } else {
-            embed = `<iframe src="${link}" style="width:100%; height:400px; border-radius:12px; border:none; background:white;"></iframe>`;
-          }
-          
-          htmlContent += `
-            <div style="margin-bottom:30px;">
-              <div style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:0.8rem; color:var(--text-muted)">Media: ${link.substring(0, 50)}...</span>
-                <a href="${link}" target="_blank" style="color:var(--primary); text-decoration:none; font-size:0.8rem; font-weight:600; background:var(--primary-light); padding:4px 10px; border-radius:6px;"><i data-lucide="external-link" style="width:14px; vertical-align:middle;"></i> Buka Tab Baru</a>
-              </div>
-              <div style="box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-radius:12px; overflow:hidden; background:#eee; border:1px solid #e2e8f0;">
-                ${embed || '<p style="text-align:center; padding:20px;">Link tidak mendukung preview langsung.</p>'}
-              </div>
-            </div>
-          `;
-      } else {
-          htmlContent += `<div style="padding:20px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:12px; margin-bottom:30px; color:var(--text-muted); font-size:0.85rem; text-align:center;">Materi ini tidak memiliki link konten terlampir di kolom link.</div>`;
-      }
-
-      // 2. BAGIAN PREVIEW SOAL
-      htmlContent += `<hr style="border:none; border-top:2px dashed #e2e8f0; margin:40px 0;">`;
-      htmlContent += `<h4 style="margin:0 0 20px 0; font-size:1rem; border-left:4px solid #ef4444; padding-left:10px; color:#ef4444;">2. Daftar Soal (Sheet Soal)</h4>`;
-      htmlContent += `<div id="soalPreviewBox"><div style="text-align:center; padding:20px;"><i data-lucide="refresh-cw" class="spin-anim" style="width:20px; height:20px;"></i><p>Mencari soal di database...</p></div></div>`;
-      htmlContent += '</div>';
-
-      content.innerHTML = htmlContent;
-      lucide.createIcons();
-
-      // Fetch Soal secara Async
       try {
         const res = await fetch(`${API_URL}?sheet=soal`);
         const data = await res.json();
         const soal = data.filter(q => {
-           const qMid = getVal(q, ['idmateri', 'materiid']);
+           const qMid = (getVal(q, ['idmateri', 'materiid']) || "").toString().trim();
            const qTingkat = (getVal(q, ['tingkat', 'kelas']) || "").toString().trim().toUpperCase();
-           let matchId = qMid != null && qMid.toString().trim() == studentMid;
-           let matchTingkat = (qTingkat === "" || qTingkat === "SEMUA" || qTingkat === myTingkat);
-           return matchId && matchTingkat;
+           return qMid === studentMid && (qTingkat === "" || qTingkat === "SEMUA" || qTingkat === myTingkat);
         });
 
-        const soalBox = document.getElementById('soalPreviewBox');
         if (soal.length === 0) {
-          soalBox.innerHTML = `
-            <div style="text-align:center; padding:30px; background:#fff5f5; border:1px solid #fed7d7; border-radius:12px; color:#c53030;">
-                <i data-lucide="alert-circle" style="width:30px; height:30px; margin-bottom:10px;"></i>
-                <p style="font-weight:600; margin:0;">Tidak ada soal untuk materi ini.</p>
-                <small>Pastikan ID Materi di sheet 'soal' adalah <b>${studentMid}</b></small>
+          content.innerHTML = `
+            <div style="text-align:center; padding:40px; color:#c53030; background:#fff5f5; border:1px solid #fed7d7; border-radius:12px;">
+                <i data-lucide="alert-circle" style="width:40px; height:40px; margin-bottom:10px;"></i>
+                <p style="font-weight:700;">Tidak ada soal untuk materi ini.</p>
+                <p style="font-size:0.85rem;">Pastikan di Google Sheets 'soal', kolom 'ID Materi' diisi: <b>${studentMid}</b></p>
             </div>`;
         } else {
-          let soalHtml = '';
-          soal.forEach((q, idx) => {
+          let soalHtml = '<div style="padding:5px;">';
+          soal.forEach((q, i) => {
             const sText = getVal(q, ['soal', 'pertanyaan']) || "Tanpa teks soal";
             const optA = getVal(q, ['a', 'pilihana']) || "-";
             const optB = getVal(q, ['b', 'pilihanb']) || "-";
             const optC = getVal(q, ['c', 'pilihanc']) || "-";
             const optD = getVal(q, ['d', 'pilihand']) || "-";
             const kunci = getVal(q, ['kunci', 'jawaban']) || "-";
-            const image = getVal(q, ['gambar', 'image', 'url_gambar']);
+            const img = getVal(q, ['gambar', 'image', 'url_gambar']);
             
             soalHtml += `
               <div style="margin-bottom:25px; border-bottom:1px solid #f1f5f9; padding-bottom:15px;">
-                <div style="font-weight:700; margin-bottom:10px; color:#1e293b; line-height:1.5;">${idx+1}. ${sText}</div>
-                ${image ? `<img src="${image}" style="max-width:100%; max-height:250px; border-radius:10px; margin-bottom:15px; border:1px solid #eee; display:block;">` : ''}
-                <div style="font-size:0.85rem; display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-left:15px;">
-                  <div style="padding:10px; background:#f8fafc; border-radius:8px; border:1px solid #f1f5f9;"><b>A.</b> ${optA}</div>
-                  <div style="padding:10px; background:#f8fafc; border-radius:8px; border:1px solid #f1f5f9;"><b>B.</b> ${optB}</div>
-                  <div style="padding:10px; background:#f8fafc; border-radius:8px; border:1px solid #f1f5f9;"><b>C.</b> ${optC}</div>
-                  <div style="padding:10px; background:#f8fafc; border-radius:8px; border:1px solid #f1f5f9;"><b>D.</b> ${optD}</div>
+                <div style="font-weight:700; color:#1e293b; margin-bottom:10px;">${i+1}. ${sText}</div>
+                ${img ? `<img src="${img}" style="max-width:100%; max-height:200px; border-radius:10px; margin-bottom:15px; border:1px solid #eee;">` : ''}
+                <div style="font-size:0.85rem; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                  <div style="padding:8px; background:#f8fafc; border-radius:6px; border:1px solid #f1f5f9;"><b>A.</b> ${optA}</div>
+                  <div style="padding:8px; background:#f8fafc; border-radius:6px; border:1px solid #f1f5f9;"><b>B.</b> ${optB}</div>
+                  <div style="padding:8px; background:#f8fafc; border-radius:6px; border:1px solid #f1f5f9;"><b>C.</b> ${optC}</div>
+                  <div style="padding:8px; background:#f8fafc; border-radius:8px; border:1px solid #f1f5f9;"><b>D.</b> ${optD}</div>
                 </div>
-                <div style="margin-top:12px; margin-left:15px;"><span style="background:#dcfce7; color:#166534; padding:5px 12px; border-radius:6px; font-weight:800; font-size:0.8rem; border:1px solid #bbf7d0;">Kunci: ${kunci.toUpperCase()}</span></div>
-              </div>
-            `;
+                <div style="margin-top:10px;"><span style="background:#dcfce7; color:#166534; padding:4px 10px; border-radius:6px; font-weight:800; font-size:0.75rem;">Kunci: ${kunci.toUpperCase()}</span></div>
+              </div>`;
           });
-          soalBox.innerHTML = soalHtml;
+          soalHtml += '</div>';
+          content.innerHTML = soalHtml;
         }
         lucide.createIcons();
-      } catch (err) {
-        document.getElementById('soalPreviewBox').innerHTML = `<div style="color:#ef4444; text-align:center; padding:20px;">Gagal mengambil data soal dari server.</div>`;
+      } catch (e) {
+        content.innerHTML = `<div style="text-align:center; padding:40px; color:#ef4444;">Gagal memuat soal dari server.</div>`;
       }
     }
+
+    function editMateriByIdx(idx) {
+        editMateri(dataMateri[idx]);
+    }
+
 
     // ============================================
     // REKAP NILAI & PROGRES
