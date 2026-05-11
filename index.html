@@ -10,7 +10,43 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="manifest" href="manifest.json">
-    <script src="pwa-handler.js?v=2" defer></script>
+    <script>
+        // PWA Handler Embedded
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log('✅ PWA beforeinstallprompt fired (Embedded)');
+            setTimeout(() => {
+                if (deferredPrompt) {
+                    const debugDiv = document.createElement('div');
+                    debugDiv.style.cssText = 'position:fixed; bottom:20px; left:20px; right:20px; background:#2563eb; color:white; padding:15px; border-radius:12px; z-index:9999; display:flex; justify-content:space-between; align-items:center; box-shadow:0 10px 15px rgba(0,0,0,0.2);';
+                    debugDiv.innerHTML = `
+                        <div style="font-size:14px; font-weight:600;">Instal Aplikasi Al Ilmi LMS?</div>
+                        <div style="display:flex; gap:10px;">
+                            <button id="pwa-install-btn" style="background:white; color:#2563eb; border:none; padding:8px 15px; border-radius:8px; font-weight:700; cursor:pointer;">Instal</button>
+                            <button id="pwa-close-btn" style="background:transparent; color:white; border:1px solid white; padding:8px 15px; border-radius:8px; cursor:pointer;">Nanti</button>
+                        </div>
+                    `;
+                    document.body.appendChild(debugDiv);
+                    document.getElementById('pwa-install-btn').onclick = () => {
+                        debugDiv.remove();
+                        deferredPrompt.prompt();
+                        deferredPrompt = null;
+                    };
+                    document.getElementById('pwa-close-btn').onclick = () => debugDiv.remove();
+                }
+            }, 3000);
+        });
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js?v=2')
+                    .then(reg => console.log('SW Registered', reg))
+                    .catch(err => console.log('SW Failed', err));
+            });
+        }
+    </script>
 
     <style>
         :root {

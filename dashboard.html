@@ -9,7 +9,43 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="manifest" href="manifest.json">
-  <script src="pwa-handler.js?v=2" defer></script>
+  <script>
+    // PWA Handler Embedded
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      console.log('✅ PWA beforeinstallprompt fired (Embedded)');
+      setTimeout(() => {
+        if (deferredPrompt) {
+          const debugDiv = document.createElement('div');
+          debugDiv.style.cssText = 'position:fixed; bottom:20px; left:20px; right:20px; background:#2563eb; color:white; padding:15px; border-radius:12px; z-index:9999; display:flex; justify-content:space-between; align-items:center; box-shadow:0 10px 15px rgba(0,0,0,0.2);';
+          debugDiv.innerHTML = `
+            <div style="font-size:14px; font-weight:600;">Instal Aplikasi Al Ilmi LMS?</div>
+            <div style="display:flex; gap:10px;">
+              <button id="pwa-install-btn" style="background:white; color:#2563eb; border:none; padding:8px 15px; border-radius:8px; font-weight:700; cursor:pointer;">Instal</button>
+              <button id="pwa-close-btn" style="background:transparent; color:white; border:1px solid white; padding:8px 15px; border-radius:8px; cursor:pointer;">Nanti</button>
+            </div>
+          `;
+          document.body.appendChild(debugDiv);
+          document.getElementById('pwa-install-btn').onclick = () => {
+            debugDiv.remove();
+            deferredPrompt.prompt();
+            deferredPrompt = null;
+          };
+          document.getElementById('pwa-close-btn').onclick = () => debugDiv.remove();
+        }
+      }, 3000);
+    });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js?v=2')
+          .then(reg => console.log('SW Registered', reg))
+          .catch(err => console.log('SW Failed', err));
+      });
+    }
+  </script>
 
   <style>
     :root {
@@ -1051,17 +1087,17 @@
           let btnPelajari = "";
           let btnKuis = "";
 
+          btnPelajari = isMateriLocked
+            ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed;" onclick="alertLocked('materi')"><i data-lucide="lock" style="width:14px"></i> Terkunci</button>`
+            : `<button class="btn-action btn-study" onclick="openMateri('${mid}')"><i data-lucide="play" style="width:14px"></i> Pelajari</button>`;
+
           if (tipe === "Praktik" || tipe === "Ujian praktik") {
             if (hasScore) {
-              btnKuis = `<button class="btn-action" style="grid-column: 1 / -1; background:#d1fae5; color:#059669; border:1px solid #a7f3d0; cursor:default; width: 100%; padding: 10px 15px;"><i data-lucide="check-circle" style="width:16px; flex-shrink:0;"></i> <span style="white-space:normal; line-height:1.2;">Lulus Ujian Praktik</span></button>`;
+              btnKuis = `<button class="btn-action" style="background:#d1fae5; color:#059669; border:1px solid #a7f3d0; cursor:default;"><i data-lucide="check-circle" style="width:16px; flex-shrink:0;"></i> <span style="white-space:normal; line-height:1.1;">Lulus</span></button>`;
             } else {
-              btnKuis = `<button class="btn-action" style="grid-column: 1 / -1; background:#fef3c7; color:#d97706; border:1px solid #fde68a; cursor:default; width: 100%; padding: 10px 15px;"><i data-lucide="clock" class="spin-anim" style="width:16px; flex-shrink:0;"></i> <span style="white-space:normal; line-height:1.2;">Menunggu Penilaian dari Guru</span></button>`;
+              btnKuis = `<button class="btn-action" style="background:#fef3c7; color:#d97706; border:1px solid #fde68a; cursor:default;"><i data-lucide="clock" class="spin-anim" style="width:16px; flex-shrink:0;"></i> <span style="white-space:normal; line-height:1.1;">Menunggu Penilaian</span></button>`;
             }
           } else {
-            btnPelajari = isMateriLocked
-              ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed;" onclick="alertLocked('materi')"><i data-lucide="lock" style="width:14px"></i> Terkunci</button>`
-              : `<button class="btn-action btn-study" onclick="openMateri('${mid}')"><i data-lucide="play" style="width:14px"></i> Pelajari</button>`;
-
             btnKuis = isKuisLocked
               ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed; border:1px solid #e2e8f0;" onclick="alertLocked('kuis')"><i data-lucide="lock" style="width:14px"></i> Kuis Terkunci</button>`
               : `<button class="btn-action btn-quiz" onclick="handleEvaluasi('${tipe}', '${mid}', encodeURIComponent(\`${m.judul || m.Judul || ("Materi " + (i + 1))}\`), ${i + 1})"><i data-lucide="${tipe === 'Kuis' ? 'edit-2' : (tipe.toLowerCase() === 'editor' ? 'type' : 'upload')}" style="width:14px"></i> ${hasScore ? 'Ulangi ' + tipe : 'Kerjakan ' + tipe}</button>`;
