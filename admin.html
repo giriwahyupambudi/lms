@@ -591,17 +591,17 @@
   </div>
 
   <!-- MODAL PREVIEW MATERI/SOAL -->
-  <div id="previewModal" class="modal" style="display:none; z-index:2000">
-    <div class="modal-content" style="max-width: 800px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; padding: 0;">
-      <div class="modal-header" style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-        <h3 id="previewModalTitle" style="margin: 0; font-size: 1.1rem; font-weight: 700;">Preview Materi</h3>
-        <button class="close-btn" onclick="closeModal('previewModal')" style="background: none; border: none; cursor: pointer; color: var(--text-muted);"><i data-lucide="x"></i></button>
+  <div id="previewModal" class="modal-overlay" style="display:none; z-index:2000">
+    <div class="modal" style="max-width: 800px; width: 95%; max-height: 90vh;">
+      <div class="modal-header">
+        <h3 id="previewModalTitle">Preview</h3>
+        <button class="close-modal" onclick="closeModal('previewModal')"><i data-lucide="x"></i></button>
       </div>
-      <div id="previewModalContent" class="modal-body" style="padding: 20px; overflow-y: auto; flex: 1;">
+      <div id="previewModalContent" class="modal-body" style="padding: 20px; overflow-y: auto;">
         <!-- Konten preview akan muncul di sini -->
       </div>
-      <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid var(--border-color); text-align: right; background: #f8fafc;">
-        <button class="btn btn-secondary" onclick="closeModal('previewModal')">Tutup</button>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('previewModal')">Tutup</button>
       </div>
     </div>
   </div>
@@ -1819,7 +1819,7 @@
       const link = (getVal(m, ['link', 'url']) || "").toString().trim();
       
       title.innerText = `Preview Materi: ${judul}`;
-      modal.style.display = 'flex';
+      openModal('previewModal');
 
       if (!link) {
           content.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-muted);"><i data-lucide="link-2-off" style="width:40px; height:40px; margin-bottom:10px; opacity:0.5;"></i><p>Materi ini tidak memiliki link konten terlampir.</p></div>';
@@ -1871,7 +1871,7 @@
       
       title.innerText = `Preview Soal: ${judul}`;
       content.innerHTML = '<div style="text-align:center; padding:40px;"><i data-lucide="refresh-cw" class="spin-anim" style="width:30px; height:30px; color:var(--primary); margin-bottom:10px;"></i><p>Mencari soal di database...</p></div>';
-      modal.style.display = 'flex';
+      openModal('previewModal');
       lucide.createIcons();
 
       try {
