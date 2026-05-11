@@ -721,6 +721,18 @@
       if(document.getElementById(current+'D')) document.getElementById(current+'D').classList.add('active');
     }
 
+    // Fungsi getTingkat yang identik dengan dashboard.html
+    const getTingkatSync = (obj) => {
+      let t = (obj.tingkat || obj.Tingkat || "").toString().trim().toUpperCase();
+      let k = (obj.kelas || obj.Kelas || "").toString().trim().toUpperCase();
+      if (!t || (t === "X" && (k.startsWith("XI") || k.startsWith("XII")))) {
+        if (k.startsWith("XII")) return "XII";
+        if (k.startsWith("XI")) return "XI";
+        if (k.startsWith("X")) return "X";
+      }
+      return t || "X";
+    };
+
     // ============================================
     // FETCH DATA
     // ============================================
@@ -1849,6 +1861,8 @@
       
       const judul = getVal(m, ['judul', 'materi']) || "Materi";
       const myTingkat = getTingkatSync(m);
+      
+      // Hitung ID Modul sesuai tampilan siswa (index di list yang sudah difilter per tingkat + 1)
       const materialsForThisTingkat = dataMateri.filter(item => {
           const itemTingkat = getTingkatSync(item);
           return itemTingkat === myTingkat || itemTingkat === "SEMUA";
@@ -1856,48 +1870,64 @@
       const studentMid = (materialsForThisTingkat.indexOf(m) + 1).toString();
       
       title.innerText = `Preview Soal: ${judul}`;
-      content.innerHTML = '<div style="text-align:center; padding:40px;"><i data-lucide="refresh-cw" class="spin-anim" style="width:30px; height:30px; color:var(--primary); margin-bottom:10px;"></i><p>Mencari soal...</p></div>';
+      content.innerHTML = '<div style="text-align:center; padding:40px;"><i data-lucide="refresh-cw" class="spin-anim" style="width:30px; height:30px; color:var(--primary); margin-bottom:10px;"></i><p>Mencari soal di database...</p></div>';
       modal.style.display = 'flex';
       lucide.createIcons();
 
       try {
         const res = await fetch(`${API_URL}?sheet=soal`);
         const data = await res.json();
+        
+        // Filter soal dengan kriteria yang lebih longgar (id_materi, idmateri, materiid, dll)
         const soal = data.filter(q => {
-           const qMid = (getVal(q, ['idmateri', 'materiid']) || "").toString().trim();
-           const qTingkat = (getVal(q, ['tingkat', 'kelas']) || "").toString().trim().toUpperCase();
-           return qMid === studentMid && (qTingkat === "" || qTingkat === "SEMUA" || qTingkat === myTingkat);
+           const qMidRaw = getVal(q, ['id_materi', 'idmateri', 'materiid', 'idmateri', 'materi_id']);
+           const qMid = qMidRaw ? qMidRaw.toString().trim() : "";
+           const qTingkat = (getVal(q, ['tingkat', 'kelas', 'tingkatan']) || "").toString().trim().toUpperCase();
+           
+           // Cocok jika ID sama DAN (Tingkat kosong atau cocok)
+           let matchId = (qMid == studentMid); 
+           let matchTingkat = (qTingkat === "" || qTingkat === "SEMUA" || qTingkat === myTingkat);
+           return matchId && matchTingkat;
         });
 
         if (soal.length === 0) {
           content.innerHTML = `
-            <div style="text-align:center; padding:40px; color:#c53030; background:#fff5f5; border:1px solid #fed7d7; border-radius:12px;">
-                <i data-lucide="alert-circle" style="width:40px; height:40px; margin-bottom:10px;"></i>
-                <p style="font-weight:700;">Tidak ada soal untuk materi ini.</p>
-                <p style="font-size:0.85rem;">Pastikan di Google Sheets 'soal', kolom 'ID Materi' diisi: <b>${studentMid}</b></p>
+            <div style="text-align:center; padding:40px; color:#c53030; background:#fff5f5; border:1px solid #fed7d7; border-radius:16px;">
+                <i data-lucide="alert-circle" style="width:48px; height:48px; margin-bottom:15px; color:#ef4444;"></i>
+                <h4 style="margin:0 0 10px 0; font-size:1.1rem;">Soal Tidak Ditemukan</h4>
+                <p style="font-size:0.9rem; margin-bottom:20px; line-height:1.5;">Sistem mencari soal dengan kriteria berikut di sheet <b>'soal'</b>:</p>
+                <div style="display:inline-block; text-align:left; background:white; padding:15px; border-radius:10px; border:1px solid #fee2e2; font-family:monospace; font-size:0.85rem;">
+                   • Kolom ID Materi: <b>${studentMid}</b><br>
+                   • Kolom Tingkat: <b>${myTingkat}</b> atau <b>Kosong</b>
+                </div>
+                <p style="font-size:0.8rem; margin-top:20px; color:#7f1d1d;">Silakan cek kembali sheet <b>'soal'</b> di Google Sheets Anda.</p>
             </div>`;
         } else {
           let soalHtml = '<div style="padding:5px;">';
+          soalHtml += `<div style="background:#f0f9ff; padding:10px 15px; border-radius:8px; margin-bottom:20px; border:1px solid #bae6fd; font-size:0.85rem; color:#0369a1;">Ditemukan <b>${soal.length} soal</b> untuk materi ini.</div>`;
+          
           soal.forEach((q, i) => {
             const sText = getVal(q, ['soal', 'pertanyaan']) || "Tanpa teks soal";
-            const optA = getVal(q, ['a', 'pilihana']) || "-";
-            const optB = getVal(q, ['b', 'pilihanb']) || "-";
-            const optC = getVal(q, ['c', 'pilihanc']) || "-";
-            const optD = getVal(q, ['d', 'pilihand']) || "-";
-            const kunci = getVal(q, ['kunci', 'jawaban']) || "-";
-            const img = getVal(q, ['gambar', 'image', 'url_gambar']);
+            const optA = getVal(q, ['a', 'pilihana', 'opsia']) || "-";
+            const optB = getVal(q, ['b', 'pilihanb', 'opsib']) || "-";
+            const optC = getVal(q, ['c', 'pilihanc', 'opsic']) || "-";
+            const optD = getVal(q, ['d', 'pilihand', 'opsid']) || "-";
+            const kunci = getVal(q, ['kunci', 'jawaban', 'kuncijawaban']) || "-";
+            const img = getVal(q, ['gambar', 'image', 'url_gambar', 'urlgambar']);
             
             soalHtml += `
-              <div style="margin-bottom:25px; border-bottom:1px solid #f1f5f9; padding-bottom:15px;">
-                <div style="font-weight:700; color:#1e293b; margin-bottom:10px;">${i+1}. ${sText}</div>
-                ${img ? `<img src="${img}" style="max-width:100%; max-height:200px; border-radius:10px; margin-bottom:15px; border:1px solid #eee;">` : ''}
-                <div style="font-size:0.85rem; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                  <div style="padding:8px; background:#f8fafc; border-radius:6px; border:1px solid #f1f5f9;"><b>A.</b> ${optA}</div>
-                  <div style="padding:8px; background:#f8fafc; border-radius:6px; border:1px solid #f1f5f9;"><b>B.</b> ${optB}</div>
-                  <div style="padding:8px; background:#f8fafc; border-radius:6px; border:1px solid #f1f5f9;"><b>C.</b> ${optC}</div>
-                  <div style="padding:8px; background:#f8fafc; border-radius:8px; border:1px solid #f1f5f9;"><b>D.</b> ${optD}</div>
+              <div style="margin-bottom:25px; border-bottom:1px solid #f1f5f9; padding-bottom:20px;">
+                <div style="font-weight:700; color:#1e293b; margin-bottom:12px; line-height:1.5; font-size:1rem;">${i+1}. ${sText}</div>
+                ${img ? `<img src="${img}" style="max-width:100%; max-height:250px; border-radius:10px; margin-bottom:15px; border:1px solid #eee; display:block;">` : ''}
+                <div style="font-size:0.85rem; display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-left:10px;">
+                  <div style="padding:10px; background:#f8fafc; border-radius:8px; border:1px solid #f1f5f9;"><b>A.</b> ${optA}</div>
+                  <div style="padding:10px; background:#f8fafc; border-radius:8px; border:1px solid #f1f5f9;"><b>B.</b> ${optB}</div>
+                  <div style="padding:10px; background:#f8fafc; border-radius:8px; border:1px solid #f1f5f9;"><b>C.</b> ${optC}</div>
+                  <div style="padding:10px; background:#f8fafc; border-radius:8px; border:1px solid #f1f5f9;"><b>D.</b> ${optD}</div>
                 </div>
-                <div style="margin-top:10px;"><span style="background:#dcfce7; color:#166534; padding:4px 10px; border-radius:6px; font-weight:800; font-size:0.75rem;">Kunci: ${kunci.toUpperCase()}</span></div>
+                <div style="margin-top:12px; margin-left:10px;">
+                   <span style="background:#dcfce7; color:#166534; padding:6px 12px; border-radius:6px; font-weight:800; font-size:0.8rem; border:1px solid #bbf7d0;">Kunci Jawaban: ${kunci.toUpperCase()}</span>
+                </div>
               </div>`;
           });
           soalHtml += '</div>';
@@ -1905,7 +1935,8 @@
         }
         lucide.createIcons();
       } catch (e) {
-        content.innerHTML = `<div style="text-align:center; padding:40px; color:#ef4444;">Gagal memuat soal dari server.</div>`;
+        content.innerHTML = `<div style="text-align:center; padding:40px; color:#ef4444;"><i data-lucide="wifi-off" style="width:30px; height:30px; margin-bottom:10px;"></i><p>Gagal mengambil data dari server. Periksa koneksi internet atau API URL.</p></div>`;
+        lucide.createIcons();
       }
     }
 
@@ -1935,18 +1966,6 @@
 
       // Helper: Normalisasi string untuk pencocokan
       const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
-
-      // Fungsi getTingkat yang identik dengan dashboard.html
-      const getTingkatSync = (obj) => {
-        let t = (obj.tingkat || obj.Tingkat || "").toString().trim().toUpperCase();
-        let k = (obj.kelas || obj.Kelas || "").toString().trim().toUpperCase();
-        if (!t || (t === "X" && (k.startsWith("XI") || k.startsWith("XII")))) {
-          if (k.startsWith("XII")) return "XII";
-          if (k.startsWith("XI")) return "XI";
-          if (k.startsWith("X")) return "X";
-        }
-        return t || "X";
-      };
 
       // 1. Ambil Siswa di Kelas Ini
       const students = dataUser.filter(u => norm(getVal(u, ['kelas', 'tingkat'])) === norm(selKelas));
