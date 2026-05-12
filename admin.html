@@ -350,14 +350,20 @@
         </div>
 
         <div class="card">
-          <div class="filter-bar">
+          <div class="filter-bar" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
             <input type="text" id="searchMateri" class="form-control" placeholder="Cari judul materi..." style="max-width: 300px;" onkeyup="renderTableMateri()">
+            <select id="filterTingkatMateri" class="form-control" style="max-width: 150px;" onchange="renderTableMateri()">
+              <option value="">Semua Tingkat</option>
+              <option value="X">Kelas X</option>
+              <option value="XI">Kelas XI</option>
+              <option value="XII">Kelas XII</option>
+            </select>
           </div>
           <div class="table-responsive">
             <table>
               <thead>
                 <tr>
-                  <th style="width: 80px; text-align: center;">ID</th>
+                  <th style="width: 80px; text-align: center; cursor:pointer; user-select:none;" onclick="handleSort('materi', 'id')">ID <span id="sort_materi_id" class="sort-icon-materi"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
                   <th style="cursor:pointer; user-select:none;" onclick="handleSort('materi', 'judul')">Modul / Judul <span id="sort_materi_judul" class="sort-icon-materi"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
                   <th style="cursor:pointer; user-select:none;" onclick="handleSort('materi', 'kelas')">Kelas <span id="sort_materi_kelas" class="sort-icon-materi"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
                   <th style="cursor:pointer; user-select:none;" onclick="handleSort('materi', 'status')">Status <span id="sort_materi_status" class="sort-icon-materi"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
@@ -971,11 +977,17 @@
     // ============================================
     function renderTableMateri() {
       let q = document.getElementById('searchMateri').value.toLowerCase();
+      let fTingkat = document.getElementById('filterTingkatMateri').value;
+      
       let filtered = dataMateri.filter(m => {
         let judul = getVal(m, ['judul', 'materi', 'namamateri']) || "";
         let kelas = getVal(m, ['kelas', 'tingkat']) || "";
         let text = judul + " " + kelas;
-        return text.toLowerCase().includes(q);
+        
+        let matchSearch = text.toLowerCase().includes(q);
+        let matchTingkat = fTingkat === "" || getTingkatSync(m) === fTingkat;
+        
+        return matchSearch && matchTingkat;
       });
 
       let html = '';
@@ -992,6 +1004,12 @@
               } else if (sortState.materi.col === 'status') {
                   valA = (getVal(a, ['status']) || "").toLowerCase();
                   valB = (getVal(b, ['status']) || "").toLowerCase();
+              } else if (sortState.materi.col === 'id') {
+                  valA = (getVal(a, ['idmateri', 'id_materi', 'materiid']) || "").toLowerCase();
+                  valB = (getVal(b, ['idmateri', 'id_materi', 'materiid']) || "").toLowerCase();
+                  // Jika ID manual kosong, bandingkan rowNumber
+                  if(!valA) valA = a.rowNumber.toString().padStart(5, '0');
+                  if(!valB) valB = b.rowNumber.toString().padStart(5, '0');
               }
               if (valA < valB) return sortState.materi.asc ? -1 : 1;
               if (valA > valB) return sortState.materi.asc ? 1 : -1;
@@ -1017,6 +1035,9 @@
         
         let midManual = getVal(m, ['idmateri', 'id_materi', 'materiid']);
         let displayId = midManual || (mTingkat === "SEMUA" ? "Global" : idTingkat);
+        
+        // Cari index asli di dataMateri untuk fungsi Edit
+        const realIdx = dataMateri.findIndex(item => item.rowNumber === m.rowNumber);
 
         html += `<tr>
           <td style="font-family:monospace; font-weight:bold; color:var(--primary); text-align:center;">${displayId}</td>
@@ -1028,9 +1049,9 @@
           <td><span class="badge ${isDraft ? 'draft' : 'active'}">${isDraft ? 'Draft' : 'Aktif'}</span></td>
           <td>
             <div class="action-group" style="justify-content:center">
-              <button class="btn-icon" style="color:#0ea5e9; border-color:#bae6fd; background:#f0f9ff;" onclick="previewContent(${dataMateri.indexOf(m)})" title="Preview Materi"><i data-lucide="play-circle"></i></button>
-              <button class="btn-icon" style="color:#f59e0b; border-color:#fef3c7; background:#fffbeb;" onclick="previewSoal(${dataMateri.indexOf(m)})" title="Preview Soal"><i data-lucide="help-circle"></i></button>
-              <button class="btn-icon edit" onclick="editMateriByIdx(${dataMateri.indexOf(m)})" title="Edit"><i data-lucide="edit-2"></i></button>
+              <button class="btn-icon" style="color:#0ea5e9; border-color:#bae6fd; background:#f0f9ff;" onclick="previewContent(${realIdx})" title="Preview Materi"><i data-lucide="play-circle"></i></button>
+              <button class="btn-icon" style="color:#f59e0b; border-color:#fef3c7; background:#fffbeb;" onclick="previewSoal(${realIdx})" title="Preview Soal"><i data-lucide="help-circle"></i></button>
+              <button class="btn-icon edit" onclick="editMateriByIdx(${realIdx})" title="Edit"><i data-lucide="edit-2"></i></button>
               <button class="btn-icon delete" onclick="deleteData('materi', ${mid})" title="Hapus"><i data-lucide="trash-2"></i></button>
             </div>
           </td>
