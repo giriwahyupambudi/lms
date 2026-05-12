@@ -625,6 +625,79 @@ function doPost(e) {
                            .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // ===============================================
+    // ACTION: UPDATE MATERI ID & SYNC SOAL
+    // ===============================================
+    if (action === "updateMateriId") {
+      var rowNum = parseInt(postData.rowNumber);
+      var oldId = (postData.oldId || "").toString().trim();
+      var newId = (postData.newId || "").toString().trim();
+      var tingkatMateri = (postData.tingkat || "X").toString().trim();
+      var dataToSave = JSON.parse(postData.data);
+      var sheetMateri = ss.getSheetByName("materi");
+      var sheetSoal = ss.getSheetByName("soal");
+      
+      if (newId !== "") {
+        var allMateri = sheetMateri.getDataRange().getValues();
+        var headersM = allMateri[0];
+        var idxIdM = -1, idxTingkatM = -1;
+        for(var i=0; i<headersM.length; i++){
+          var h = headersM[i].toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+          if(h === "idmateri" || h === "id_materi") idxIdM = i;
+          if(h === "tingkat" || h === "kelas") idxTingkatM = i;
+        }
+        for (var i = 1; i < allMateri.length; i++) {
+          if (i + 1 === rowNum) continue;
+          var rowId = allMateri[i][idxIdM].toString().trim();
+          var rowTingkat = allMateri[i][idxTingkatM].toString().trim();
+          function getTingkatPure(t) {
+            t = t.toUpperCase();
+            if(t.includes("XII")) return "XII";
+            if(t.includes("XI")) return "XI";
+            if(t.includes("X")) return "X";
+            return t;
+          }
+          if (rowId === newId && getTingkatPure(rowTingkat) === getTingkatPure(tingkatMateri)) {
+            return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "ID Materi '" + newId + "' sudah digunakan di tingkat " + rowTingkat }))
+                                 .setMimeType(ContentService.MimeType.JSON);
+          }
+        }
+      }
+
+      var headers = sheetMateri.getDataRange().getValues()[0];
+      var updateRow = new Array(headers.length).fill("");
+      var existingData = sheetMateri.getRange(rowNum, 1, 1, headers.length).getValues()[0];
+      for (var i = 0; i < headers.length; i++) {
+        var h = headers[i].toString().trim();
+        var hLower = h.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (dataToSave[h] !== undefined) updateRow[i] = dataToSave[h];
+        else if (dataToSave[hLower] !== undefined) updateRow[i] = dataToSave[hLower];
+        else if (hLower === "idmateri" || hLower === "id_materi") updateRow[i] = newId;
+        else updateRow[i] = existingData[i];
+      }
+      sheetMateri.getRange(rowNum, 1, 1, headers.length).setValues([updateRow]);
+
+      var syncCount = 0;
+      if (oldId !== "" && oldId !== newId && sheetSoal) {
+        var soalData = sheetSoal.getDataRange().getValues();
+        var headersSoal = soalData[0];
+        var idxIdSoal = -1;
+        for(var k=0; k<headersSoal.length; k++){
+           var hs = headersSoal[k].toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+           if(hs === "idmateri" || hs === "id_materi") { idxIdSoal = k; break; }
+        }
+        if (idxIdSoal !== -1) {
+          for (var j = 1; j < soalData.length; j++) {
+            if (soalData[j][idxIdSoal].toString().trim() === oldId) {
+              sheetSoal.getRange(j + 1, idxIdSoal + 1).setValue(newId);
+              syncCount++;
+            }
+          }
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Materi diperbarui. " + syncCount + " soal disinkronkan." })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     throw new Error("Aksi tidak dikenali: " + action);
 
   } catch (error) {
