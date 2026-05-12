@@ -139,6 +139,18 @@
     @keyframes spin { 100% { transform: rotate(360deg); } }
     #syncOverlay { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 10px 20px; border-radius: 30px; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; z-index: 9999; box-shadow: var(--shadow-lg); transition: 0.3s; }
 
+    /* SIDEBAR TOGGLE CLASSES (Desktop) */
+    .sidebar { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .top-bar { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .main-content { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+
+    body.sidebar-collapsed .sidebar { transform: translateX(-100%); width: 0; padding: 0; opacity: 0; visibility: hidden; }
+    body.sidebar-collapsed .top-bar { left: 0; }
+    body.sidebar-collapsed .main-content { margin-left: 0; }
+    
+    .sidebar-toggle-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; display: none; padding: 8px; border-radius: 8px; transition: 0.2s; }
+    .sidebar-toggle-btn:hover { background: var(--bg-color); color: var(--primary); }
+
     /* MOBILE ADJUSTMENTS */
     @media (max-width: 768px) {
       .header-section { flex-direction: column; align-items: flex-start; }
@@ -151,6 +163,7 @@
       .sidebar { display: flex; }
       .top-bar { left: var(--sidebar-width); }
       .main-content { margin-left: var(--sidebar-width); padding: 40px; margin-bottom: 0; }
+      .sidebar-toggle-btn { display: flex; align-items: center; justify-content: center; }
     }
   </style>
 </head>
@@ -158,9 +171,12 @@
 <body>
 
   <header class="top-bar">
-    <div class="brand">
-      <i data-lucide="shield-check"></i>
-      <span>Al Ilmi <span class="brand-admin-badge">Admin</span></span>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <button class="sidebar-toggle-btn" onclick="toggleSidebar()"><i data-lucide="menu"></i></button>
+      <div class="brand">
+        <i data-lucide="shield-check"></i>
+        <span>Al Ilmi <span class="brand-admin-badge">Admin</span></span>
+      </div>
     </div>
     <div class="profile-container">
       <div class="avatar" id="avatar-toggle" onclick="toggleDropdown()">A</div>
@@ -553,6 +569,12 @@
       </div>
       <div class="modal-body">
         <input type="hidden" id="materiRowNum" value="">
+        <input type="hidden" id="oldMId" value="">
+        <div class="form-group">
+          <label>ID Materi (Manual)</label>
+          <input type="text" id="mId" class="form-control" placeholder="ID Unik (misal: BIO-1, 01, dll)">
+          <small style="color:var(--text-muted); font-size:0.7rem;">ID ini harus sama dengan kolom 'ID Materi' di Sheet Soal.</small>
+        </div>
         <div class="form-group"><label>Judul Materi</label><input type="text" id="mJudul" class="form-control" placeholder="Contoh: Logaritma Dasar"></div>
         <div class="form-group"><label>Deskripsi (Opsional)</label><input type="text" id="mDeskripsi" class="form-control" placeholder="Penjelasan singkat materi"></div>
         <div class="form-group"><label>Link / Tautan (Opsional)</label><input type="text" id="mLink" class="form-control" placeholder="Link Google Form / Modul"></div>
@@ -973,20 +995,18 @@
         let kelas = getVal(m, ['kelas', 'tingkat']) || "SEMUA";
 
         // Hitung ID Modul Relatif per Tingkat
-        let mTingkat = getTingkatFromKelas(kelas);
+        let mTingkat = getTingkatSync(m);
         let idTingkat = 0;
-        for (let i = 0; i < dataMateri.length; i++) {
-            let t = getTingkatFromKelas(getVal(dataMateri[i], ['kelas', 'tingkat']));
-            if (t === mTingkat || t === "SEMUA" || mTingkat === "SEMUA") {
-                idTingkat++;
-                if (dataMateri[i] === m) break;
-            }
-        }
-        let modulText = mTingkat === "SEMUA" ? "Global" : idTingkat;
+        const materiTingkatSama = dataMateri.filter(item => getTingkatSync(item) === mTingkat);
+        idTingkat = materiTingkatSama.indexOf(m) + 1;
+        
+        let midManual = getVal(m, ['idmateri', 'id_materi', 'materiid']);
+        let displayId = midManual || (mTingkat === "SEMUA" ? "Global" : idTingkat);
 
         html += `<tr>
+          <td style="font-family:monospace; font-weight:bold; color:var(--primary); text-align:center;">${displayId}</td>
           <td>
-            <div style="font-weight:600">${judul} <span style="font-size:0.7rem; color:var(--text-muted)">[ID Kuis: ${modulText}]</span></div>
+            <div style="font-weight:600">${judul}</div>
             <div style="font-size:0.75rem; color:var(--text-muted)">Mapel: ${mapel} | Tipe: ${tipe}</div>
           </td>
           <td>${kelas}</td>
@@ -1008,6 +1028,8 @@
     function openModalMateri() {
       document.getElementById('materiModalTitle').innerText = "Tambah Materi Baru";
       document.getElementById('materiRowNum').value = "";
+      document.getElementById('oldMId').value = "";
+      document.getElementById('mId').value = "";
       document.getElementById('mJudul').value = "";
       document.getElementById('mDeskripsi').value = "";
       document.getElementById('mLink').value = "";
@@ -1018,9 +1040,15 @@
       openModal('materiModal');
     }
 
-    function editMateri(m) {
+    function editMateriByIdx(idx) {
+      const m = dataMateri[idx];
       document.getElementById('materiModalTitle').innerText = "Edit Materi";
       document.getElementById('materiRowNum').value = m.rowNumber;
+      
+      const mid = getVal(m, ['idmateri', 'id_materi', 'materiid']) || "";
+      document.getElementById('mId').value = mid;
+      document.getElementById('oldMId').value = mid;
+
       document.getElementById('mJudul').value = getVal(m, ['judul', 'materi', 'namamateri']) || "";
       document.getElementById('mDeskripsi').value = getVal(m, ['deskripsi', 'keterangan']) || "";
       document.getElementById('mLink').value = getVal(m, ['link', 'url']) || "";
@@ -1033,6 +1061,8 @@
 
     async function saveMateri() {
       let rowNum = document.getElementById('materiRowNum').value;
+      let oldId = document.getElementById('oldMId').value;
+      let newId = document.getElementById('mId').value;
       
       let judulVal = document.getElementById('mJudul').value;
       let descVal = document.getElementById('mDeskripsi').value;
@@ -1042,6 +1072,8 @@
       let tipeVal = document.getElementById('mTipe').value;
       let statusVal = document.getElementById('mStatus').value;
 
+      if (!judulVal) return alert("Judul materi wajib diisi!");
+
       let data = {
         "judul": judulVal, "materi": judulVal, "namamateri": judulVal,
         "deskripsi": descVal, "keterangan": descVal,
@@ -1049,11 +1081,24 @@
         "mapel": mapelVal, "matapelajaran": mapelVal,
         "kelas": kelasVal, "tingkat": kelasVal,
         "tipe": tipeVal, "tipe_evaluasi": tipeVal, "tipeevaluasi": tipeVal,
-        "status": statusVal
+        "status": statusVal,
+        "id_materi": newId
       };
       
       closeModal('materiModal');
-      await postData({ action: "saveData", sheet: "materi", rowNumber: rowNum, data: JSON.stringify(data) });
+
+      if (rowNum && (newId !== oldId)) {
+        await postData({ 
+          action: "updateMateriId", 
+          rowNumber: rowNum, 
+          oldId: oldId, 
+          newId: newId, 
+          tingkat: kelasVal,
+          data: JSON.stringify(data) 
+        });
+      } else {
+        await postData({ action: "saveData", sheet: "materi", rowNumber: rowNum, data: JSON.stringify(data) });
+      }
     }
 
     // ============================================
@@ -2086,26 +2131,40 @@
     // ============================================
     // FUNGSI POST GENERAL
     // ============================================
+    // ============================
+    // SIDEBAR TOGGLE LOGIC
+    // ============================
+    function toggleSidebar() {
+      const isCollapsed = document.body.classList.toggle('sidebar-collapsed');
+      localStorage.setItem('admin_sidebar_collapsed', isCollapsed);
+    }
+
+    // Initialize sidebar state
+    if (localStorage.getItem('admin_sidebar_collapsed') === 'true') {
+      document.body.classList.add('sidebar-collapsed');
+    }
+
     async function postData(payload) {
       showOverlay("Menyimpan...");
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
           body: JSON.stringify(payload),
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' } // text/plain agar tidak memicu CORS preflight error di GAS
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' }
         });
 
         const result = await response.json();
         if(result.status === "success") {
            showOverlay("Berhasil!");
-           setTimeout(() => { loadAllData(); }, 1000); // Reload data
+           setTimeout(() => { loadAllData(); }, 1000);
         } else {
-           throw new Error(result.message);
+           alert("GAGAL: " + (result.message || "Terjadi kesalahan pada server"));
+           hideOverlay();
         }
       } catch(e) {
         console.error(e);
-        showOverlay("Gagal menyimpan data!");
-        setTimeout(hideOverlay, 3000);
+        alert("ERROR: Tidak dapat terhubung ke server atau format data salah.");
+        hideOverlay();
       }
     }
 

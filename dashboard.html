@@ -1008,12 +1008,12 @@
         // Hanya tambahkan ke openedMaterials JIKA materi tersebut tidak terkunci secara aturan (mencegah anomali jika listNilai dihapus)
         const openedMaterials = new Set();
         dataMateri.forEach((m, i) => {
-          const mid = (i + 1).toString();
+          const mid = getVal(m, ['idmateri', 'id_materi', 'materiid']) || (i + 1).toString();
 
           let isMateriLocked = false;
 
           if (!isMateriLocked) {
-            if (localStorage.getItem(`opened_materi_${user.username}_${mid}`)) openedMaterials.add(mid);
+            if (localStorage.getItem(`opened_materi_${user.username}_${mid}`)) openedMaterials.add(mid.toString());
           } else {
             localStorage.removeItem(`opened_materi_${user.username}_${mid}`);
           }
@@ -1026,7 +1026,7 @@
         let upNextHTML = "";
         let upNextFound = false;
         list.innerHTML = dataMateri.map((m, i) => {
-          const mid = i + 1;
+          const mid = getVal(m, ['idmateri', 'id_materi', 'materiid']) || (i + 1).toString();
           const tipeRaw = getVal(m, ['tipeevaluasi', 'tipe', 'evaluasi', 'jenis']);
           let tipe = (tipeRaw && tipeRaw.toString().trim() !== "") ? tipeRaw.toString().trim() : (i % 2 === 0 ? "Kuis" : "Tugas");
           // Format menjadi Kuis atau Tugas atau Praktik
@@ -1100,7 +1100,7 @@
           } else {
             btnKuis = isKuisLocked
               ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed; border:1px solid #e2e8f0;" onclick="alertLocked('kuis')"><i data-lucide="lock" style="width:14px"></i> Kuis Terkunci</button>`
-              : `<button class="btn-action btn-quiz" onclick="handleEvaluasi('${tipe}', '${mid}', encodeURIComponent(\`${m.judul || m.Judul || ("Materi " + (i + 1))}\`), ${i + 1})"><i data-lucide="${tipe === 'Kuis' ? 'edit-2' : (tipe.toLowerCase() === 'editor' ? 'type' : 'upload')}" style="width:14px"></i> ${hasScore ? 'Ulangi ' + tipe : 'Kerjakan ' + tipe}</button>`;
+              : `<button class="btn-action btn-quiz" onclick="handleEvaluasi('${tipe}', '${mid}', encodeURIComponent(\`${m.judul || m.Judul || ("Materi " + (i + 1))}\`), '${mid}')"><i data-lucide="${tipe === 'Kuis' ? 'edit-2' : (tipe.toLowerCase() === 'editor' ? 'type' : 'upload')}" style="width:14px"></i> ${hasScore ? 'Ulangi ' + tipe : 'Kerjakan ' + tipe}</button>`;
           }
 
           let viewBtnHTML = "";
@@ -1118,7 +1118,7 @@
               <div class="course-content">
                 <h3 style="margin:0 0 8px 0; font-size:0.95rem; font-weight:600; line-height:1.4; color:#334155;">${m.judul || m.Judul || ("Materi " + (i + 1))}</h3>
                 <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
-                  <span class="course-tag">Modul ${i + 1}</span>
+                  <span class="course-tag" style="background:var(--primary-light); color:var(--primary); border:1px solid var(--primary-light);">ID: ${mid}</span>
                   ${timeBadge}
                   ${scoreBadge}
                 </div>
