@@ -689,7 +689,10 @@ function doPost(e) {
         var idxIdSoal = -1;
         for(var k=0; k<headersSoal.length; k++){
            var hs = headersSoal[k] ? headersSoal[k].toString().toLowerCase().replace(/[^a-z0-9]/g, '') : "";
-           if(hs === "idmateri" || hs === "id_materi") { idxIdSoal = k; break; }
+           if(hs === "idmateri" || hs === "id_materi" || hs === "materiid" || hs === "modul") { 
+             idxIdSoal = k; 
+             break; 
+           }
         }
         if (idxIdSoal !== -1) {
           for (var j = 1; j < soalData.length; j++) {

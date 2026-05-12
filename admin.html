@@ -1093,7 +1093,7 @@
       document.getElementById('materiModalTitle').innerText = "Edit Materi";
       document.getElementById('materiRowNum').value = m.rowNumber;
       
-      const mid = getVal(m, ['idmateri', 'id_materi', 'materiid']) || "";
+      const mid = getVal(m, ['idmateri', 'id_materi', 'materiid', 'id']) || "";
       document.getElementById('mId').value = mid;
       document.getElementById('oldMId').value = mid;
 
@@ -1141,7 +1141,9 @@
         "kelas": kelasVal, "tingkat": kelasVal,
         "tipe": tipeVal, "tipe_evaluasi": tipeVal, "tipeevaluasi": tipeVal,
         "status": statusVal,
-        "id_materi": newId
+        "id_materi": newId,
+        "idmateri": newId,
+        "materiid": newId
       };
       
       closeModal('materiModal');
