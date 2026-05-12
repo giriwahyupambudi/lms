@@ -648,10 +648,15 @@ function doPost(e) {
         }
         for (var i = 1; i < allMateri.length; i++) {
           if (i + 1 === rowNum) continue;
-          var rowId = allMateri[i][idxIdM].toString().trim();
-          var rowTingkat = allMateri[i][idxTingkatM].toString().trim();
+          var rowIdRaw = allMateri[i][idxIdM];
+          var rowId = rowIdRaw ? rowIdRaw.toString().trim() : "";
+          
+          var rowTingkatRaw = allMateri[i][idxTingkatM];
+          var rowTingkat = rowTingkatRaw ? rowTingkatRaw.toString().trim() : "";
+          
           function getTingkatPure(t) {
-            t = t.toUpperCase();
+            if(!t) return "X";
+            t = t.toString().toUpperCase();
             if(t.includes("XII")) return "XII";
             if(t.includes("XI")) return "XI";
             if(t.includes("X")) return "X";
@@ -683,12 +688,13 @@ function doPost(e) {
         var headersSoal = soalData[0];
         var idxIdSoal = -1;
         for(var k=0; k<headersSoal.length; k++){
-           var hs = headersSoal[k].toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+           var hs = headersSoal[k] ? headersSoal[k].toString().toLowerCase().replace(/[^a-z0-9]/g, '') : "";
            if(hs === "idmateri" || hs === "id_materi") { idxIdSoal = k; break; }
         }
         if (idxIdSoal !== -1) {
           for (var j = 1; j < soalData.length; j++) {
-            if (soalData[j][idxIdSoal].toString().trim() === oldId) {
+            var currentSoalId = soalData[j][idxIdSoal] ? soalData[j][idxIdSoal].toString().trim() : "";
+            if (currentSoalId === oldId) {
               sheetSoal.getRange(j + 1, idxIdSoal + 1).setValue(newId);
               syncCount++;
             }
