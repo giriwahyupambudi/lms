@@ -57,7 +57,7 @@
                         <i data-lucide="cloud-upload" class="w-8 h-8"></i>
                     </div>
                     <h2 class="text-xl font-bold text-slate-800">Kirim Tugas Anda</h2>
-                    <p class="text-sm text-slate-500 mt-1">Format yang didukung: PDF, Word, Excel, Gambar, ZIP (Maks. 5MB)</p>
+                    <p class="text-sm text-slate-500 mt-1">Format yang didukung: PDF, Word, Excel, Gambar, ZIP (Maks. <span id="max-size-label">5MB</span>)</p>
                 </div>
 
                 <!-- Error Message Box -->
@@ -136,7 +136,24 @@
             }
             document.getElementById('page-subtitle').innerText = decodeURIComponent(titleParam);
             setupFileHandlers();
+            fetchSettings();
         };
+
+        let maxFileSizeMB = 5;
+
+        async function fetchSettings() {
+            try {
+                const res = await fetch(`${API_URL}?sheet=settings`);
+                const settings = await res.json();
+                const uploadSetting = settings.find(s => s.key === "MAX_UPLOAD_SIZE" || s.pengaturan === "MAX_UPLOAD_SIZE");
+                if (uploadSetting) {
+                    maxFileSizeMB = parseFloat(uploadSetting.value || uploadSetting.nilai || 5);
+                    document.getElementById('max-size-label').innerText = maxFileSizeMB + "MB";
+                }
+            } catch (e) {
+                console.error("Gagal mengambil setting ukuran file:", e);
+            }
+        }
 
         function setupFileHandlers() {
             const dragArea = document.getElementById('drag-area');
@@ -187,10 +204,10 @@
         function handleFile(file) {
             if (!file) return;
 
-            // Batas maksimal file (misal 5MB)
-            const MAX_SIZE = 5 * 1024 * 1024;
+            // Batas maksimal file (Dinamis dari setting)
+            const MAX_SIZE = maxFileSizeMB * 1024 * 1024;
             if (file.size > MAX_SIZE) {
-                showError("Ukuran file terlalu besar! Maksimal 5MB.");
+                showError(`Ukuran file terlalu besar! Maksimal ${maxFileSizeMB}MB.`);
                 return;
             }
             
