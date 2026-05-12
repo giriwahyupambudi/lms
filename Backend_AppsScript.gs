@@ -642,8 +642,8 @@ function doPost(e) {
         var headersM = allMateri[0];
         var idxIdM = -1, idxTingkatM = -1;
         for(var i=0; i<headersM.length; i++){
-          var h = headersM[i].toString().toLowerCase().replace(/[^a-z0-9]/g, '');
-          if(h === "idmateri" || h === "id_materi") idxIdM = i;
+          var h = headersM[i] ? headersM[i].toString().toLowerCase().replace(/[^a-z0-9]/g, '') : "";
+          if(h === "idmateri" || h === "id_materi" || h === "materiid" || h === "id") idxIdM = i;
           if(h === "tingkat" || h === "kelas") idxTingkatM = i;
         }
         for (var i = 1; i < allMateri.length; i++) {
@@ -689,7 +689,7 @@ function doPost(e) {
         var idxIdSoal = -1;
         for(var k=0; k<headersSoal.length; k++){
            var hs = headersSoal[k] ? headersSoal[k].toString().toLowerCase().replace(/[^a-z0-9]/g, '') : "";
-           if(hs === "idmateri" || hs === "id_materi" || hs === "materiid" || hs === "modul") { 
+           if(hs === "idmateri" || hs === "id_materi" || hs === "materiid" || hs === "modul" || hs === "id") { 
              idxIdSoal = k; 
              break; 
            }
