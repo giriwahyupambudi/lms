@@ -682,29 +682,47 @@ function doPost(e) {
       }
       sheetMateri.getRange(rowNum, 1, 1, headers.length).setValues([updateRow]);
 
+      // 3. Sinkronisasi ke Sheet Soal
       var syncCount = 0;
+      var foundCount = 0;
       if (oldId !== "" && oldId !== newId && sheetSoal) {
         var soalData = sheetSoal.getDataRange().getValues();
         var headersSoal = soalData[0];
         var idxIdSoal = -1;
+        
+        // Cari kolom ID di Soal dengan sangat teliti
         for(var k=0; k<headersSoal.length; k++){
-           var hs = headersSoal[k] ? headersSoal[k].toString().toLowerCase().replace(/[^a-z0-9]/g, '') : "";
+           var hs = headersSoal[k] ? headersSoal[k].toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim() : "";
            if(hs === "idmateri" || hs === "id_materi" || hs === "materiid" || hs === "modul" || hs === "id") { 
              idxIdSoal = k; 
              break; 
            }
         }
+
         if (idxIdSoal !== -1) {
-          for (var j = 1; j < soalData.length; j++) {
-            var currentSoalId = soalData[j][idxIdSoal] ? soalData[j][idxIdSoal].toString().trim() : "";
-            if (currentSoalId === oldId) {
-              sheetSoal.getRange(j + 1, idxIdSoal + 1).setValue(newId);
+          // Ambil seluruh kolom ID soal untuk diproses di memori (lebih cepat)
+          var rangeSoal = sheetSoal.getRange(1, idxIdSoal + 1, sheetSoal.getLastRow(), 1);
+          var colValues = rangeSoal.getValues();
+          
+          for (var j = 1; j < colValues.length; j++) {
+            var valSoal = colValues[j][0] ? colValues[j][0].toString().trim() : "";
+            if (valSoal == oldId) { // Gunakan == untuk pencocokan angka/teks yang longgar
+              colValues[j][0] = newId;
               syncCount++;
             }
           }
+          
+          // Simpan kembali sekaligus jika ada yang berubah
+          if (syncCount > 0) {
+            rangeSoal.setValues(colValues);
+          }
         }
       }
-      return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Materi diperbarui. " + syncCount + " soal disinkronkan." })).setMimeType(ContentService.MimeType.JSON);
+
+      return ContentService.createTextOutput(JSON.stringify({ 
+        status: "success", 
+        message: "Materi diperbarui. " + syncCount + " baris di sheet soal disinkronkan." 
+      })).setMimeType(ContentService.MimeType.JSON);
     }
 
     throw new Error("Aksi tidak dikenali: " + action);
