@@ -534,7 +534,8 @@
                     nilai: score,
                     waktu: "'" + waktuFormat, // Tambahkan kutip tunggal agar Google Sheet menjadikannya teks (mencegah format tanggal 1899)
                     timestamp: new Date().toISOString(),
-                    jawaban: userAnswers.map(ans => ans || "")
+                    jawaban: userAnswers.map(ans => ans || ""),
+                    urutan_soal: allQuestions.map(q => q.id || "").join(",")
                 }
             };
 

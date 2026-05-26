@@ -196,6 +196,7 @@
     <div class="brand" style="color:white; margin-bottom: 32px;"><i data-lucide="shield-check"></i> Al Ilmi Admin</div>
     <button class="nav-item active" id="tabDashboardD" onclick="showTab('dashboard')"><i data-lucide="layout-dashboard"></i> Dashboard</button>
     <button class="nav-item" id="tabMateriD" onclick="showTab('materi')"><i data-lucide="book-open"></i> Kelola Materi</button>
+    <button class="nav-item" id="tabAnalisisD" onclick="showTab('analisis')"><i data-lucide="bar-chart-2"></i> Analisis Soal</button>
     <button class="nav-item" id="tabNilaiD" onclick="showTab('nilai')"><i data-lucide="graduation-cap"></i> Input Nilai</button>
     <button class="nav-item" id="tabTugasD" onclick="showTab('tugas')"><i data-lucide="file-text"></i> Tugas</button>
     <button class="nav-item" id="tabRankingD" onclick="showTab('ranking')"><i data-lucide="award"></i> Peringkat</button>
@@ -334,6 +335,92 @@
                 <button class="btn btn-primary" onclick="saveSettingMaxUpload()"><i data-lucide="save"></i> Simpan</button>
               </div>
               <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">Batas ukuran file tugas yang dikirim siswa (dalam Megabyte).</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION: ANALISIS & BANK SOAL ================= -->
+      <section id="analisisSection" style="display:none">
+        <div class="header-section">
+          <div>
+            <h1>Analisis Butir & Bank Soal</h1>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Uji kualitas soal (Kesukaran, Daya Pembeda/Uji Beda, Validitas) dan buat paket Ujian Akhir.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="filter-bar" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+            <div class="form-group" style="flex:1; min-width:200px; margin-bottom: 0;">
+              <label>Pilih Materi/Kuis Asal</label>
+              <select class="form-control" id="filterMateriAnalisis" onchange="runItemAnalysis()"></select>
+            </div>
+            <div style="margin-bottom: 0;">
+              <button class="btn btn-outline" onclick="runItemAnalysis()"><i data-lucide="refresh-cw"></i> Hitung Ulang</button>
+            </div>
+          </div>
+
+          <!-- Cards Ringkasan -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; padding: 20px; background: #fafafa; border-bottom: 1px solid var(--border-color);">
+            <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+              <h4 style="margin: 0; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Siswa Mengerjakan</h4>
+              <p id="analisisTotalSiswa" style="margin: 6px 0 0 0; font-size: 1.25rem; font-weight: 700; color: var(--primary);">-</p>
+            </div>
+            <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+              <h4 style="margin: 0; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Rata-rata Nilai</h4>
+              <p id="analisisAvgScore" style="margin: 6px 0 0 0; font-size: 1.25rem; font-weight: 700; color: var(--success);">-</p>
+            </div>
+            <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+              <h4 style="margin: 0; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Soal Sangat Layak</h4>
+              <p id="analisisSoalLayak" style="margin: 6px 0 0 0; font-size: 1.25rem; font-weight: 700; color: var(--warning);">-</p>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 40px; text-align: center;"><input type="checkbox" id="checkAllAnalisis" onchange="toggleAllCheckboxesAnalisis(this)"></th>
+                  <th style="width: 60px; text-align: center;">No</th>
+                  <th>Butir Pertanyaan</th>
+                  <th style="text-align: center; width: 120px;">Kesukaran (P)</th>
+                  <th style="text-align: center; width: 120px;">Uji Beda (D)</th>
+                  <th style="text-align: center; width: 120px;">Validitas</th>
+                  <th style="text-align: center; width: 120px;">Rekomendasi</th>
+                </tr>
+              </thead>
+              <tbody id="analisisTableBody">
+                <tr><td colspan="7" style="text-align:center;">Pilih materi asal untuk menganalisis butir soal.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- PANEL EKSPOR floating/footer style jika ada yang dipilih -->
+        <div id="exportPanel" class="card" style="display: none; border-color: var(--primary); margin-top: 24px; background: #eff6ff;">
+          <div class="card-header" style="background: var(--primary-light); border-bottom-color: var(--primary-light);">
+            <h3 style="color: #1e3a8a;"><i data-lucide="package-plus" style="vertical-align:middle; width:20px; height:20px; display:inline-block; margin-right:6px;"></i>Buat Ujian Akhir dari Soal Terpilih (<span id="countSelectedSoal">0</span> Soal)</h3>
+          </div>
+          <div style="padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+              <label>ID Materi Ujian Baru (Unique)</label>
+              <input type="text" id="newExamId" class="form-control" placeholder="Contoh: UA-XI-1, UJIAN-FINAL, dll">
+              <small style="color:var(--text-muted); font-size:0.7rem;">ID ini akan mereferensikan paket kuis baru di sheet soal.</small>
+            </div>
+            <div class="form-group">
+              <label>Nama / Judul Ujian Akhir</label>
+              <input type="text" id="newExamTitle" class="form-control" placeholder="Contoh: Ujian Akhir Semester Fisika XI">
+            </div>
+            <div class="form-group">
+              <label>Mata Pelajaran</label>
+              <input type="text" id="newExamMapel" class="form-control" placeholder="Contoh: Fisika">
+            </div>
+            <div class="form-group">
+              <label>Target Kelas / Tingkat</label>
+              <input type="text" id="newExamKelas" class="form-control" placeholder="Contoh: XI">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <button class="btn btn-primary" onclick="exportSelectedQuestions()" style="width: 100%; justify-content: center; padding: 12px;"><i data-lucide="send"></i> Ekspor & Buat Ujian Akhir Baru di Spreadsheet</button>
             </div>
           </div>
         </div>
@@ -746,10 +833,14 @@
     };
 
     function showTab(tabName) {
-      ['dashboardSection', 'materiSection', 'nilaiSection', 'usersSection', 'settingsSection', 'tugasSection', 'rankingSection', 'rekapSection'].forEach(s => document.getElementById(s).style.display = 'none');
-      document.getElementById(tabName + 'Section').style.display = 'block';
+      ['dashboardSection', 'materiSection', 'nilaiSection', 'usersSection', 'settingsSection', 'tugasSection', 'rankingSection', 'rekapSection', 'analisisSection'].forEach(s => {
+        let el = document.getElementById(s);
+        if (el) el.style.display = 'none';
+      });
+      let targetSec = document.getElementById(tabName + 'Section');
+      if (targetSec) targetSec.style.display = 'block';
       
-      ['tabDashboard', 'tabMateri', 'tabNilai', 'tabUsers', 'tabSettings', 'tabTugas', 'tabRanking', 'tabRekap'].forEach(id => {
+      ['tabDashboard', 'tabMateri', 'tabNilai', 'tabUsers', 'tabSettings', 'tabTugas', 'tabRanking', 'tabRekap', 'tabAnalisis'].forEach(id => {
         let el = document.getElementById(id); if(el) el.classList.remove('active');
         let elD = document.getElementById(id+'D'); if(elD) elD.classList.remove('active');
       });
@@ -757,6 +848,10 @@
       let current = 'tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1);
       if(document.getElementById(current)) document.getElementById(current).classList.add('active');
       if(document.getElementById(current+'D')) document.getElementById(current+'D').classList.add('active');
+      
+      if (tabName === 'analisis') {
+        populateFilterAnalisis();
+      }
     }
 
     // Fungsi getTingkat yang identik dengan dashboard.html
@@ -2215,6 +2310,394 @@
       if(existing) payload.rowNumber = existing.rowNumber;
       
       await postData(payload);
+    }
+
+    // ========================================================
+    // ANALISIS ITEM & BANK SOAL
+    // ========================================================
+    function populateFilterAnalisis() {
+      const selMateri = document.getElementById('filterMateriAnalisis');
+      if (!selMateri) return;
+      
+      const oldVal = selMateri.value;
+      selMateri.innerHTML = '<option value="">-- Pilih Materi / Kuis Asal --</option>';
+      
+      // Saring materi yang bertipe Kuis, Praktik, Editor (bukan tipe Materi teori)
+      const quizes = dataMateri.filter(m => {
+        let tipe = (getVal(m, ['tipe']) || "Praktik").toLowerCase();
+        return tipe !== "materi";
+      });
+      
+      quizes.forEach(m => {
+        const idManual = getVal(m, ['idmateri', 'id_materi', 'materiid']);
+        const judul = getVal(m, ['judul', 'materi']) || "Tanpa Judul";
+        const mapel = getVal(m, ['mapel']) || "";
+        const kelas = getTingkatSync(m);
+        
+        if (idManual) {
+          selMateri.innerHTML += `<option value="${idManual}" data-row="${m.rowNumber}" data-tingkat="${kelas}">[ID: ${idManual}] ${judul} - Kelas ${kelas} (${mapel})</option>`;
+        }
+      });
+      
+      if (oldVal) selMateri.value = oldVal;
+    }
+
+    async function runItemAnalysis() {
+      const selMateri = document.getElementById('filterMateriAnalisis').value;
+      const tbody = document.getElementById('analisisTableBody');
+      
+      if (!selMateri) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Pilih materi asal untuk menganalisis butir soal.</td></tr>';
+        document.getElementById('analisisTotalSiswa').innerText = '-';
+        document.getElementById('analisisAvgScore').innerText = '-';
+        document.getElementById('analisisSoalLayak').innerText = '-';
+        document.getElementById('exportPanel').style.display = 'none';
+        return;
+      }
+      
+      const selOpt = document.getElementById('filterMateriAnalisis').options[document.getElementById('filterMateriAnalisis').selectedIndex];
+      const targetTingkat = selOpt.getAttribute('data-tingkat') || "";
+      
+      showOverlay("Mengambil bank soal dari database...");
+      
+      let allSoal = [];
+      try {
+        const res = await fetch(`${API_URL}?sheet=soal`);
+        allSoal = await res.json();
+      } catch (e) {
+        hideOverlay();
+        alert("Gagal mengambil data soal.");
+        return;
+      }
+      
+      // 1. Filter Soal yang sesuai dengan ID Materi & Tingkat
+      const filteredSoal = allSoal.filter(q => {
+        const qMidRaw = getVal(q, ['id_materi', 'idmateri', 'materiid', 'materi_id']);
+        const qMid = qMidRaw ? qMidRaw.toString().trim() : "";
+        const qTingkat = (getVal(q, ['tingkat', 'kelas', 'tingkatan']) || "").toString().trim().toUpperCase();
+        
+        let matchId = (qMid == selMateri);
+        let matchTingkat = (qTingkat === "" || qTingkat === "SEMUA" || qTingkat === targetTingkat);
+        return matchId && matchTingkat;
+      });
+      
+      if (filteredSoal.length === 0) {
+        hideOverlay();
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--danger); font-weight:bold;">Tidak ada soal yang terdaftar untuk materi ini di tab "soal".</td></tr>';
+        document.getElementById('analisisTotalSiswa').innerText = '0';
+        document.getElementById('analisisAvgScore').innerText = '0';
+        document.getElementById('analisisSoalLayak').innerText = '0';
+        return;
+      }
+      
+      // 2. Filter nilai/jawaban siswa di listNilai untuk materi ini
+      // Kita asumsikan id_materi kuis bernilai 'selMateri'
+      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      const studentAttempts = dataNilai.filter(n => {
+        const nMid = (getVal(n, ['id_materi', 'idmateri']) || "").toString().trim();
+        let pNilai = getVal(n, ['nilai', 'skor', 'point']);
+        return nMid === selMateri && pNilai !== undefined && pNilai !== null && pNilai !== "";
+      });
+      
+      if (studentAttempts.length === 0) {
+        hideOverlay();
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--text-muted);">Belum ada data pengerjaan siswa di sheet "listNilai" untuk materi ini. Metrik tidak bisa dihitung.</td></tr>';
+        document.getElementById('analisisTotalSiswa').innerText = '0';
+        document.getElementById('analisisAvgScore').innerText = '-';
+        document.getElementById('analisisSoalLayak').innerText = '-';
+        return;
+      }
+      
+      // Hitung Rata-rata Nilai
+      let totalScoreSum = 0;
+      studentAttempts.forEach(s => {
+        totalScoreSum += parseFloat(getVal(s, ['nilai', 'skor'])) || 0;
+      });
+      const avgScore = Math.round(totalScoreSum / studentAttempts.length);
+      
+      document.getElementById('analisisTotalSiswa').innerText = studentAttempts.length;
+      document.getElementById('analisisAvgScore').innerText = avgScore + " / 100";
+      
+      // 3. Kelompok Atas & Bawah (Uji Beda)
+      // Urutkan siswa berdasarkan total skor kuis secara descending
+      const sortedAttempts = [...studentAttempts].sort((a, b) => {
+        let valA = parseFloat(getVal(a, ['nilai', 'skor'])) || 0;
+        let valB = parseFloat(getVal(b, ['nilai', 'skor'])) || 0;
+        return valB - valA;
+      });
+      
+      const halfSize = Math.max(1, Math.round(sortedAttempts.length / 2));
+      const upperGroup = sortedAttempts.slice(0, halfSize);
+      const lowerGroup = sortedAttempts.slice(halfSize);
+      
+      // Helper untuk memparsing jawaban siswa
+      const parseAnswersArray = (rec) => {
+        let ans = [];
+        for (let idx = 1; idx <= 100; idx++) {
+          let val = getVal(rec, ['jawaban' + idx]);
+          if (val !== undefined) ans.push(val.toString().trim().toUpperCase());
+          else break;
+        }
+        return ans;
+      };
+      
+      // 4. Analisis Tiap Soal
+      let soalLayakCount = 0;
+      let tbodyHtml = '';
+      
+      filteredSoal.forEach((q, qIdx) => {
+        const qId = (getVal(q, ['id']) || "").toString().trim();
+        const sText = getVal(q, ['soal', 'pertanyaan']) || "Tanpa pertanyaan";
+        const kunci = (getVal(q, ['kunci', 'jawaban']) || "").toString().toUpperCase().trim();
+        
+        let correctAttempts = 0;
+        let totalAttempts = 0;
+        
+        let correctUpper = 0;
+        let correctLower = 0;
+        
+        // Pearson correlation calculation arrays
+        let itemScores = []; // X values (0 or 1)
+        let totalScores = []; // Y values (0 to 100)
+        
+        studentAttempts.forEach(rec => {
+          let answers = parseAnswersArray(rec);
+          let urutan = (getVal(rec, ['urutan_soal', 'urutansoal']) || "").toString().trim();
+          
+          let ansValue = "";
+          if (urutan) {
+            // Menggunakan urutan soal untuk mendapatkan index jawaban yang benar
+            let orderArray = urutan.split(",");
+            let idx = orderArray.indexOf(qId);
+            if (idx !== -1 && idx < answers.length) {
+              ansValue = answers[idx];
+            }
+          } else {
+            // Fallback: Jika tidak diacak, gunakan index default soal
+            if (qIdx < answers.length) {
+              ansValue = answers[qIdx];
+            }
+          }
+          
+          if (ansValue !== "") {
+            let isCorrect = (ansValue === kunci) ? 1 : 0;
+            totalAttempts++;
+            if (isCorrect) correctAttempts++;
+            
+            // Check groups
+            let username = getVal(rec, ['username']);
+            let isUpper = upperGroup.some(u => getVal(u, ['username']) === username);
+            let isLower = lowerGroup.some(l => getVal(l, ['username']) === username);
+            
+            if (isUpper) {
+              if (isCorrect) correctUpper++;
+            } else if (isLower) {
+              if (isCorrect) correctLower++;
+            }
+            
+            itemScores.push(isCorrect);
+            totalScores.push(parseFloat(getVal(rec, ['nilai', 'skor'])) || 0);
+          }
+        });
+        
+        // A. Tingkat Kesukaran (P)
+        let P = totalAttempts > 0 ? (correctAttempts / totalAttempts) : 0;
+        let kesukaranBadge = '';
+        if (P > 0.70) {
+          kesukaranBadge = `<span class="badge" style="background:#e0f2fe; color:#0369a1; padding:4px 8px;">Mudah (${Math.round(P*100)}%)</span>`;
+        } else if (P >= 0.30) {
+          kesukaranBadge = `<span class="badge" style="background:#f0fdf4; color:#16a34a; padding:4px 8px;">Sedang (${Math.round(P*100)}%)</span>`;
+        } else {
+          kesukaranBadge = `<span class="badge" style="background:#fee2e2; color:#b91c1c; padding:4px 8px;">Sukar (${Math.round(P*100)}%)</span>`;
+        }
+        
+        // B. Daya Pembeda (D)
+        let D = 0;
+        let dayapembedaBadge = '';
+        if (upperGroup.length > 0 && lowerGroup.length > 0) {
+          D = (correctUpper / upperGroup.length) - (correctLower / lowerGroup.length);
+        }
+        
+        if (D >= 0.40) {
+          dayapembedaBadge = `<span class="badge active" style="padding:4px 8px;">Sangat Baik (${D.toFixed(2)})</span>`;
+        } else if (D >= 0.30) {
+          dayapembedaBadge = `<span class="badge" style="background:#e0f2fe; color:#0369a1; padding:4px 8px;">Baik (${D.toFixed(2)})</span>`;
+        } else if (D >= 0.20) {
+          dayapembedaBadge = `<span class="badge orange" style="padding:4px 8px;">Cukup (${D.toFixed(2)})</span>`;
+        } else {
+          dayapembedaBadge = `<span class="badge red" style="padding:4px 8px;">Jelek (${D.toFixed(2)})</span>`;
+        }
+        
+        // C. Validitas Pearson (r)
+        let rVal = 0;
+        let validitasBadge = '';
+        if (itemScores.length > 1) {
+          rVal = calculatePearsonCorrelation(itemScores, totalScores);
+        }
+        
+        let isValid = (rVal >= 0.25);
+        if (isValid) {
+          validitasBadge = `<span class="badge active" style="padding:4px 8px;">Valid (${rVal.toFixed(2)})</span>`;
+        } else {
+          validitasBadge = `<span class="badge draft" style="padding:4px 8px;">Tidak Valid (${rVal.toFixed(2)})</span>`;
+        }
+        
+        // D. Rekomendasi
+        let rekomendasi = '';
+        if (isValid && D >= 0.30) {
+          rekomendasi = `<span style="color:var(--success); font-weight:bold;">Sangat Layak</span>`;
+          soalLayakCount++;
+        } else if (isValid && D >= 0.20) {
+          rekomendasi = `<span style="color:var(--warning); font-weight:bold;">Perlu Revisi</span>`;
+        } else {
+          rekomendasi = `<span style="color:var(--danger); font-weight:bold;">Dibuang / Diganti</span>`;
+        }
+        
+        let truncatedText = sText.length > 70 ? sText.substring(0, 67) + "..." : sText;
+        let tooltipText = sText.replace(/"/g, '&quot;');
+        
+        tbodyHtml += `<tr>
+          <td style="text-align:center;">
+            <input type="checkbox" class="analisis-check" value="${q.rowNumber}" onchange="updateExportPanelState()">
+          </td>
+          <td style="text-align:center; font-weight:bold;">${qIdx + 1}</td>
+          <td>
+            <a href="javascript:void(0)" onclick="previewSoalByRow(${q.rowNumber})" title="${tooltipText}" style="color: var(--text-main); font-weight: 500; text-decoration: none; border-bottom: 1px dotted var(--text-muted);">${truncatedText}</a>
+          </td>
+          <td style="text-align:center;">${kesukaranBadge}</td>
+          <td style="text-align:center;">${dayapembedaBadge}</td>
+          <td style="text-align:center;">${validitasBadge}</td>
+          <td style="text-align:center; font-size:0.85rem;">${rekomendasi}</td>
+        </tr>`;
+      });
+      
+      tbody.innerHTML = tbodyHtml;
+      document.getElementById('analisisSoalLayak').innerText = soalLayakCount + " Soal";
+      document.getElementById('checkAllAnalisis').checked = false;
+      updateExportPanelState();
+      
+      hideOverlay();
+      lucide.createIcons();
+    }
+
+    // Helper: Pearson correlation coefficient
+    function calculatePearsonCorrelation(x, y) {
+      const n = x.length;
+      let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+      for (let i = 0; i < n; i++) {
+        sumX += x[i];
+        sumY += y[i];
+        sumXY += x[i] * y[i];
+        sumX2 += x[i] * x[i];
+        sumY2 += y[i] * y[i];
+      }
+      
+      const num = (n * sumXY) - (sumX * sumY);
+      const den = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
+      if (den === 0) return 0;
+      return num / den;
+    }
+
+    function toggleAllCheckboxesAnalisis(master) {
+      const checkboxes = document.querySelectorAll('.analisis-check');
+      checkboxes.forEach(cb => cb.checked = master.checked);
+      updateExportPanelState();
+    }
+
+    function updateExportPanelState() {
+      const checkboxes = document.querySelectorAll('.analisis-check');
+      const selected = Array.from(checkboxes).filter(cb => cb.checked);
+      const panel = document.getElementById('exportPanel');
+      
+      document.getElementById('countSelectedSoal').innerText = selected.length;
+      if (selected.length > 0) {
+        panel.style.display = 'block';
+        
+        // Auto fill default values for convenience
+        const selOpt = document.getElementById('filterMateriAnalisis').options[document.getElementById('filterMateriAnalisis').selectedIndex];
+        const targetTingkat = selOpt ? (selOpt.getAttribute('data-tingkat') || "") : "";
+        
+        if (!document.getElementById('newExamKelas').value) {
+          document.getElementById('newExamKelas').value = targetTingkat;
+        }
+      } else {
+        panel.style.display = 'none';
+      }
+      lucide.createIcons();
+    }
+
+    async function exportSelectedQuestions() {
+      const examId = document.getElementById('newExamId').value.trim();
+      const examTitle = document.getElementById('newExamTitle').value.trim();
+      const examMapel = document.getElementById('newExamMapel').value.trim();
+      const examKelas = document.getElementById('newExamKelas').value.trim();
+      
+      if (!examId || !examTitle || !examMapel || !examKelas) {
+        alert("Semua data input paket kuis baru wajib diisi!");
+        return;
+      }
+      
+      const checkboxes = document.querySelectorAll('.analisis-check');
+      const selectedRows = Array.from(checkboxes).filter(cb => cb.checked).map(cb => parseInt(cb.value));
+      
+      if (selectedRows.length === 0) {
+        alert("Pilih minimal satu soal untuk diekspor!");
+        return;
+      }
+      
+      // Periksa apakah ID baru bentrok dengan ID materi yang sudah ada
+      let isDuplicate = dataMateri.some(m => {
+        let existingId = getVal(m, ['idmateri', 'id_materi', 'materiid']);
+        return existingId && existingId.toString().trim().toLowerCase() === examId.toLowerCase();
+      });
+      
+      if (isDuplicate) {
+        alert(`ID Ujian '${examId}' sudah digunakan. Silakan gunakan ID unik yang lain.`);
+        return;
+      }
+      
+      if (!confirm(`Yakin ingin membuat kuis/ujian akhir baru dengan ID '${examId}' menggunakan ${selectedRows.length} soal terpilih?`)) {
+        return;
+      }
+      
+      showOverlay("Mengekspor & Membuat Ujian Akhir baru...");
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: "createExamFromSelectedQuestions",
+            newExamId: examId,
+            newExamTitle: examTitle,
+            newExamMapel: examMapel,
+            newExamKelas: examKelas,
+            selectedQuestionRows: selectedRows
+          }),
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        });
+        
+        const result = await response.json();
+        if (result.status === "success") {
+          showOverlay("Ujian Akhir Berhasil Dibuat!");
+          // Kosongkan form input
+          document.getElementById('newExamId').value = "";
+          document.getElementById('newExamTitle').value = "";
+          document.getElementById('newExamMapel').value = "";
+          document.getElementById('newExamKelas').value = "";
+          
+          setTimeout(() => {
+            loadAllData();
+            showTab('materi'); // Langsung ke kelola materi untuk lihat materi kuis baru
+          }, 1500);
+        } else {
+          alert("Gagal membuat kuis: " + (result.message || "Terjadi kesalahan di server."));
+          hideOverlay();
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Gagal terhubung ke server saat melakukan ekspor.");
+        hideOverlay();
+      }
     }
 
     async function postData(payload) {

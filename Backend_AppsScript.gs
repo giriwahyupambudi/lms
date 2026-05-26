@@ -84,10 +84,38 @@ function doPost(e) {
       if (!sheet) throw new Error("Sheet tidak ditemukan");
       
       var headersRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-      var newRow = new Array(headersRow.length).fill("");
       
       // Ambil data langsung dari postData (sesuai script lama)
       var pData = postData.data || postData;
+      
+      // Otomatis buat header jawaban jika belum ada di sheet
+      var normalizedHeaders = headersRow.map(function(h) {
+        return h.toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+      });
+      
+      if (pData.jawaban && pData.jawaban.length > 0) {
+        var addedNewHeader = false;
+        for (var k = 0; k < pData.jawaban.length; k++) {
+          var expectedHeaderName = "jawaban" + (k + 1);
+          if (normalizedHeaders.indexOf(expectedHeaderName) === -1) {
+            var newColIdx = headersRow.length + 1;
+            sheet.getRange(1, newColIdx).setValue("Jawaban " + (k + 1));
+            headersRow.push("Jawaban " + (k + 1));
+            normalizedHeaders.push(expectedHeaderName);
+            addedNewHeader = true;
+          }
+        }
+      }
+      
+      // Otomatis buat header urutan_soal jika belum ada
+      if (pData.urutan_soal && normalizedHeaders.indexOf("urutansoal") === -1) {
+        var newColIdx = headersRow.length + 1;
+        sheet.getRange(1, newColIdx).setValue("Urutan Soal");
+        headersRow.push("Urutan Soal");
+        normalizedHeaders.push("urutansoal");
+      }
+      
+      var newRow = new Array(headersRow.length).fill("");
       
       for (var i = 0; i < headersRow.length; i++) {
         var headerName = headersRow[i].toString().toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -99,6 +127,7 @@ function doPost(e) {
         else if (headerName === "tipe") newRow[i] = pData.tipe;
         else if (headerName === "idmateri" || headerName === "id_materi") newRow[i] = pData.id_materi;
         else if (headerName === "waktu") newRow[i] = pData.waktu;
+        else if (headerName === "urutansoal" || headerName === "urutan_soal") newRow[i] = pData.urutan_soal;
         else if (headerName.indexOf("jawaban") === 0) {
           var idx = parseInt(headerName.replace("jawaban", "")) - 1;
           if (pData.jawaban && pData.jawaban[idx] !== undefined) {
@@ -724,7 +753,70 @@ function doPost(e) {
         message: "Materi diperbarui. " + syncCount + " baris di sheet soal disinkronkan." 
       })).setMimeType(ContentService.MimeType.JSON);
     }
-
+    
+    // ========================================================
+    // ACTION: BATCH CREATE EXAM FROM SELECTED QUESTIONS
+    // ========================================================
+    if (action === "createExamFromSelectedQuestions") {
+      var sheetMateri = ss.getSheetByName("materi");
+      var sheetSoal = ss.getSheetByName("soal");
+      if (!sheetMateri || !sheetSoal) throw new Error("Sheet kuis/materi tidak ditemukan");
+      
+      // 1. Tambahkan materi kuis baru
+      var headersM = sheetMateri.getRange(1, 1, 1, sheetMateri.getLastColumn()).getValues()[0];
+      var newRowM = new Array(headersM.length).fill("");
+      for (var i = 0; i < headersM.length; i++) {
+        var h = headersM[i].toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (h === "idmateri" || h === "id_materi" || h === "materiid" || h === "id") newRowM[i] = postData.newExamId;
+        else if (h === "judul" || h === "materi" || h === "namamateri") newRowM[i] = postData.newExamTitle;
+        else if (h === "mapel" || h === "matapelajaran") newRowM[i] = postData.newExamMapel;
+        else if (h === "tingkat" || h === "kelas") newRowM[i] = postData.newExamKelas;
+        else if (h === "tipe") newRowM[i] = "Kuis";
+        else if (h === "status") newRowM[i] = "Aktif";
+      }
+      sheetMateri.appendRow(newRowM);
+      
+      // 2. Salin soal terpilih dengan ID Materi Ujian baru
+      var headersS = sheetSoal.getRange(1, 1, 1, sheetSoal.getLastColumn()).getValues()[0];
+      var idxIdMateriS = -1;
+      var idxIdSoalS = -1;
+      
+      for (var i = 0; i < headersS.length; i++) {
+        var h = headersS[i].toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (h === "idmateri" || h === "id_materi" || h === "materiid") idxIdMateriS = i;
+        if (h === "id" || h === "idsoal") idxIdSoalS = i;
+      }
+      
+      var selectedRows = postData.selectedQuestionRows; // Array of row numbers
+      var newSoalRows = [];
+      
+      for (var r = 0; r < selectedRows.length; r++) {
+        var rowNum = parseInt(selectedRows[r]);
+        var rowData = sheetSoal.getRange(rowNum, 1, 1, headersS.length).getValues()[0];
+        
+        // Ubah ID Materi ke ID Ujian Baru
+        if (idxIdMateriS !== -1) {
+          rowData[idxIdMateriS] = postData.newExamId;
+        }
+        // Perbarui ID Soal agar unik (misal: UA-XI-1_1, UA-XI-1_2)
+        if (idxIdSoalS !== -1) {
+          rowData[idxIdSoalS] = postData.newExamId + "_" + (r + 1);
+        }
+        
+        newSoalRows.push(rowData);
+      }
+      
+      if (newSoalRows.length > 0) {
+        var lastRowS = sheetSoal.getLastRow();
+        sheetSoal.getRange(lastRowS + 1, 1, newSoalRows.length, headersS.length).setValues(newSoalRows);
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({ 
+        status: "success", 
+        message: "Ujian Akhir berhasil dibuat dengan " + newSoalRows.length + " soal." 
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+ 
     throw new Error("Aksi tidak dikenali: " + action);
 
   } catch (error) {
