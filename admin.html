@@ -641,6 +641,10 @@
               <label>Pilih Kelas</label>
               <select class="form-control" id="filterKelasRekap" onchange="renderRekapAdmin()"></select>
             </div>
+            <div id="rekapLegend" style="font-size: 0.8rem; color: var(--text-muted); display: flex; gap: 1rem; align-items: center; background: #f8fafc; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-left: auto; flex-wrap: wrap;">
+              <span style="display: inline-flex; align-items: center; gap: 4px;"><span style="font-size:0.65rem; color:#d97706; background:#fffbeb; padding:2px 4px; border-radius:4px; border:1px solid #fef3c7; font-weight:bold;">Terkirim</span> Sudah kirim & belum dinilai</span>
+              <span style="display: inline-flex; align-items: center; gap: 4px;"><span style="font-weight:bold; color:#ef4444; background:#fef2f2; padding:2px 6px; border-radius:6px; border:1px solid #fee2e2; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px;">90 <i data-lucide="alert-triangle" style="width:12px; height:12px; color:#ef4444;"></i></span> Salah Input? (Nilai ada tapi tugas belum dikirim)</span>
+            </div>
           </div>
           <div class="table-responsive" style="max-height: 70vh; overflow: auto;">
             <table style="min-width: 1000px; border-collapse: separate; border-spacing: 0;">
@@ -765,6 +769,35 @@
        let key = `${materiId}_${username}`;
        if (!draftNilai[key]) draftNilai[key] = {};
        draftNilai[key][field] = value;
+    }
+
+    function checkMismatch(username, isUploadType, hasUpload) {
+       const inputNilai = document.getElementById(`nilai_${username}`);
+       const statusCell = document.getElementById(`status_cell_${username}`);
+       if (!inputNilai || !statusCell) return;
+
+       const val = inputNilai.value.trim();
+       const isMismatch = isUploadType && !hasUpload && val !== "";
+
+       if (isMismatch) {
+          inputNilai.style.borderColor = "#ef4444";
+          inputNilai.style.backgroundColor = "#fef2f2";
+          inputNilai.style.color = "#b91c1c";
+          inputNilai.style.fontWeight = "bold";
+          statusCell.innerHTML = `<span class="badge" style="background:#fee2e2; color:#ef4444; border:1px solid #fca5a5; display:inline-flex; align-items:center; gap:2px;" title="Siswa belum mengunggah tugas tetapi sudah memiliki nilai!"><i data-lucide="alert-circle" style="width:12px; height:12px;"></i> Salah Input?</span>`;
+       } else {
+          inputNilai.style.borderColor = "";
+          inputNilai.style.backgroundColor = "";
+          inputNilai.style.color = "";
+          inputNilai.style.fontWeight = "";
+          const originalVal = inputNilai.getAttribute("data-original-value") || "";
+          if (val !== "" || originalVal !== "") {
+             statusCell.innerHTML = `<span class="badge active">Tuntas</span>`;
+          } else {
+             statusCell.innerHTML = `<span class="badge draft">Belum</span>`;
+          }
+       }
+       lucide.createIcons();
     }
 
     // Helper Fungsi
@@ -1819,6 +1852,14 @@
       let selMateriOption = document.getElementById('filterMateriNilai').options[document.getElementById('filterMateriNilai').selectedIndex];
       let selMateriJudul = selMateriOption ? selMateriOption.text.toString().trim() : "";
 
+      let mObj = dataMateri.find(m => {
+          let mId = (getVal(m, ['id', 'id_materi', 'idmateri', 'materiid']) || "").toString().trim();
+          return mId === selMateri.toString().trim();
+      });
+      let mJudulClean = mObj ? norm(getVal(mObj, ['judul', 'materi'])) : "";
+      let rawTipe = mObj ? (getVal(mObj, ['tipeevaluasi', 'tipe_evaluasi', 'tipe']) || "Praktik").toLowerCase() : "praktik";
+      let isUploadType = ["praktik", "tugas", "ujian praktik"].includes(rawTipe);
+
       let mappedStudents = students.map((u, originalIndex) => {
         let username = (getVal(u, ['username', 'nisn']) || "").toString().trim();
         let nama = getVal(u, ['nama', 'namalengkap', 'namasiswa']) || "-";
@@ -1870,7 +1911,15 @@
            durasiKuis = getVal(bestAttempt, ['waktu', 'durasi', 'waktuaktif']) || "-";
         }
 
-        return { u, username, nama, maxNilai, statusKuis: maxNilai !== "" ? "Tuntas" : "Belum", waktuSubmit, durasiKuis, rawDate };
+        // Cek logTugas
+        let upload = dataLogTugas.find(t => {
+            let tUser = norm(getVal(t, ['username']));
+            let tMid = (getVal(t, ['id_materi', 'materi']) || "").toString().trim();
+            let tJudul = norm(getVal(t, ['materi', 'judul']));
+            return tUser === norm(username) && (tMid === selMateri.toString().trim() || (mJudulClean !== "" && tJudul === mJudulClean));
+        });
+
+        return { u, username, nama, maxNilai, statusKuis: maxNilai !== "" ? "Tuntas" : "Belum", waktuSubmit, durasiKuis, rawDate, upload, isUploadType };
       });
 
       let html = '';
@@ -1908,7 +1957,7 @@
       }
 
       mappedStudents.forEach((item, i) => {
-        let { username, nama, maxNilai, statusKuis, waktuSubmit, durasiKuis } = item;
+        let { username, nama, maxNilai, statusKuis, waktuSubmit, durasiKuis, upload, isUploadType } = item;
         let safeNama = nama.toString().replace(/'/g, "\\'");
         let safeKelas = selKelas.toString().replace(/'/g, "\\'");
         let safeMateri = selMateri.toString().replace(/'/g, "\\'");
@@ -1922,21 +1971,53 @@
         let nilaiOriginal = maxNilai;
         let nilaiRender = draftObj.nilai !== undefined ? draftObj.nilai : nilaiOriginal;
 
+        // Tampilkan link download/lihat tugas jika ada
+        let fileLinkHTML = "";
+        if (upload) {
+           let fileUrl = getVal(upload, ['link_tugas', 'file']) || "#";
+           fileLinkHTML = `<br><a href="${fileUrl}" target="_blank" style="font-size:0.7rem; color:var(--primary); text-decoration:none; display:inline-flex; align-items:center; gap:2px; margin-top:4px;"><i data-lucide="external-link" style="width:12px; height:12px;"></i> Lihat Tugas</a>`;
+           
+           // Jika waktuSubmit kosong (belum dinilai), pakai waktu upload dari logTugas
+           if (waktuSubmit === "-") {
+               let tWaktu = getVal(upload, ['waktu', 'timestamp']);
+               if (tWaktu) {
+                   try {
+                       let d = new Date(tWaktu);
+                       if(!isNaN(d.getTime())) {
+                           waktuSubmit = d.toLocaleString('id-ID', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+                       }
+                   } catch(e) {}
+               }
+           }
+        }
+
+        // Tentukan style & warning jika belum upload tapi sudah dinilai/sedang dinilai
+        let inputStyle = "";
+        let statusBadge = "";
+        let isMismatch = isUploadType && !upload && (nilaiRender !== "");
+
+        if (isMismatch) {
+           inputStyle = "border-color: #ef4444; background-color: #fef2f2; color: #b91c1c; font-weight: bold;";
+           statusBadge = `<span class="badge" style="background:#fee2e2; color:#ef4444; border:1px solid #fca5a5; display:inline-flex; align-items:center; gap:2px;" title="Siswa belum mengunggah tugas tetapi sudah memiliki nilai!"><i data-lucide="alert-circle" style="width:12px; height:12px;"></i> Salah Input?</span>`;
+        } else {
+           statusBadge = maxNilai !== "" ? `<span class="badge active">Tuntas</span>` : `<span class="badge draft">Belum</span>`;
+        }
+
         html += `<tr>
           <td>${i+1}</td>
-          <td style="font-weight:500;">${nama}<br><small style="color:var(--text-muted)">${username}</small></td>
+          <td style="font-weight:500;">${nama} ${fileLinkHTML}<br><small style="color:var(--text-muted)">${username}</small></td>
           <td style="text-align:center; font-size:0.85rem;">${waktuSubmit}</td>
           <td style="text-align:center">
              <input type="text" id="durasi_${username}" class="form-control" value="${durasiRender}" data-original-value="${durasiOriginal}" oninput="updateDraft('${safeMateri}', '${username}', 'durasi', this.value)" placeholder="00:00" style="max-width:70px; display:inline-block; text-align:center; padding: 0.3rem;">
           </td>
           <td style="text-align:center">
-            <input type="number" id="nilai_${username}" class="form-control input-nilai" value="${nilaiRender}" data-original-value="${nilaiOriginal}" oninput="updateDraft('${safeMateri}', '${username}', 'nilai', this.value)" placeholder="-" style="max-width:80px; display:inline-block; text-align:center;">
+             <input type="number" id="nilai_${username}" class="form-control input-nilai" value="${nilaiRender}" data-original-value="${nilaiOriginal}" oninput="updateDraft('${safeMateri}', '${username}', 'nilai', this.value); checkMismatch('${username}', ${isUploadType}, ${!!upload})" placeholder="-" style="max-width:80px; display:inline-block; text-align:center; ${inputStyle}">
+          </td>
+          <td style="text-align:center" id="status_cell_${username}">
+             ${statusBadge}
           </td>
           <td style="text-align:center">
-            ${maxNilai !== "" ? `<span class="badge active">Tuntas</span>` : `<span class="badge draft">Belum</span>`}
-          </td>
-          <td style="text-align:center">
-            <button class="btn btn-sm btn-outline" onclick="simpanNilai('${username}', '${safeMateri}', '${safeNama}', '${safeKelas}')"><i data-lucide="save"></i> Simpan</button>
+             <button class="btn btn-sm btn-outline" onclick="simpanNilai('${username}', '${safeMateri}', '${safeNama}', '${safeKelas}')"><i data-lucide="save"></i> Simpan</button>
           </td>
         </tr>`;
       });
@@ -2210,7 +2291,7 @@
           // PENTING: Sisi siswa menghitung ID dari index materi yang SUDAH DIFILTER per tingkat
           const mid = (idx + 1).toString(); 
           const mJudul = norm(getVal(m, ['judul', 'materi']));
-          const tipe = (getVal(m, ['tipe']) || "Praktik").toLowerCase();
+          const tipe = (getVal(m, ['tipeevaluasi', 'tipe_evaluasi', 'tipe']) || "Praktik").toLowerCase();
           
           let scoreText = "-";
           let cellStyle = "text-align:center;";
@@ -2218,6 +2299,16 @@
           if (tipe === "materi") {
             scoreText = '<i data-lucide="check" style="color:#22c55e; width:14px;"></i>';
           } else {
+            // Cek di logTugas
+            const upload = dataLogTugas.find(t => {
+                const tUser = norm(getVal(t, ['username']));
+                const tMid = (getVal(t, ['id_materi', 'materi']) || "").toString().trim();
+                const tJudul = norm(getVal(t, ['materi', 'judul']));
+                return tUser === username && (tMid === mid || (mJudul !== "" && tJudul === mJudul));
+            });
+
+            const isUploadType = ["praktik", "tugas", "ujian praktik"].includes(tipe);
+
             // Pencocokan Nilai menggunakan mid yang sudah disinkronkan
             const filteredNilai = dataNilai.filter(n => {
                 const nUser = norm(getVal(n, ['username', 'nisn']));
@@ -2231,20 +2322,18 @@
               const scores = filteredNilai.map(n => parseInt(getVal(n, ['nilai', 'skor']) || 0)).filter(val => !isNaN(val));
               if (scores.length > 0) {
                   const maxS = Math.max(...scores);
-                  scoreText = maxS;
                   totalScore += maxS;
                   countScored++;
-                  cellStyle += "font-weight:bold; color:var(--primary);";
+                  
+                  if (isUploadType && !upload) {
+                      // Siswa belum mengirim tugas tapi sudah diberi nilai
+                      scoreText = `<span style="font-weight:bold; color:#ef4444; background:#fef2f2; padding:3px 6px; border-radius:6px; border:1px solid #fee2e2; display:inline-flex; align-items:center; gap:4px; font-size:0.8rem;" title="Salah Input? Siswa belum mengirim tugas tapi sudah diisi nilai.">${maxS} <i data-lucide="alert-triangle" style="width:13px; height:13px; color:#ef4444;"></i></span>`;
+                  } else {
+                      scoreText = maxS;
+                      cellStyle += "font-weight:bold; color:var(--primary);";
+                  }
               }
             } else {
-              // Cek di logTugas
-              const upload = dataLogTugas.find(t => {
-                  const tUser = norm(getVal(t, ['username']));
-                  const tMid = (getVal(t, ['id_materi', 'materi']) || "").toString().trim();
-                  const tJudul = norm(getVal(t, ['materi', 'judul']));
-                  return tUser === username && (tMid === mid || (mJudul !== "" && tJudul === mJudul));
-              });
-
               if (upload) {
                 scoreText = '<span style="font-size:0.65rem; color:#d97706; background:#fffbeb; padding:2px 4px; border-radius:4px; border:1px solid #fef3c7;">Terkirim</span>';
               } else {
