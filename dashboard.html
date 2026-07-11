@@ -707,8 +707,11 @@
 
       <!-- MATERI -->
       <section id="materiSection" style="display:none">
-        <div class="header-section">
-          <h1>Daftar Materi</h1>
+        <div class="header-section" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:24px;">
+          <h1 style="margin:0;">Daftar Materi</h1>
+          <select id="filterMapelSiswa" style="max-width:200px; padding:10px 16px; border-radius:12px; border:1px solid var(--border-color); outline:none; background-color:#fff; font-size:0.85rem; font-weight:500; color:#334155; cursor:pointer;" onchange="filterMateriSiswa()">
+            <option value="">Semua Mapel</option>
+          </select>
         </div>
         <div id="materiList" class="course-grid">
           <!-- Skeleton Loading -->
@@ -774,6 +777,11 @@
     if (!userData) { window.location.href = "index.html"; }
     const user = JSON.parse(userData);
 
+    // Data Penampung Global untuk Filter Mapel
+    let allMateriMentah = [];
+    let allProgresMentah = [];
+    let allLogTugasMentah = [];
+
     function getTingkat(obj) {
       let t = (obj.tingkat || obj.Tingkat || "").toString().trim().toUpperCase();
       let k = (obj.kelas || obj.Kelas || "").toString().trim().toUpperCase();
@@ -804,7 +812,10 @@
 
       if (cachedMateri && cachedListNilai && cachedUser) {
         try {
-          renderMateri(JSON.parse(cachedMateri), JSON.parse(cachedListNilai), cachedLogTugas ? JSON.parse(cachedLogTugas) : []);
+          allMateriMentah = JSON.parse(cachedMateri);
+          allProgresMentah = JSON.parse(cachedListNilai);
+          allLogTugasMentah = cachedLogTugas ? JSON.parse(cachedLogTugas) : [];
+          renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah);
           renderRanking(JSON.parse(cachedListNilai), JSON.parse(cachedUser));
           if (lastUpdated) {
             syncStatus.innerHTML = `<i data-lucide="refresh-cw" class="spin-anim" style="width:14px; height:14px;"></i> <span>Menyinkronkan...</span>`;
@@ -837,8 +848,13 @@
         const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
         localStorage.setItem("cache_lastUpdated", timeString);
 
+        // Simpan ke variabel global
+        allMateriMentah = dataMateri;
+        allProgresMentah = dataListNilai;
+        allLogTugasMentah = dataLogTugas;
+
         // Re-render with fresh data silently
-        renderMateri(dataMateri, dataListNilai, dataLogTugas);
+        renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah);
         renderRanking(dataListNilai, dataUser);
 
         // Update indicator
@@ -876,6 +892,28 @@
           const mTingkat = getTingkat(m);
           return mTingkat === myTingkat || mTingkat === "SEMUA";
         });
+
+        // Isi dropdown mapel secara dinamis jika belum pernah diisi
+        const selectMapel = document.getElementById("filterMapelSiswa");
+        if (selectMapel && selectMapel.options.length <= 1) {
+          const mapelSet = new Set();
+          dataMateri.forEach(m => {
+            const mp = (m.mapel || m.Mapel || m.matapelajaran || m.MataPelajaran || "").toString().trim();
+            if (mp) mapelSet.add(mp);
+          });
+          Array.from(mapelSet).sort().forEach(mp => {
+            const opt = document.createElement("option");
+            opt.value = mp;
+            opt.textContent = mp;
+            selectMapel.appendChild(opt);
+          });
+        }
+
+        // Terapkan filter mapel dari dropdown
+        const mapelSelected = selectMapel ? selectMapel.value : "";
+        const dataMateriFiltered = mapelSelected
+          ? dataMateri.filter(m => (m.mapel || m.Mapel || m.matapelajaran || m.MataPelajaran || "").toString().trim().toLowerCase() === mapelSelected.toLowerCase())
+          : dataMateri;
 
         // Filter progres hanya untuk user yang sedang login
         const userProgress = dataProgres.filter(p =>
@@ -969,10 +1007,10 @@
 
 
 
-        // Materi yang sudah dibuka cukup diambil dari perangkat (localStorage) agar tidak mengotori database
+         // Materi yang sudah dibuka cukup diambil dari perangkat (localStorage) agar tidak mengotori database
         // Hanya tambahkan ke openedMaterials JIKA materi tersebut tidak terkunci secara aturan (mencegah anomali jika listNilai dihapus)
         const openedMaterials = new Set();
-        dataMateri.forEach((m, i) => {
+        dataMateriFiltered.forEach((m, i) => {
           const mid = getVal(m, ['idmateri', 'id_materi', 'materiid']) || (i + 1).toString();
 
           let isMateriLocked = false;
@@ -984,13 +1022,13 @@
           }
         });
 
-        document.getElementById("materiTotal").innerText = dataMateri.length;
+        document.getElementById("materiTotal").innerText = dataMateriFiltered.length;
         // Progres dinilai berdasarkan jumlah evaluasi (Kuis/Tugas) yang telah diselesaikan
         document.getElementById("materiProgress").innerText = quizScores.size;
 
         let upNextHTML = "";
         let upNextFound = false;
-        list.innerHTML = dataMateri.map((m, i) => {
+        list.innerHTML = dataMateriFiltered.map((m, i) => {
           const mid = getVal(m, ['idmateri', 'id_materi', 'materiid']) || (i + 1).toString();
           const tipeRaw = getVal(m, ['tipeevaluasi', 'tipe', 'evaluasi', 'jenis']);
           let tipe = (tipeRaw && tipeRaw.toString().trim() !== "") ? tipeRaw.toString().trim() : (i % 2 === 0 ? "Kuis" : "Tugas");
@@ -1346,6 +1384,10 @@
         </div>
       </div>
     `;
+    }
+
+    function filterMateriSiswa() {
+      renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah);
     }
 
     function openMateri(id) { window.location.href = "materi.html?id=" + id; }
