@@ -781,6 +781,7 @@
     let allMateriMentah = [];
     let allProgresMentah = [];
     let allLogTugasMentah = [];
+    let allGuruMentah = [];
 
     function getTingkat(obj) {
       let t = (obj.tingkat || obj.Tingkat || "").toString().trim().toUpperCase();
@@ -808,6 +809,7 @@
       const cachedListNilai = localStorage.getItem("cache_listNilai");
       const cachedLogTugas = localStorage.getItem("cache_logTugas");
       const cachedUser = localStorage.getItem("cache_user");
+      const cachedGuru = localStorage.getItem("cache_guru");
       const lastUpdated = localStorage.getItem("cache_lastUpdated");
 
       if (cachedMateri && cachedListNilai && cachedUser) {
@@ -815,7 +817,8 @@
           allMateriMentah = JSON.parse(cachedMateri);
           allProgresMentah = JSON.parse(cachedListNilai);
           allLogTugasMentah = cachedLogTugas ? JSON.parse(cachedLogTugas) : [];
-          renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah);
+          allGuruMentah = cachedGuru ? JSON.parse(cachedGuru) : [];
+          renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah, allGuruMentah);
           renderRanking(JSON.parse(cachedListNilai), JSON.parse(cachedUser));
           if (lastUpdated) {
             syncStatus.innerHTML = `<i data-lucide="refresh-cw" class="spin-anim" style="width:14px; height:14px;"></i> <span>Menyinkronkan...</span>`;
@@ -826,23 +829,26 @@
 
       // 2. Fetch fresh data in background
       try {
-        const [resMateri, resListNilai, resUser, resLogTugas] = await Promise.all([
+        const [resMateri, resListNilai, resUser, resLogTugas, resGuru] = await Promise.all([
           fetch(`${API_URL}?sheet=materi`),
           fetch(`${API_URL}?sheet=listNilai`).catch(() => ({ json: async () => [] })),
           fetch(`${API_URL}?sheet=user`).catch(() => ({ json: async () => [] })),
-          fetch(`${API_URL}?sheet=logTugas`).catch(() => ({ json: async () => [] }))
+          fetch(`${API_URL}?sheet=logTugas`).catch(() => ({ json: async () => [] })),
+          fetch(`${API_URL}?sheet=public_guru`).catch(() => ({ json: async () => [] }))
         ]);
 
         const dataMateri = await resMateri.json();
         let dataListNilai = await resListNilai.json();
         const dataUser = await resUser.json();
         const dataLogTugas = await resLogTugas.json();
+        const dataGuru = await resGuru.json();
 
         // Save to cache
         localStorage.setItem("cache_materi", JSON.stringify(dataMateri));
         localStorage.setItem("cache_listNilai", JSON.stringify(dataListNilai));
         localStorage.setItem("cache_user", JSON.stringify(dataUser));
         localStorage.setItem("cache_logTugas", JSON.stringify(dataLogTugas));
+        localStorage.setItem("cache_guru", JSON.stringify(dataGuru));
 
         const now = new Date();
         const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
@@ -852,9 +858,10 @@
         allMateriMentah = dataMateri;
         allProgresMentah = dataListNilai;
         allLogTugasMentah = dataLogTugas;
+        allGuruMentah = dataGuru;
 
         // Re-render with fresh data silently
-        renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah);
+        renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah, allGuruMentah);
         renderRanking(dataListNilai, dataUser);
 
         // Update indicator
@@ -882,7 +889,7 @@
       window.scrollTo(0, 0);
     }
 
-    function renderMateri(dataMateriMentah, dataProgres, dataLogTugas = []) {
+    function renderMateri(dataMateriMentah, dataProgres, dataLogTugas = [], dataGuruMentah = []) {
       const list = document.getElementById("materiList");
       try {
         const myTingkat = getTingkat(user);
@@ -1115,11 +1122,21 @@
             viewBtnHTML = `<button class="btn-action" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; grid-column: 1 / -1; margin-top: 2px;" onclick="openViewModal('${previewUrl}')"><i data-lucide="eye" style="width:14px"></i> Lihat Dokumen Tugas Anda</button>`;
           }
 
+          let mapelName = (m.mapel || m.Mapel || m.matapelajaran || m.MataPelajaran || "Umum").toString().trim();
+          let matchedGuru = dataGuruMentah.find(g => (g.mapel || "").toString().trim().toLowerCase() === mapelName.toLowerCase());
+          let namaGuru = matchedGuru && matchedGuru.nama ? matchedGuru.nama : "Guru Pengampu";
+
           let cardHTML = `
           <div class="course-card">
             <div class="course-header">
               <div class="course-content">
-                <h3 style="margin:0 0 8px 0; font-size:0.95rem; font-weight:600; line-height:1.4; color:#334155;">${m.judul || m.Judul || ("Materi " + (i + 1))}</h3>
+                <div style="font-size:0.75rem; color:var(--primary); font-weight:700; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">
+                   ${mapelName}
+                </div>
+                <h3 style="margin:0 0 4px 0; font-size:0.95rem; font-weight:600; line-height:1.4; color:#334155;">${m.judul || m.Judul || ("Materi " + (i + 1))}</h3>
+                <div style="font-size:0.75rem; color:var(--text-muted); font-weight:500; margin-bottom:10px; display:flex; align-items:center; gap:4px;">
+                   <i data-lucide="user" style="width:12px; height:12px;"></i> ${namaGuru}
+                </div>
                 <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
                   <span class="course-tag" style="background:var(--primary-light); color:var(--primary); border:1px solid var(--primary-light);">ID: ${mid}</span>
                   ${timeBadge}
@@ -1387,7 +1404,7 @@
     }
 
     function filterMateriSiswa() {
-      renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah);
+      renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah, allGuruMentah);
     }
 
     function openMateri(id) { window.location.href = "materi.html?id=" + id; }

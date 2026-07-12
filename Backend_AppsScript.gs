@@ -5,6 +5,29 @@ function doGet(e) {
                          .setMimeType(ContentService.MimeType.JSON);
   }
   
+  if (sheetName === "public_guru") {
+    var sheetAdmin = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("admin");
+    if (!sheetAdmin) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
+    
+    var rawAdmin = sheetAdmin.getDataRange().getValues();
+    var result = [];
+    if (rawAdmin.length > 1) {
+      var headersAdmin = rawAdmin[0].map(function(h) { return h.toString().toLowerCase().replace(/[^a-z0-9]/g, ''); });
+      var idxNama = headersAdmin.indexOf("nama");
+      var idxMapel = headersAdmin.indexOf("mapel");
+      
+      for (var i = 1; i < rawAdmin.length; i++) {
+        if (idxNama !== -1 && idxMapel !== -1) {
+           result.push({
+             nama: rawAdmin[i][idxNama],
+             mapel: rawAdmin[i][idxMapel]
+           });
+        }
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+  }
+  
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   if (!sheet) {
     if (sheetName === "admin") {
