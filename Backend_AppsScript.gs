@@ -9,8 +9,8 @@ function doGet(e) {
   if (!sheet) {
     if (sheetName === "admin") {
       sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet("admin");
-      sheet.appendRow(["nama", "username", "password", "role"]);
-      sheet.appendRow(["Admin Utama", "admin", "admin123", "Administrator"]);
+      sheet.appendRow(["nama", "username", "password", "role", "mapel", "kelas"]);
+      sheet.appendRow(["Admin Utama", "admin", "admin123", "Administrator", "", ""]);
     } else {
       return ContentService.createTextOutput(JSON.stringify([]))
                            .setMimeType(ContentService.MimeType.JSON);
