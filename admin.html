@@ -452,9 +452,9 @@
               <label>Mata Pelajaran</label>
               <input type="text" id="newExamMapel" class="form-control" placeholder="Contoh: Fisika">
             </div>
-            <div class="form-group">
-              <label>Target Kelas / Tingkat</label>
-              <input type="text" id="newExamKelas" class="form-control" placeholder="Contoh: XI">
+            <div class="form-group" id="newExamKelasContainer">
+                <label>Target Kelas / Tingkat</label>
+                <input type="text" id="newExamKelas" class="form-control" placeholder="Contoh: XI">
             </div>
             <div class="form-group" style="grid-column: span 2;">
               <button class="btn btn-primary" onclick="exportSelectedQuestions()" style="width: 100%; justify-content: center; padding: 12px;"><i data-lucide="send"></i> Ekspor & Buat Ujian Akhir Baru di Spreadsheet</button>
@@ -727,7 +727,7 @@
         <div class="form-group"><label>Deskripsi (Opsional)</label><input type="text" id="mDeskripsi" class="form-control" placeholder="Penjelasan singkat materi"></div>
         <div class="form-group"><label>Link / Tautan (Opsional)</label><input type="text" id="mLink" class="form-control" placeholder="Link Google Form / Modul"></div>
         <div class="form-group"><label>Mata Pelajaran</label><input type="text" id="mMapel" class="form-control" placeholder="Contoh: Matematika"></div>
-        <div class="form-group"><label>Target Kelas / Tingkat</label><input type="text" id="mKelas" class="form-control" placeholder="Contoh: X, XI, XII, atau SEMUA"></div>
+        <div class="form-group" id="mKelasContainer"><label>Target Kelas / Tingkat</label><input type="text" id="mKelas" class="form-control" placeholder="Contoh: X, XI, XII, atau SEMUA"></div>
         <div class="form-group"><label>Tipe</label><select id="mTipe" class="form-control"><option value="Praktik">Praktik</option><option value="Tugas">Tugas</option><option value="Kuis">Kuis</option><option value="Survey">Survey</option><option value="Editor">Editor</option></select></div>
         <div class="form-group"><label>Status</label><select id="mStatus" class="form-control"><option value="Aktif">Aktif</option><option value="Draft">Draft</option></select></div>
       </div>
@@ -1048,8 +1048,30 @@
              let mMapel = (getVal(m, ['mapel']) || "").toString().trim().toLowerCase();
              return mMapel === MY_MAPEL.toLowerCase();
           });
+          
+          // 3. Update input Target Kelas menjadi dropdown khusus Guru
+          const mKelasContainer = document.getElementById('mKelasContainer');
+          if (mKelasContainer) {
+              let options = MY_KELAS.map(k => `<option value="${k}">${k}</option>`).join('');
+              if (MY_KELAS.length > 1) {
+                  options = `<option value="${MY_KELAS.join(',')}">Semua Kelas Saya</option>` + options;
+              }
+              if (MY_KELAS.length === 0) {
+                  options = `<option value="">(Tidak ada kelas yang ditugaskan)</option>`;
+              }
+              mKelasContainer.innerHTML = `<label>Target Kelas / Tingkat</label><select id="mKelas" class="form-control">${options}</select>`;
+          }
 
-          // 3. Filter Nilai, Log Tugas, & Log Login agar hanya menyisakan siswa yang diajar oleh guru
+          const newExamKelasContainer = document.getElementById('newExamKelasContainer');
+          if (newExamKelasContainer) {
+              let options = MY_KELAS.map(k => `<option value="${k}">${k}</option>`).join('');
+              if (MY_KELAS.length === 0) {
+                  options = `<option value="">(Tidak ada kelas yang ditugaskan)</option>`;
+              }
+              newExamKelasContainer.innerHTML = `<label>Target Kelas / Tingkat</label><select id="newExamKelas" class="form-control">${options}</select>`;
+          }
+
+          // 4. Filter Nilai, Log Tugas, & Log Login agar hanya menyisakan siswa yang diajar oleh guru
           const validUsernames = new Set(dataUser.map(u => (getVal(u, ['username', 'nisn']) || "").toString().trim().toLowerCase()));
           const validNames = new Set(dataUser.map(u => (getVal(u, ['nama']) || "").toString().trim().toLowerCase()));
 
@@ -1433,8 +1455,13 @@
         mapelInput.disabled = false;
       }
 
-      document.getElementById('mKelas').value = "";
-      document.getElementById('mTipe').value = "Praktik";
+        let mKelasElem = document.getElementById('mKelas');
+        if (mKelasElem.tagName === 'SELECT') {
+            mKelasElem.selectedIndex = 0;
+        } else {
+            mKelasElem.value = "";
+        }
+        document.getElementById('mTipe').value = "Praktik";
       document.getElementById('mStatus').value = "Aktif";
       openModal('materiModal');
     }
@@ -3279,7 +3306,12 @@
           document.getElementById('newExamId').value = "";
           document.getElementById('newExamTitle').value = "";
           document.getElementById('newExamMapel').value = "";
-          document.getElementById('newExamKelas').value = "";
+          let newExamKelasElem = document.getElementById('newExamKelas');
+          if (newExamKelasElem.tagName === 'SELECT') {
+              newExamKelasElem.selectedIndex = 0;
+          } else {
+              newExamKelasElem.value = "";
+          }
           
           setTimeout(() => {
             loadAllData();
