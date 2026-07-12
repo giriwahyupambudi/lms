@@ -1036,14 +1036,10 @@
              return MY_KELAS.includes(k);
           });
 
-          // 2. Filter Materi berdasarkan mapel & tingkat kelas dari kelas guru
-          const myTingkat = MY_KELAS.map(k => getTingkatFromKelas(k));
+          // 2. Filter Materi berdasarkan mapel guru saja
           dataMateri = dataMateri.filter(m => {
              let mMapel = (getVal(m, ['mapel']) || "").toString().trim().toLowerCase();
-             let mKelas = (getVal(m, ['kelas', 'tingkat']) || "").toString().trim().toUpperCase();
-             let isMapelMatch = mMapel === MY_MAPEL.toLowerCase();
-             let isKelasMatch = mKelas === "SEMUA" || mKelas === "" || myTingkat.includes(mKelas);
-             return isMapelMatch && isKelasMatch;
+             return mMapel === MY_MAPEL.toLowerCase();
           });
 
           // 3. Filter Nilai, Log Tugas, & Log Login agar hanya menyisakan siswa yang diajar oleh guru
@@ -1428,6 +1424,7 @@
       let tipeVal = document.getElementById('mTipe').value;
       let statusVal = document.getElementById('mStatus').value;
 
+      if (!newId) return alert("ID Materi wajib diisi (misal: BIO-1)!");
       if (!judulVal) return alert("Judul materi wajib diisi!");
 
       let data = {
