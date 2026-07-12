@@ -395,7 +395,22 @@ function doPost(e) {
         throw new Error("Format data tidak valid (bukan JSON)");
       }
 
-      var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+      var headers = sheet.getRange(1, 1, 1, Math.max(1, sheet.getLastColumn())).getValues()[0];
+      if (headers.length === 1 && headers[0] === "") headers = []; // Empty sheet edge case
+      
+      var normalizedHeaders = headers.map(function(h) { return h.toString().trim().toLowerCase(); });
+      
+      // Otomatis tambahkan kolom baru jika belum ada di sheet
+      for (var key in dataToSave) {
+        if (dataToSave.hasOwnProperty(key)) {
+           var keyLower = key.toString().trim().toLowerCase();
+           if (normalizedHeaders.indexOf(keyLower) === -1) {
+              headers.push(key);
+              normalizedHeaders.push(keyLower);
+              sheet.getRange(1, headers.length).setValue(key);
+           }
+        }
+      }
       
       // JIKA MENGEDIT BARIS YANG ADA
       if (postData.rowNumber && postData.rowNumber !== "") {
