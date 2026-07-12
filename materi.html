@@ -207,16 +207,24 @@
     try {
       const res = await fetch(API_URL);
       const data = await res.json();
-      const index = getParam("id");
+      const getVal = (obj, possibleKeys) => {
+          for (const key in obj) {
+              const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+              for (const p of possibleKeys) {
+                  if (normKey === p.toLowerCase().replace(/[^a-z0-9]/g, '')) return obj[key];
+              }
+          }
+          return undefined;
+      };
 
-      const filteredData = data.filter(item => {
-          const itemTingkat = (item.tingkat || item.Tingkat || "SEMUA").toString().trim().toUpperCase();
-          return itemTingkat === myTingkatAPI || itemTingkat === "SEMUA";
+      const midTarget = getParam("id");
+
+      let m = data.find(item => {
+          let mid = (getVal(item, ['id_materi', 'idmateri', 'id']) || item.rowNumber).toString().trim();
+          return mid === midTarget;
       });
 
-      let m = filteredData[parseInt(index) - 1];
-
-      if (index === null || !m) {
+      if (!midTarget || !m) {
         titleEl.innerText = "Error";
         container.innerHTML = '<div class="loader-container"><p style="color:var(--text-muted)">Materi tidak ditemukan</p></div>';
         return;
@@ -278,7 +286,7 @@
       }
 
       // Catat progres bahwa materi ini sudah dibuka
-      logMateriProgress(index);
+      logMateriProgress(midTarget);
 
     } catch (e) {
       titleEl.innerText = "Error";
