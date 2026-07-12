@@ -509,11 +509,16 @@
             btn.disabled = true;
             btn.classList.add("opacity-75", "cursor-wait");
 
-            let correct = 0;
-            userAnswers.forEach((ans, i) => {
-                if(ans && ans === allQuestions[i].kunci.toUpperCase()) correct++;
-            });
-            const score = Math.round((correct / allQuestions.length) * 100);
+            let score = 0;
+            if (tipe === "survey") {
+                score = "Selesai";
+            } else {
+                let correct = 0;
+                userAnswers.forEach((ans, i) => {
+                    if(ans && ans === allQuestions[i].kunci.toUpperCase()) correct++;
+                });
+                score = Math.round((correct / allQuestions.length) * 100);
+            }
             
             const m = Math.floor(elapsedSeconds / 60).toString().padStart(2, '0');
             const s = (elapsedSeconds % 60).toString().padStart(2, '0');
@@ -553,12 +558,18 @@
             
             // Sembunyikan antarmuka kuis
             document.querySelector('header').classList.add('hidden');
-            document.getElementById('quiz-container').classList.add('hidden');
-            document.getElementById('action-footer').classList.add('hidden');
-            
-            // Tampilkan kartu hasil
-            document.getElementById('result-score').innerText = score;
-            document.getElementById('result-time').innerText = waktuFormat;
+                document.getElementById('quiz-container').classList.add('hidden');
+                document.getElementById('result-container').classList.remove('hidden');
+                
+                if (tipe === "survey") {
+                    document.getElementById('result-score').innerText = "Selesai";
+                    document.getElementById('result-score').classList.replace("text-blue-600", "text-emerald-600");
+                    document.getElementById('result-score').style.fontSize = "1.5rem";
+                } else {
+                    document.getElementById('result-score').innerText = score;
+                }
+                
+                document.getElementById('result-time').innerText = waktuFormat;
             document.getElementById('result-tipe').innerText = tipe;
             
             const resultBox = document.getElementById('result-container');

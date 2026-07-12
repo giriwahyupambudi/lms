@@ -1123,8 +1123,8 @@
             }
           } else {
             btnKuis = isKuisLocked
-              ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed; border:1px solid #e2e8f0;" onclick="alertLocked('kuis')"><i data-lucide="lock" style="width:14px"></i> Kuis Terkunci</button>`
-              : `<button class="btn-action btn-quiz" onclick="handleEvaluasi('${tipe}', '${mid}', encodeURIComponent(\`${m.judul || m.Judul || ("Materi " + (i + 1))}\`), '${mid}')"><i data-lucide="${tipe === 'Kuis' ? 'edit-2' : (tipe.toLowerCase() === 'editor' ? 'type' : 'upload')}" style="width:14px"></i> ${hasScore ? 'Ulangi ' + tipe : 'Kerjakan ' + tipe}</button>`;
+                ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed; border:1px solid #e2e8f0;" onclick="alertLocked('${tipe.toLowerCase()}')"><i data-lucide="lock" style="width:14px"></i> ${tipe} Terkunci</button>`
+                : `<button class="btn-action btn-quiz" onclick="handleEvaluasi('${tipe}', '${mid}', encodeURIComponent(\`${m.judul || m.Judul || ("Materi " + (i + 1))}\`), '${mid}')"><i data-lucide="${tipe === 'Kuis' ? 'edit-2' : (tipe.toLowerCase() === 'survey' ? 'clipboard-list' : (tipe.toLowerCase() === 'editor' ? 'type' : 'upload'))}" style="width:14px"></i> ${hasScore ? 'Ulangi ' + tipe : 'Kerjakan ' + tipe}</button>`;
           }
 
           let viewBtnHTML = "";
@@ -1214,8 +1214,8 @@
 
     // Fungsi baru untuk menangani tombol evaluasi
     function handleEvaluasi(tipe, idMateri, titleEncoded, index) {
-      if (tipe === "Kuis") {
-        window.location.href = `evaluasi.html?tipe=kuis&id=${idMateri}&title=${titleEncoded || ''}&idx=${index || idMateri}`;
+      if (tipe === "Kuis" || tipe === "Survey") {
+        window.location.href = `evaluasi.html?tipe=${tipe.toLowerCase()}&id=${idMateri}&title=${titleEncoded || ''}&idx=${index || idMateri}`;
       } else if (tipe.toLowerCase() === "editor") {
         window.location.href = `tugas-editor.html?tipe=editor&id=${idMateri}&title=${titleEncoded || ''}&idx=${index || idMateri}`;
       } else {
