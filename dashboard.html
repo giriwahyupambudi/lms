@@ -1111,11 +1111,16 @@
           let btnPelajari = "";
           let btnKuis = "";
 
-          btnPelajari = isMateriLocked
-            ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed;" onclick="alertLocked('materi')"><i data-lucide="lock" style="width:14px"></i> Terkunci</button>`
-            : `<button class="btn-action btn-study" onclick="openMateri('${mid}')"><i data-lucide="play" style="width:14px"></i> Pelajari</button>`;
+          let link = (getVal(m, ['link', 'url']) || "").toString().trim();
+          btnPelajari = (link === "") 
+            ? "" 
+            : (isMateriLocked
+               ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed;" onclick="alertLocked('materi')"><i data-lucide="lock" style="width:14px"></i> Terkunci</button>`
+               : `<button class="btn-action btn-study" onclick="openMateri('${mid}')"><i data-lucide="play" style="width:14px"></i> Pelajari</button>`);
 
-          if (tipe === "Praktik" || tipe === "Ujian praktik") {
+          if (tipe === "Materi Saja" || tipe === "Tidak Ada" || tipe === "") {
+              btnKuis = "";
+          } else if (tipe === "Praktik" || tipe === "Ujian praktik") {
             if (hasScore) {
               btnKuis = `<button class="btn-action" style="background:#d1fae5; color:#059669; border:1px solid #a7f3d0; cursor:default;"><i data-lucide="check-circle" style="width:16px; flex-shrink:0;"></i> <span style="white-space:normal; line-height:1.1;">Lulus</span></button>`;
             } else {
