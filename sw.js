@@ -1,4 +1,4 @@
-const CACHE_NAME = 'al-ilmi-lms-v2';
+const CACHE_NAME = 'al-ilmi-lms-v3';
 const ASSETS_TO_CACHE = [
   'index.html',
   'dashboard.html',
@@ -10,6 +10,7 @@ const ASSETS_TO_CACHE = [
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       // Use a more resilient approach: try to cache everything, 
@@ -19,19 +20,41 @@ self.addEventListener('install', (event) => {
           cache.add(url).catch(err => console.warn(`Failed to cache: ${url}`, err))
         )
       );
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => clients.claim())
+  );
 });
 
 self.addEventListener('fetch', (event) => {
-  // Optional: console.log('Fetching:', event.request.url);
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
+    fetch(event.request)
+      .then((response) => {
+        // Clone the response and cache it for offline use
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+        return response;
+      })
+      .catch(() => {
+        // Fallback to cache if network fails (offline)
+        return caches.match(event.request);
+      })
   );
 });
