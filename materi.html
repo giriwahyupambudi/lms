@@ -251,7 +251,10 @@
             embedUrl = `https://docs.google.com/presentation/d/${match[0]}/embed`;
           }
         }
-        embed = `<iframe src="${embedUrl}?start=false&loop=false&delayms=3000" allowfullscreen></iframe>`;
+        if (!embedUrl.includes("?")) {
+          embedUrl += "?start=false&loop=false&delayms=3000";
+        }
+        embed = `<iframe src="${embedUrl}" allowfullscreen></iframe>`;
       }
       else if (link.includes("drive.google.com")) {
         let match = link.match(/[-\w]{25,}/);

@@ -1476,7 +1476,10 @@
                   embedUrl = `https://docs.google.com/presentation/d/${match[1]}/embed`;
               }
           }
-          iframeUrl = `${embedUrl}?start=false&loop=false&delayms=3000`;
+          if (!embedUrl.includes("?")) {
+              embedUrl += "?start=false&loop=false&delayms=3000";
+          }
+          iframeUrl = embedUrl;
       }
 
       iframe.onload = function () {
