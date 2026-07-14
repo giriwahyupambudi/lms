@@ -239,6 +239,13 @@
         let id = link.includes("watch?v=") ? link.split("v=")[1].split("&")[0] : link.split("youtu.be/")[1];
         embed = `<iframe src="https://www.youtube.com/embed/${id}" allowfullscreen></iframe>`;
       } 
+      else if (link.includes("docs.google.com/presentation")) {
+        let match = link.match(/[-\w]{25,}/);
+        if (match) {
+            let fileId = match[0];
+            embed = `<iframe src="https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false&delayms=3000" allowfullscreen></iframe>`;
+        }
+      }
       else if (link.includes("drive.google.com")) {
         let match = link.match(/[-\w]{25,}/);
         if (match) {
