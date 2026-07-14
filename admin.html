@@ -1369,6 +1369,7 @@
             <div class="action-group" style="justify-content:center">
               <button class="btn-icon" style="color:#0ea5e9; border-color:#bae6fd; background:#f0f9ff;" onclick="previewContentByRow(${m.rowNumber})" title="Preview Materi"><i data-lucide="play-circle"></i></button>
               <button class="btn-icon" style="color:#f59e0b; border-color:#fef3c7; background:#fffbeb;" onclick="previewSoalByRow(${m.rowNumber})" title="Preview Soal"><i data-lucide="help-circle"></i></button>
+              <button class="btn-icon" style="color:${isDraft ? '#10b981' : '#64748b'}; border-color:${isDraft ? '#a7f3d0' : '#e2e8f0'}; background:${isDraft ? '#d1fae5' : '#f1f5f9'};" onclick="toggleMateriStatus(${m.rowNumber})" title="${isDraft ? 'Tampilkan ke Siswa' : 'Sembunyikan'}"><i data-lucide="${isDraft ? 'eye' : 'eye-off'}"></i></button>
               <button class="btn-icon edit" onclick="editMateriByRow(${m.rowNumber})" title="Edit"><i data-lucide="edit-2"></i></button>
               <button class="btn-icon delete" onclick="deleteData('materi', ${m.rowNumber})" title="Hapus"><i data-lucide="trash-2"></i></button>
             </div>
@@ -1571,6 +1572,17 @@
       } else {
         await postData({ action: "saveData", sheet: "materi", rowNumber: rowNum, data: JSON.stringify(data) });
       }
+    }
+
+    async function toggleMateriStatus(rowNum) {
+      const idx = dataMateri.findIndex(m => m.rowNumber == rowNum);
+      if(idx === -1) return;
+      let m = dataMateri[idx];
+      let currentStatus = getVal(m, ['status']) || "Aktif";
+      let newStatus = currentStatus.toString().toLowerCase() === "draft" ? "Aktif" : "Draft";
+      
+      let data = { ...m, status: newStatus };
+      await postData({ action: "saveData", sheet: "materi", rowNumber: rowNum, data: JSON.stringify(data) });
     }
 
     // ============================================
