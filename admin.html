@@ -2389,10 +2389,18 @@
             let id = link.includes("watch?v=") ? link.split("v=")[1].split("&")[0] : link.split("youtu.be/")[1];
             embed = `<iframe src="https://www.youtube.com/embed/${id}" style="width:100%; height:450px; border-radius:12px; border:none;" allowfullscreen></iframe>`;
           } else if (link.includes("docs.google.com/presentation")) {
-            let match = link.match(/[-\w]{25,}/);
-            if (match) {
-                embed = `<iframe src="https://docs.google.com/presentation/d/${match[0]}/embed?start=false&loop=false&delayms=3000" style="width:100%; height:450px; border-radius:12px; border:none;" allowfullscreen></iframe>`;
+            let embedUrl = link;
+            if (link.includes("/pub")) {
+              embedUrl = link.replace("/pub", "/embed");
+            } else if (link.includes("/edit")) {
+              embedUrl = link.replace(/\/edit.*$/, "/embed");
+            } else if (!link.includes("/embed")) {
+              let match = link.match(/[-\w]{25,}/);
+              if (match) {
+                embedUrl = `https://docs.google.com/presentation/d/${match[0]}/embed`;
+              }
             }
+            embed = `<iframe src="${embedUrl}?start=false&loop=false&delayms=3000" style="width:100%; height:450px; border-radius:12px; border:none;" allowfullscreen></iframe>`;
           } else if (link.includes("drive.google.com")) {
             let match = link.match(/[-\w]{25,}/);
             if (match) {

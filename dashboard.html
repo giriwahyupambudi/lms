@@ -1465,11 +1465,18 @@
               iframeUrl = `https://docs.google.com/gview?url=${encodeURIComponent(dlUrl)}&embedded=true`;
           }
       } else if (url.includes('docs.google.com/presentation')) {
-          let match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-          if (match) {
-              let fileId = match[1];
-              iframeUrl = `https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false&delayms=3000`;
+          let embedUrl = url;
+          if (url.includes("/pub")) {
+              embedUrl = url.replace("/pub", "/embed");
+          } else if (url.includes("/edit")) {
+              embedUrl = url.replace(/\/edit.*$/, "/embed");
+          } else if (!url.includes("/embed")) {
+              let match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+              if (match) {
+                  embedUrl = `https://docs.google.com/presentation/d/${match[1]}/embed`;
+              }
           }
+          iframeUrl = `${embedUrl}?start=false&loop=false&delayms=3000`;
       }
 
       iframe.onload = function () {
