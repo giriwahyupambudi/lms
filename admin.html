@@ -1384,8 +1384,8 @@
       let tbody = document.getElementById('materiTableBody');
       let btnSaveOrder = document.getElementById('btnSaveOrder');
 
-      // Hanya aktifkan drag-and-drop jika TIDAK ADA filter/sort
-      let canDragAndDrop = (q === '' && fTingkat === '' && !isSorted);
+      // Hanya aktifkan drag-and-drop jika tidak sedang mencari (search) atau mensortir kolom
+      let canDragAndDrop = (q === '' && !isSorted);
 
       if (sortableMateri) {
         sortableMateri.destroy();
