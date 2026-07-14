@@ -1106,12 +1106,12 @@
             timeBadge = `<span class="course-tag" style="background:#f1f5f9; color:#cbd5e1; font-size:0.65rem; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="clock" style="width:12px; height:12px;"></i> -</span>`;
           }
 
-          let isKuisLocked = isMateriLocked || (!openedMaterials.has(mid.toString()) && !hasScore);
+          let link = (getVal(m, ['link', 'url']) || "").toString().trim();
+          let isKuisLocked = isMateriLocked || (link !== "" && tipe.toLowerCase() !== "survey" && !openedMaterials.has(mid.toString()) && !hasScore);
 
           let btnPelajari = "";
           let btnKuis = "";
 
-          let link = (getVal(m, ['link', 'url']) || "").toString().trim();
           btnPelajari = (link === "") 
             ? "" 
             : (isMateriLocked
