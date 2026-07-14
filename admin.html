@@ -482,7 +482,12 @@
               <option value="XI">Kelas XI</option>
               <option value="XII">Kelas XII</option>
             </select>
+            <button class="btn btn-secondary" onclick="resetMateriFilters()"><i data-lucide="filter-x"></i> Reset Filter</button>
+            
+            <span style="flex-grow: 1;"></span>
+            
             <button id="btnSaveOrder" class="btn btn-primary" style="display:none;" onclick="saveMateriOrder()"><i data-lucide="save"></i> Simpan Urutan</button>
+            <button id="btnCancelOrder" class="btn btn-secondary" style="display:none; background: #fee2e2; color: #dc2626; border: 1px solid #fecaca;" onclick="cancelMateriOrder()"><i data-lucide="rotate-ccw"></i> Batal</button>
           </div>
           <div class="table-responsive">
             <table>

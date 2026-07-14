@@ -511,7 +511,7 @@
 
             let score = 0;
             if (tipe === "survey") {
-                score = "Selesai";
+                score = 100;
             } else {
                 let correct = 0;
                 userAnswers.forEach((ans, i) => {
@@ -562,9 +562,8 @@
                 document.getElementById('result-container').classList.remove('hidden');
                 
                 if (tipe === "survey") {
-                    document.getElementById('result-score').innerText = "Selesai";
+                    document.getElementById('result-score').innerText = "100";
                     document.getElementById('result-score').classList.replace("text-blue-600", "text-emerald-600");
-                    document.getElementById('result-score').style.fontSize = "1.5rem";
                 } else {
                     document.getElementById('result-score').innerText = score;
                 }
