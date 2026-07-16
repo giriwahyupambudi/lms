@@ -2647,8 +2647,8 @@
         let countScored = 0;
 
         materials.forEach((m, idx) => {
-          // PENTING: Sisi siswa menghitung ID dari index materi yang SUDAH DIFILTER per tingkat
-          const mid = (idx + 1).toString(); 
+          // PENTING: Sisi siswa menghitung ID dari index materi yang SUDAH DIFILTER per tingkat ATAU idmateri eksplisit
+          const mid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (idx + 1)).toString();
           const mJudul = norm(getVal(m, ['judul', 'materi']));
           const tipe = (getVal(m, ['tipeevaluasi', 'tipe_evaluasi', 'tipe']) || "Praktik").toLowerCase();
           
@@ -2795,7 +2795,7 @@
         let totalScore = 0, countScored = 0;
 
         materials.forEach((m, idx) => {
-          const mid = (idx + 1).toString();
+          const mid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (idx + 1)).toString();
           const mJudul = norm(getVal(m, ['judul', 'materi']));
           const tipe = (getVal(m, ['tipeevaluasi', 'tipe_evaluasi', 'tipe']) || 'Praktik').toLowerCase();
 
