@@ -2055,9 +2055,18 @@
           
           // Re-populate materi based on the restored class
           let tingkatUser = getTingkatFromKelas(oldKelas);
+          let selKelasUpper = oldKelas.toUpperCase();
           let materiTingkatIni = dataMateri.filter(m => {
-             let tk = getVal(m, ['kelas', 'tingkat']);
-             return !tk || tk.toString().trim() === "" || tk.toString().trim().toUpperCase() === "SEMUA" || tk.toString().trim().toUpperCase() === tingkatUser.toUpperCase();
+              let mKelasMentah = (getVal(m, ['kelas', 'tingkat']) || "").toString().trim().toUpperCase();
+              let mTingkat = getTingkatSync(m);
+              
+              if (mTingkat === "SEMUA" || mKelasMentah === "SEMUA" || mKelasMentah === "") return true;
+
+              let mKelasArray = mKelasMentah.split(',').map(k => k.trim());
+              if (selKelasUpper && mKelasArray.includes(selKelasUpper)) return true;
+              if (mKelasArray.includes(tingkatUser)) return true;
+              
+              return false;
           });
           
           selMateri.innerHTML = '<option value="">-- Pilih Materi --</option>';
@@ -2117,10 +2126,18 @@
 
       // Saring materi sesuai tingkat yang dipilih (sama seperti perilaku di dashboard.html)
       // Karena dashboard.html men-generate idMateri berdasarkan urutan array SETELAH difilter!
+      let selKelasUpper = selKelas.toUpperCase();
       let materiTingkatIni = dataMateri.filter(m => {
-          let tingkatMateri = getVal(m, ['tingkat', 'kelas']) || "";
-          let tm = tingkatMateri.toString().trim().toUpperCase();
-          return tm === "SEMUA" || tm === tingkatDipilih;
+          let mKelasMentah = (getVal(m, ['kelas', 'tingkat']) || "").toString().trim().toUpperCase();
+          let mTingkat = getTingkatSync(m);
+          
+          if (mTingkat === "SEMUA" || mKelasMentah === "SEMUA" || mKelasMentah === "") return true;
+
+          let mKelasArray = mKelasMentah.split(',').map(k => k.trim());
+          if (selKelasUpper && mKelasArray.includes(selKelasUpper)) return true;
+          if (mKelasArray.includes(tingkatDipilih)) return true;
+          
+          return false;
       });
 
       let validMateriHTML = '<option value="">-- Pilih Materi --</option>';
