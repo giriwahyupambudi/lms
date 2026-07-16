@@ -2678,7 +2678,10 @@
             });
 
             if (filteredNilai.length > 0) {
-              const scores = filteredNilai.map(n => parseInt(getVal(n, ['nilai', 'skor']) || 0)).filter(val => !isNaN(val));
+              const scores = filteredNilai.map(n => {
+                  if (tipe === "survey") return 100;
+                  return parseInt(getVal(n, ['nilai', 'skor']) || 0);
+              }).filter(val => !isNaN(val));
               if (scores.length > 0) {
                   const maxS = Math.max(...scores);
                   totalScore += maxS;
@@ -2819,7 +2822,10 @@
           });
 
           if (filteredNilai.length > 0) {
-            const scores = filteredNilai.map(n => parseInt(getVal(n, ['nilai', 'skor']) || 0)).filter(v => !isNaN(v));
+            const scores = filteredNilai.map(n => {
+                if (tipe === "survey") return 100;
+                return parseInt(getVal(n, ['nilai', 'skor']) || 0);
+            }).filter(v => !isNaN(v));
             if (scores.length > 0) {
               const maxS = Math.max(...scores);
               totalScore += maxS;

@@ -993,7 +993,11 @@
             }
 
             const rawVal = pNilai.toString();
-            const score = parseInt(pNilai) || 0;
+            let score = parseInt(pNilai) || 0;
+            const pTipe = (getVal(p, ['tipe']) || "").toString().trim().toLowerCase();
+            if (pTipe === "survey") {
+                score = 100;
+            }
 
             let pWaktu = getVal(p, ['waktu', 'timestamp']);
             let timeStr = pWaktu ? pWaktu.toString().replace(/^'/, '').trim() : "00:00";
@@ -1296,7 +1300,10 @@
           // Pastikan user tersebut se-tingkat dengan kita (karena kita mengabaikan tingkat lain)
           if (!userMap.has(uname)) return;
           const mid = (n.id_materi || n.idmateri || "").toString();
-          const score = parseInt(n.nilai) || 0;
+          let score = parseInt(n.nilai) || 0;
+          if (n.tipe && n.tipe.toLowerCase() === "survey") {
+              score = 100;
+          }
           const waktuSec = parseTimeToSeconds(n.waktu);
 
           if (!userMap.has(uname)) {

@@ -509,16 +509,15 @@
             btn.disabled = true;
             btn.classList.add("opacity-75", "cursor-wait");
 
-            let score = 0;
-            if (tipe === "survey") {
-                score = 100;
-            } else {
-                let correct = 0;
-                userAnswers.forEach((ans, i) => {
-                    if(ans && ans === allQuestions[i].kunci.toUpperCase()) correct++;
-                });
-                score = Math.round((correct / allQuestions.length) * 100);
-            }
+            let realScore = 0;
+            let correct = 0;
+            userAnswers.forEach((ans, i) => {
+                if(ans && ans === allQuestions[i].kunci.toUpperCase()) correct++;
+            });
+            realScore = Math.round((correct / allQuestions.length) * 100);
+
+            // Simpan nilai asli ke database, tapi Rekap Nilai dan Ranking akan membacanya sebagai 100
+            let score = realScore;
             
             const m = Math.floor(elapsedSeconds / 60).toString().padStart(2, '0');
             const s = (elapsedSeconds % 60).toString().padStart(2, '0');
