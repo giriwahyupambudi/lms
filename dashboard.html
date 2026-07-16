@@ -1462,18 +1462,18 @@
         let isi = getVal(p, ['deskripsi', 'keterangan']) || "-";
         let mapel = getVal(p, ['mapel']) || "Umum";
         
-        return \`
+        return `
           <div style="background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.1); padding:20px; border-left:4px solid var(--primary);">
              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
                 <div>
-                  <h3 style="margin:0 0 4px 0; font-size:1.1rem; font-weight:700; color:#1e293b;">\${judul}</h3>
-                  <span style="font-size:0.75rem; color:var(--primary); font-weight:600; background:var(--primary-light); padding:2px 8px; border-radius:12px;">\${mapel}</span>
+                  <h3 style="margin:0 0 4px 0; font-size:1.1rem; font-weight:700; color:#1e293b;">${judul}</h3>
+                  <span style="font-size:0.75rem; color:var(--primary); font-weight:600; background:var(--primary-light); padding:2px 8px; border-radius:12px;">${mapel}</span>
                 </div>
                 <i data-lucide="info" style="color:var(--text-muted); width:20px;"></i>
              </div>
-             <p style="margin:0; font-size:0.9rem; color:#475569; line-height:1.5;">\${isi.replace(/\\n/g, '<br>')}</p>
+             <p style="margin:0; font-size:0.9rem; color:#475569; line-height:1.5;">${isi.replace(/\n/g, '<br>')}</p>
           </div>
-        \`;
+        `;
       }).join('');
       lucide.createIcons();
     }
