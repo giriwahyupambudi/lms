@@ -34,6 +34,12 @@ function doGet(e) {
       sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet("admin");
       sheet.appendRow(["nama", "username", "password", "role", "mapel", "kelas"]);
       sheet.appendRow(["Admin Utama", "admin", "admin123", "Administrator", "", ""]);
+    } else if (sheetName === "absen") {
+      sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet("absen");
+      sheet.appendRow(["waktu", "tanggal", "kelas", "mapel", "guru", "nisn", "nama", "status", "keterangan"]);
+    } else if (sheetName === "jurnal") {
+      sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet("jurnal");
+      sheet.appendRow(["waktu", "tanggal", "guru", "kelas", "mapel", "topik", "catatan"]);
     } else {
       return ContentService.createTextOutput(JSON.stringify([]))
                            .setMimeType(ContentService.MimeType.JSON);
@@ -496,6 +502,97 @@ function doPost(e) {
         return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Data baru berhasil ditambahkan" }))
                              .setMimeType(ContentService.MimeType.JSON);
       }
+    }
+
+    // ===============================================
+    // ACTION: SAVE DATA BULK (ADMIN PANEL - MASSAL)
+    // ===============================================
+    if (action === "saveDataBulk") {
+      var payloads = postData.payloads;
+      if (!payloads || !Array.isArray(payloads)) throw new Error("Payloads tidak valid");
+      
+      var successCount = 0;
+      var sheetCache = {};
+      
+      for (var p = 0; p < payloads.length; p++) {
+         var item = payloads[p];
+         var shName = item.sheet;
+         
+         if (!sheetCache[shName]) {
+             var s = ss.getSheetByName(shName);
+             if (!s) {
+                if (shName === "absen") {
+                  s = ss.insertSheet("absen");
+                  s.appendRow(["waktu", "tanggal", "kelas", "mapel", "guru", "nisn", "nama", "status", "keterangan"]);
+                } else if (shName === "jurnal") {
+                  s = ss.insertSheet("jurnal");
+                  s.appendRow(["waktu", "tanggal", "guru", "kelas", "mapel", "topik", "catatan"]);
+                } else {
+                  throw new Error("Sheet " + shName + " tidak ditemukan");
+                }
+             }
+             sheetCache[shName] = s;
+         }
+         var sh = sheetCache[shName];
+         
+         var dataToSave;
+         try {
+            dataToSave = (typeof item.data === "string") ? JSON.parse(item.data) : item.data;
+         } catch (err) {
+            continue;
+         }
+         
+         var headers = sh.getRange(1, 1, 1, Math.max(1, sh.getLastColumn())).getValues()[0];
+         var normalizedHeaders = headers.map(function(h) { return h.toString().trim().toLowerCase(); });
+         
+         for (var key in dataToSave) {
+            if (dataToSave.hasOwnProperty(key)) {
+               var keyLower = key.toString().trim().toLowerCase();
+               if (normalizedHeaders.indexOf(keyLower) === -1) {
+                  headers.push(key);
+                  normalizedHeaders.push(keyLower);
+                  sh.getRange(1, headers.length).setValue(key);
+               }
+            }
+         }
+         
+         if (item.rowNumber && item.rowNumber !== "") {
+            var rowNum = parseInt(item.rowNumber);
+            var updateRow = new Array(headers.length).fill("");
+            var existingData = sh.getRange(rowNum, 1, 1, headers.length).getValues()[0];
+            
+            for (var i = 0; i < headers.length; i++) {
+               var h = headers[i].toString().trim();
+               var hLower = h.toLowerCase();
+               
+               if (dataToSave[h] !== undefined) {
+                  updateRow[i] = dataToSave[h];
+               } else if (dataToSave[hLower] !== undefined) {
+                  updateRow[i] = dataToSave[hLower];
+               } else {
+                  updateRow[i] = existingData[i];
+               }
+            }
+            sh.getRange(rowNum, 1, 1, headers.length).setValues([updateRow]);
+            successCount++;
+         } else {
+            var newRow = new Array(headers.length).fill("");
+            for (var i = 0; i < headers.length; i++) {
+               var h = headers[i].toString().trim();
+               var hLower = h.toLowerCase();
+               if (dataToSave[h] !== undefined) {
+                  newRow[i] = dataToSave[h];
+               } else if (dataToSave[hLower] !== undefined) {
+                  newRow[i] = dataToSave[hLower];
+               }
+            }
+            sh.appendRow(newRow);
+            successCount++;
+         }
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({ status: "success", successCount: successCount }))
+                           .setMimeType(ContentService.MimeType.JSON);
     }
 
     // ===============================================

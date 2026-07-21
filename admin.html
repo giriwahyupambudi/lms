@@ -3887,26 +3887,28 @@
       
       if (payloads.length === 0) return;
       
-      showOverlay("Menyimpan absen " + payloads.length + " siswa...");
-      let successCount = 0;
-      for (let p of payloads) {
-         try {
-            const response = await fetch(API_URL, {
-              method: 'POST',
-              body: JSON.stringify(p),
-              headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-            });
-            let r = await response.json();
-            if(r.status === "success") successCount++;
-         } catch(e) {
-            console.error(e);
-         }
-      }
+      showOverlay("Menyimpan absen " + payloads.length + " data secara massal...");
       
-      if (successCount === payloads.length) {
-         showOverlay("Berhasil menyimpan absensi!");
-      } else {
-         alert(`Tersimpan: ${successCount} dari ${payloads.length}`);
+      try {
+         const response = await fetch(API_URL, {
+           method: 'POST',
+           body: JSON.stringify({
+              action: "saveDataBulk",
+              payloads: payloads
+           }),
+           headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+         });
+         
+         let r = await response.json();
+         if (r.status === "success") {
+            showOverlay("Berhasil menyimpan absensi!");
+         } else {
+            alert("Kesalahan: " + (r.message || "Gagal menyimpan."));
+            hideOverlay();
+         }
+      } catch (e) {
+         console.error(e);
+         alert("Terjadi kesalahan koneksi saat menyimpan.");
          hideOverlay();
       }
       
