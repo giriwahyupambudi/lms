@@ -3762,11 +3762,13 @@
            </td>
            <td style="font-weight:600">${nama}</td>
            <td>
-              <div style="display:flex; gap:10px; align-items:center;">
+              <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                 <label><input type="radio" name="abs_status_${i}" value="Hadir" ${status==="Hadir"?"checked":""}> Hadir</label>
                 <label><input type="radio" name="abs_status_${i}" value="Sakit" ${status==="Sakit"?"checked":""}> Sakit</label>
-                <label><input type="radio" name="abs_status_${i}" value="Izin"  ${status==="Izin"?"checked":""}> Izin</label>
+                <label><input type="radio" name="abs_status_${i}" value="Izin"  ${(status==="Izin"||status==="ijin")?"checked":""}> Izin</label>
                 <label><input type="radio" name="abs_status_${i}" value="Alpa"  ${status==="Alpa"?"checked":""}> Alpa</label>
+                <label><input type="radio" name="abs_status_${i}" value="Telat" ${status==="Telat"?"checked":""}> Telat</label>
+                <label><input type="radio" name="abs_status_${i}" value="Bolos" ${status==="Bolos"?"checked":""}> Bolos</label>
               </div>
            </td>
            <td>
@@ -3949,6 +3951,8 @@
                    <th style="text-align:center; min-width:40px; background:#fef3c7; color:#b45309; border-bottom: 2px solid #fde68a; padding: 10px;">S</th>
                    <th style="text-align:center; min-width:40px; background:#fef9c3; color:#a16207; border-bottom: 2px solid #fef08a; padding: 10px;">I</th>
                    <th style="text-align:center; min-width:40px; background:#fee2e2; color:#b91c1c; border-bottom: 2px solid #fecaca; padding: 10px;">A</th>
+                   <th style="text-align:center; min-width:40px; background:#f3e8ff; color:#7e22ce; border-bottom: 2px solid #e9d5ff; padding: 10px;">T</th>
+                   <th style="text-align:center; min-width:40px; background:#e0e7ff; color:#4338ca; border-bottom: 2px solid #c7d2fe; padding: 10px;">B</th>
                    </tr>`;
       thead.innerHTML = headHtml;
       
@@ -3981,7 +3985,7 @@
             <td style="position: sticky; left: 0; background: #fff; z-index: 9; text-align:center; padding: 10px; border-bottom: 1px solid #f1f5f9;">${idx+1}</td>
             <td style="position: sticky; left: 40px; background: #fff; z-index: 9; font-weight: 500; padding: 10px; border-bottom: 1px solid #f1f5f9;">${nama}</td>`;
             
-         let count = { "Hadir":0, "Sakit":0, "Izin":0, "Alpa":0 };
+         let count = { "Hadir":0, "Sakit":0, "Izin":0, "Alpa":0, "Telat":0, "Bolos":0 };
          for(let i=1; i<=daysInMonth; i++) {
             let st = absenMap[i];
             let disp = "-";
@@ -3990,8 +3994,10 @@
                count[st] = (count[st] || 0) + 1;
                if(st==="Hadir") { disp = "H"; color="#10b981"; }
                else if(st==="Sakit") { disp = "S"; color="#f59e0b"; }
-               else if(st==="Izin") { disp = "I"; color="#eab308"; }
+               else if(st==="Izin" || st.toLowerCase()==="ijin") { disp = "I"; color="#eab308"; count["Izin"]++; count[st]--;}
                else if(st==="Alpa" || st==="Alpha") { disp = "A"; color="#ef4444"; count["Alpa"]++; count[st]--;}
+               else if(st==="Telat") { disp = "T"; color="#8b5cf6"; }
+               else if(st==="Bolos") { disp = "B"; color="#3b82f6"; }
             }
             rowHtml += `<td style="text-align:center; font-weight:600; color:${color}; font-size:0.85rem; border-bottom: 1px solid #f1f5f9;">${disp}</td>`;
          }
@@ -4000,6 +4006,8 @@
                      <td style="text-align:center; font-weight:700; background:#fffbeb; color:#b45309; border-bottom: 1px solid #fef3c7;">${count["Sakit"]}</td>
                      <td style="text-align:center; font-weight:700; background:#fefce8; color:#a16207; border-bottom: 1px solid #fef9c3;">${count["Izin"]}</td>
                      <td style="text-align:center; font-weight:700; background:#fef2f2; color:#b91c1c; border-bottom: 1px solid #fee2e2;">${count["Alpa"]}</td>
+                     <td style="text-align:center; font-weight:700; background:#faf5ff; color:#7e22ce; border-bottom: 1px solid #f3e8ff;">${count["Telat"]}</td>
+                     <td style="text-align:center; font-weight:700; background:#eef2ff; color:#4338ca; border-bottom: 1px solid #e0e7ff;">${count["Bolos"]}</td>
                      </tr>`;
          html += rowHtml;
       });
