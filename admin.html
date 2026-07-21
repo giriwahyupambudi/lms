@@ -521,7 +521,7 @@
           <div class="filter-bar" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
             <div class="form-group" style="flex:1; min-width:150px; margin-bottom: 0;">
               <label>Pilih Kelas</label>
-              <select class="form-control" id="filterKelasNilai" onchange="renderTableNilai()"></select>
+              <select class="form-control" id="filterKelasNilai" onchange="onKelasChangeNilai()"></select>
             </div>
             <div class="form-group" style="flex:1; min-width:150px; margin-bottom: 0;">
               <label>Pilih Materi/Kuis</label>
@@ -2155,6 +2155,7 @@
     }
 
     function renderTableNilai() {
+      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
       let selKelas = document.getElementById('filterKelasNilai').value;
       let selMateri = document.getElementById('filterMateriNilai').value;
       let tbody = document.getElementById('nilaiTableBody');
