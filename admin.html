@@ -3799,10 +3799,12 @@
       tbody.innerHTML = html;
       
       // Ambil data Jurnal hari ini untuk kelas ini (jika ada)
+      let adminName = document.getElementById('admin-name').innerText;
       let existingJurnal = dataJurnal.find(j => {
          let jTgl = (getVal(j, ['tanggal']) || "").toString().trim();
          let jKelas = norm(getVal(j, ['kelas']));
-         return jTgl.includes(selTgl) && jKelas === norm(selKelas);
+         let jGuru = norm(getVal(j, ['guru']));
+         return jTgl.includes(selTgl) && jKelas === norm(selKelas) && jGuru === norm(adminName);
       });
       
       let elTopik = document.getElementById('jurnalTopik');
@@ -3868,7 +3870,7 @@
       let jCatatan = document.getElementById('jurnalCatatan')?.value || "";
       let jRowNumber = document.getElementById('jurnalRowNumber')?.value || "";
       
-      if (jTopik.trim() !== "") {
+      if (jTopik.trim() !== "" || jCatatan.trim() !== "" || jRowNumber !== "") {
           payloads.push({
              action: "saveData",
              sheet: "jurnal",
