@@ -203,7 +203,6 @@
     <button class="nav-item" id="tabTugasD" onclick="showTab('tugas')"><i data-lucide="file-text"></i> Tugas</button>
     <button class="nav-item" id="tabAbsenD" onclick="showTab('absen')"><i data-lucide="user-check"></i> Absensi</button>
     <button class="nav-item" id="tabRekapAbsenD" onclick="showTab('rekapAbsen')"><i data-lucide="calendar-check"></i> Rekap Absen</button>
-    <button class="nav-item" id="tabJurnalD" onclick="showTab('jurnal')"><i data-lucide="calendar"></i> Jurnal Harian</button>
     <button class="nav-item" id="tabRankingD" onclick="showTab('ranking')"><i data-lucide="award"></i> Peringkat</button>
     <button class="nav-item" id="tabRekapD" onclick="showTab('rekap')"><i data-lucide="clipboard-list"></i> Rekap Nilai</button>
     <button class="nav-item" id="tabUsersD" onclick="showTab('users')"><i data-lucide="users"></i> Pengguna</button>
@@ -219,7 +218,6 @@
     <button class="nav-item" id="tabNilai" onclick="showTab('nilai')"><i data-lucide="graduation-cap"></i> Nilai</button>
     <button class="nav-item" id="tabAbsen" onclick="showTab('absen')"><i data-lucide="user-check"></i> Absen</button>
     <button class="nav-item" id="tabRekapAbsen" onclick="showTab('rekapAbsen')"><i data-lucide="calendar-check"></i> Rekap Absen</button>
-    <button class="nav-item" id="tabJurnal" onclick="showTab('jurnal')"><i data-lucide="calendar"></i> Jurnal</button>
     <button class="nav-item" id="tabTugas" onclick="showTab('tugas')"><i data-lucide="file-text"></i> Tugas</button>
     <button class="nav-item" id="tabRanking" onclick="showTab('ranking')"><i data-lucide="award"></i> Peringkat</button>
     <button class="nav-item" id="tabRekap" onclick="showTab('rekap')"><i data-lucide="clipboard-list"></i> Rekap</button>
@@ -594,8 +592,20 @@
               </tbody>
             </table>
           </div>
-          <div style="margin-top: 15px; text-align: right;">
-            <button class="btn btn-primary" onclick="saveAbsenBulk()"><i data-lucide="save"></i> Simpan Absen Kelas Ini</button>
+          <div style="margin-top: 25px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+            <h3 style="margin-bottom: 15px; font-size: 1.1rem; color: var(--text-color);">Jurnal Harian (Opsional)</h3>
+            <input type="hidden" id="jurnalRowNumber">
+            <div class="form-group">
+              <label>Topik / Materi Pokok</label>
+              <input type="text" id="jurnalTopik" class="form-control" placeholder="Contoh: Sistem Operasi Linux">
+            </div>
+            <div class="form-group">
+              <label>Catatan / Keterangan</label>
+              <textarea id="jurnalCatatan" class="form-control" rows="3" placeholder="Siswa aktif bertanya, ada 2 siswa terlambat..."></textarea>
+            </div>
+            <div style="margin-top: 15px; text-align: right;">
+              <button class="btn btn-primary" onclick="saveAbsenBulk()"><i data-lucide="save"></i> Simpan Absen & Jurnal</button>
+            </div>
           </div>
         </div>
       </section>
@@ -634,45 +644,7 @@
         </div>
       </section>
 
-      <!-- ================= SECTION: JURNAL ================= -->
-      <section id="jurnalSection" style="display:none">
-        <div class="header-section">
-          <div>
-            <h1>Jurnal Mengajar Harian</h1>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Catat aktivitas dan materi yang Anda ajarkan hari ini.</p>
-          </div>
-          <button class="btn btn-primary" onclick="openJurnalModal()"><i data-lucide="plus"></i> Tambah Jurnal</button>
-        </div>
-        <div class="card">
-          <div class="filter-bar" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
-            <div class="form-group" style="flex:1; min-width:150px; margin-bottom: 0;">
-              <label>Filter Kelas</label>
-              <select class="form-control" id="filterKelasJurnal" onchange="renderTableJurnal()"></select>
-            </div>
-            <div class="form-group" style="flex:1; min-width:150px; margin-bottom: 0;">
-              <label>Filter Tanggal</label>
-              <input type="date" class="form-control" id="filterTanggalJurnal" onchange="renderTableJurnal()">
-            </div>
-          </div>
-          <div class="table-responsive" style="margin-top:20px;">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Tanggal</th>
-                  <th>Kelas</th>
-                  <th>Guru</th>
-                  <th>Mapel</th>
-                  <th>Topik/Materi</th>
-                  <th>Catatan</th>
-                </tr>
-              </thead>
-              <tbody id="jurnalTableBody">
-                <tr><td colspan="6" style="text-align:center;">Memuat data jurnal...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+      <!-- Removed Jurnal Section -->
 
       <!-- ================= SECTION: TUGAS ================= -->
       <section id="tugasSection" style="display:none">
@@ -916,42 +888,7 @@
     </div>
   </div>
 
-  <!-- MODAL JURNAL HARIAN -->
-  <div id="jurnalModal" class="modal-overlay" style="display:none; z-index:2000">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Form Jurnal Harian</h3>
-        <button class="close-modal" onclick="closeModal('jurnalModal')"><i data-lucide="x"></i></button>
-      </div>
-      <div class="modal-body">
-        <input type="hidden" id="jRowNumber">
-        <div class="form-group">
-          <label>Tanggal</label>
-          <input type="date" id="jTanggal" class="form-control" required>
-        </div>
-        <div class="form-group" id="jKelasContainer">
-          <label>Kelas</label>
-          <select id="jKelas" class="form-control"></select>
-        </div>
-        <div class="form-group">
-          <label>Mata Pelajaran</label>
-          <input type="text" id="jMapel" class="form-control" required>
-        </div>
-        <div class="form-group">
-          <label>Topik / Materi Pokok</label>
-          <input type="text" id="jTopik" class="form-control" required placeholder="Contoh: Sistem Operasi Linux">
-        </div>
-        <div class="form-group">
-          <label>Catatan / Keterangan</label>
-          <textarea id="jCatatan" class="form-control" rows="3" placeholder="Siswa aktif bertanya, ada 2 siswa terlambat..."></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal('jurnalModal')">Batal</button>
-        <button class="btn btn-primary" onclick="saveJurnal()"><i data-lucide="save"></i> Simpan Jurnal</button>
-      </div>
-    </div>
-  </div>
+  <!-- Removed Jurnal Modal -->
 
   <!-- MODAL PREVIEW MATERI/SOAL -->
   <div id="previewModal" class="modal-overlay" style="display:none; z-index:2000">
@@ -1134,14 +1071,14 @@
     };
 
     function showTab(tabName) {
-      ['dashboardSection', 'materiSection', 'nilaiSection', 'usersSection', 'settingsSection', 'tugasSection', 'rankingSection', 'rekapSection', 'analisisSection', 'guruSection', 'absenSection', 'rekapAbsenSection', 'jurnalSection'].forEach(s => {
+      ['dashboardSection', 'materiSection', 'nilaiSection', 'usersSection', 'settingsSection', 'tugasSection', 'rankingSection', 'rekapSection', 'analisisSection', 'guruSection', 'absenSection', 'rekapAbsenSection'].forEach(s => {
         let el = document.getElementById(s);
         if (el) el.style.display = 'none';
       });
       let targetSec = document.getElementById(tabName + 'Section');
       if (targetSec) targetSec.style.display = 'block';
       
-      ['tabDashboard', 'tabMateri', 'tabNilai', 'tabUsers', 'tabSettings', 'tabTugas', 'tabRanking', 'tabRekap', 'tabAnalisis', 'tabGuru', 'tabAbsen', 'tabRekapAbsen', 'tabJurnal'].forEach(id => {
+      ['tabDashboard', 'tabMateri', 'tabNilai', 'tabUsers', 'tabSettings', 'tabTugas', 'tabRanking', 'tabRekap', 'tabAnalisis', 'tabGuru', 'tabAbsen', 'tabRekapAbsen'].forEach(id => {
         let el = document.getElementById(id); if(el) el.classList.remove('active');
         let elD = document.getElementById(id+'D'); if(elD) elD.classList.remove('active');
       });
@@ -1304,8 +1241,6 @@
         populateFilterAbsen();
         populateFilterRekapAbsen();
         renderTableAbsen();
-        populateFilterJurnal();
-        renderTableJurnal();
         if (IS_SUPER_ADMIN) renderTableGuru();
         
         hideOverlay();
@@ -3841,6 +3776,29 @@
       });
       
       tbody.innerHTML = html;
+      
+      // Ambil data Jurnal hari ini untuk kelas ini (jika ada)
+      let existingJurnal = dataJurnal.find(j => {
+         let jTgl = (getVal(j, ['tanggal']) || "").toString().trim();
+         let jKelas = norm(getVal(j, ['kelas']));
+         return jTgl.includes(selTgl) && jKelas === norm(selKelas);
+      });
+      
+      let elTopik = document.getElementById('jurnalTopik');
+      let elCatatan = document.getElementById('jurnalCatatan');
+      let elRowNum = document.getElementById('jurnalRowNumber');
+      
+      if (elTopik && elCatatan && elRowNum) {
+         if (existingJurnal) {
+            elTopik.value = getVal(existingJurnal, ['topik']) || "";
+            elCatatan.value = getVal(existingJurnal, ['catatan']) || "";
+            elRowNum.value = existingJurnal.rowNumber || "";
+         } else {
+            elTopik.value = "";
+            elCatatan.value = "";
+            elRowNum.value = "";
+         }
+      }
     }
 
     async function saveAbsenBulk() {
@@ -3884,6 +3842,27 @@
             })
          });
       });
+      
+      let jTopik = document.getElementById('jurnalTopik')?.value || "";
+      let jCatatan = document.getElementById('jurnalCatatan')?.value || "";
+      let jRowNumber = document.getElementById('jurnalRowNumber')?.value || "";
+      
+      if (jTopik.trim() !== "") {
+          payloads.push({
+             action: "saveData",
+             sheet: "jurnal",
+             rowNumber: jRowNumber,
+             data: JSON.stringify({
+                waktu: now,
+                tanggal: selTgl,
+                guru: document.getElementById('admin-name').innerText,
+                kelas: selKelas,
+                mapel: MY_MAPEL || "Semua",
+                topik: jTopik,
+                catatan: jCatatan
+             })
+          });
+      }
       
       if (payloads.length === 0) return;
       
@@ -4045,128 +4024,7 @@
       XLSX.writeFile(wb, `Rekap_Absen_${selKelas}_${selBulan}.xlsx`);
     }
 
-    // ============================================
-    // MODUL JURNAL HARIAN
-    // ============================================
-    function populateFilterJurnal() {
-      let selKelas = document.getElementById('filterKelasJurnal');
-      let jKelas = document.getElementById('jKelas');
-      if (!selKelas || !jKelas) return;
-      
-      let oldKelas = selKelas.value;
-      
-      let kls = new Set();
-      dataUser.forEach(u => {
-         let k = getVal(u, ['kelas', 'tingkat']);
-         if(k && getVal(u, ['role', 'peran']) !== "admin") kls.add(k.toString().trim());
-      });
-      
-      let opts = '<option value="">Semua Kelas</option>';
-      let optsForm = '';
-      Array.from(kls).sort().forEach(k => {
-         opts += `<option value="${k}">${k}</option>`;
-         optsForm += `<option value="${k}">${k}</option>`;
-      });
-      
-      selKelas.innerHTML = opts;
-      jKelas.innerHTML = optsForm;
-      if (oldKelas) selKelas.value = oldKelas;
-      
-      let tgl = document.getElementById('filterTanggalJurnal');
-      if (!tgl.value) {
-        let today = new Date();
-        tgl.value = today.toISOString().split('T')[0];
-      }
-    }
-
-    function renderTableJurnal() {
-      let selKelas = document.getElementById('filterKelasJurnal').value;
-      let selTgl = document.getElementById('filterTanggalJurnal').value;
-      let tbody = document.getElementById('jurnalTableBody');
-      
-      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
-      
-      let filteredJurnal = dataJurnal.filter(j => {
-         let jTgl = (getVal(j, ['tanggal']) || "").toString().trim();
-         let jKelas = norm(getVal(j, ['kelas']));
-         
-         let matchKelas = selKelas === "" || jKelas === norm(selKelas);
-         let matchTgl = selTgl === "" || jTgl.includes(selTgl);
-         
-         return matchKelas && matchTgl;
-      });
-      
-      if (filteredJurnal.length === 0) {
-         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Tidak ada jurnal untuk pencarian ini.</td></tr>';
-         return;
-      }
-      
-      // Sort dari yang terbaru
-      filteredJurnal.sort((a,b) => (b.rowNumber || 0) - (a.rowNumber || 0));
-      
-      let html = "";
-      filteredJurnal.forEach(j => {
-         let tgl = getVal(j, ['tanggal']) || "-";
-         let kls = getVal(j, ['kelas']) || "-";
-         let guru = getVal(j, ['guru']) || "-";
-         let mpl = getVal(j, ['mapel']) || "-";
-         let tpk = getVal(j, ['topik']) || "-";
-         let ctt = getVal(j, ['catatan']) || "-";
-         
-         html += `<tr>
-           <td style="white-space:nowrap">${tgl}</td>
-           <td><span class="badge" style="background:var(--primary-light); color:var(--primary); font-weight:600;">${kls}</span></td>
-           <td>${guru}</td>
-           <td>${mpl}</td>
-           <td>${tpk}</td>
-           <td>${ctt}</td>
-         </tr>`;
-      });
-      
-      tbody.innerHTML = html;
-    }
-
-    function openJurnalModal() {
-      let today = new Date();
-      document.getElementById('jTanggal').value = today.toISOString().split('T')[0];
-      document.getElementById('jMapel').value = MY_MAPEL;
-      document.getElementById('jTopik').value = "";
-      document.getElementById('jCatatan').value = "";
-      document.getElementById('jRowNumber').value = "";
-      openModal('jurnalModal');
-    }
-
-    async function saveJurnal() {
-      let tgl = document.getElementById('jTanggal').value;
-      let kls = document.getElementById('jKelas').value;
-      let mpl = document.getElementById('jMapel').value;
-      let tpk = document.getElementById('jTopik').value;
-      let ctt = document.getElementById('jCatatan').value;
-      
-      if (!tgl || !kls || !mpl || !tpk) {
-         alert("Lengkapi form dengan benar!");
-         return;
-      }
-      
-      closeModal('jurnalModal');
-      
-      let data = {
-         waktu: new Date().toLocaleString('id-ID'),
-         tanggal: tgl,
-         guru: document.getElementById('admin-name').innerText,
-         kelas: kls,
-         mapel: mpl,
-         topik: tpk,
-         catatan: ctt
-      };
-      
-      await postData({ action: "saveData", sheet: "jurnal", rowNumber: "", data: JSON.stringify(data) });
-      
-      setTimeout(() => {
-         loadAllData();
-         showTab('jurnal');
-      }, 1500);
-    }
+    // Removed Jurnal JS Functions
   </script>
 </body>
 </html>
