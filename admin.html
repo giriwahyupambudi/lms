@@ -641,6 +641,25 @@
               </tbody>
             </table>
           </div>
+          
+          <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+            <h3 style="margin-bottom: 15px; font-size: 1.1rem; color: var(--text-color);">Rekap Jurnal Harian</h3>
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width:100px;">Tanggal</th>
+                    <th style="width:150px;">Guru</th>
+                    <th style="width:200px;">Topik/Materi</th>
+                    <th>Catatan/Keterangan</th>
+                  </tr>
+                </thead>
+                <tbody id="rekapJurnalTableBody">
+                  <tr><td colspan="4" style="text-align:center;">Data jurnal akan muncul di sini.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -4013,6 +4032,42 @@
       });
       
       tbody.innerHTML = html;
+      
+      // Render Jurnal Table
+      let jTbody = document.getElementById('rekapJurnalTableBody');
+      if (jTbody) {
+         let jurnalBulanIni = dataJurnal.filter(j => {
+            let jTgl = (getVal(j, ['tanggal']) || "").toString().trim();
+            let jKelas = norm(getVal(j, ['kelas']));
+            return jTgl.startsWith(selBulan) && jKelas === norm(selKelas);
+         });
+         
+         if (jurnalBulanIni.length === 0) {
+            jTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Tidak ada jurnal untuk bulan ini.</td></tr>';
+         } else {
+            jurnalBulanIni.sort((a,b) => {
+               let ta = (getVal(a, ['tanggal']) || "").toString();
+               let tb = (getVal(b, ['tanggal']) || "").toString();
+               return ta.localeCompare(tb);
+            });
+            
+            let jHtml = "";
+            jurnalBulanIni.forEach(j => {
+               let tgl = getVal(j, ['tanggal']) || "-";
+               let guru = getVal(j, ['guru']) || "-";
+               let tpk = getVal(j, ['topik']) || "-";
+               let ctt = getVal(j, ['catatan']) || "-";
+               
+               jHtml += `<tr>
+                 <td style="white-space:nowrap">${tgl}</td>
+                 <td>${guru}</td>
+                 <td>${tpk}</td>
+                 <td>${ctt}</td>
+               </tr>`;
+            });
+            jTbody.innerHTML = jHtml;
+         }
+      }
     }
 
     function downloadRekapAbsen() {
