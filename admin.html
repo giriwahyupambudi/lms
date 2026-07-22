@@ -2207,15 +2207,12 @@
          });
 
          selMateri.innerHTML = '<option value="">-- Pilih Materi --</option>';
-         let relativeId = 1;
          materiTingkatIni.forEach(m => {
-            let tk = getVal(m, ['kelas', 'tingkat']);
-            let isSemua = !tk || tk.toString().trim() === "" || tk.toString().trim().toUpperCase() === "SEMUA";
-            let actualId = isSemua ? m.rowNumber : relativeId++;
             let mStatus = (getVal(m, ['status']) || "Aktif").toString().toLowerCase();
             if (mStatus !== "aktif") return;
             let judul = getVal(m, ['judul', 'materi', 'namamateri']) || "Tanpa Judul";
-            selMateri.innerHTML += `<option value="${actualId}">[ID Kuis: ${actualId}] ${judul}</option>`;
+            const materiId = getVal(m, ['id', 'id_materi', 'idmateri', 'materiid']);
+            selMateri.innerHTML += `<option value="${materiId}">${judul}</option>`;
          });
 
          // Restore materi selection if still present
