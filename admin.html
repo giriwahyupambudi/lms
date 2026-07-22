@@ -2334,11 +2334,9 @@
                              (nUserRaw !== "" && nUserRaw.toLowerCase() === nama.toString().trim().toLowerCase());
                              
            let nMatRaw = (getVal(n, ['id_materi', 'idmateri', 'modul']) || "").toString().trim();
-           let nMatJudulRaw = (getVal(n, ['judul', 'materi', 'judulkuis', 'namamateri']) || "").toString().trim();
            
-           let isMateriMatch = (nMatRaw === selMateri.toString().trim()) || 
-                               (nMatRaw !== "" && nMatRaw.toLowerCase() === selMateriJudul.toLowerCase()) ||
-                               (nMatJudulRaw !== "" && nMatJudulRaw.toLowerCase() === selMateriJudul.toLowerCase());
+           // Use only idmateri for matching
+           let isMateriMatch = nMatRaw === selMateri.toString().trim();
                                
            return isUserMatch && isMateriMatch;
         });
