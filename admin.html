@@ -2211,7 +2211,7 @@
             let mStatus = (getVal(m, ['status']) || "Aktif").toString().toLowerCase();
             if (mStatus !== "aktif") return;
             let judul = getVal(m, ['judul', 'materi', 'namamateri']) || "Tanpa Judul";
-            const materiId = getVal(m, ['id', 'id_materi', 'idmateri', 'materiid']);
+            const materiId = getVal(m, ['idmateri', 'id_materi', 'materiid']);
             selMateri.innerHTML += `<option value="${materiId}">${judul}</option>`;
          });
 
@@ -2292,7 +2292,7 @@
 
          let judul = getVal(m, ['judul', 'materi', 'namamateri']);
          if (judul && judul.toString().trim() !== "") {
-             const materiId = getVal(m, ['id', 'id_materi', 'idmateri', 'materiid']);
+             const materiId = getVal(m, ['idmateri', 'id_materi', 'materiid']);
              validMateriHTML += `<option value="${materiId}">${judul}</option>`;
          }
       });
@@ -2321,7 +2321,7 @@
       let selMateriJudul = selMateriOption ? selMateriOption.text.toString().trim() : "";
 
       let mObj = dataMateri.find(m => {
-          let mId = (getVal(m, ['id', 'id_materi', 'idmateri', 'materiid']) || "").toString().trim();
+          let mId = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || "").toString().trim();
           return mId === selMateri.toString().trim();
       });
       let mJudulClean = mObj ? norm(getVal(mObj, ['judul', 'materi'])) : "";
@@ -2343,7 +2343,7 @@
            let nMatRaw = (getVal(n, ['id_materi', 'idmateri', 'modul']) || "").toString().trim();
            
            // Use only idmateri for matching
-            let mObjId = mObj ? (getVal(mObj, ['id', 'id_materi', 'idmateri', 'materiid']) || "").toString().trim() : "";
+            let mObjId = mObj ? (getVal(mObj, ['idmateri', 'id_materi', 'materiid']) || "").toString().trim() : "";
             let isMateriMatch = (nMatRaw || "").toString().trim() === mObjId;
                                
            return isUserMatch && isMateriMatch;
