@@ -2209,6 +2209,10 @@
              let tk = getVal(m, ['kelas', 'tingkat']);
              let isSemua = !tk || tk.toString().trim() === "" || tk.toString().trim().toUpperCase() === "SEMUA";
              let actualId = isSemua ? m.rowNumber : relativeId++;
+             
+             let mStatus = (getVal(m, ['status']) || "Aktif").toString().toLowerCase();
+             if (mStatus !== "aktif") return;
+
              let judul = getVal(m, ['judul', 'materi', 'namamateri']) || "Tanpa Judul";
              selMateri.innerHTML += `<option value="${actualId}">[ID Kuis: ${actualId}] ${judul}</option>`;
           });
@@ -2276,11 +2280,13 @@
 
       let validMateriHTML = '<option value="">-- Pilih Materi --</option>';
       materiTingkatIni.forEach((m, i) => {
+         let mStatus = (getVal(m, ['status']) || "Aktif").toString().toLowerCase();
+         if (mStatus !== "aktif") return; // Skip non-active materi
+
          let judul = getVal(m, ['judul', 'materi', 'namamateri']);
          if (judul && judul.toString().trim() !== "") {
-             // value di sini sekarang akan cocok 100% dengan id_materi yang tersimpan di listNilai
-             // karena mengikuti urutan index (i+1) khusus untuk kelas tersebut.
-             validMateriHTML += `<option value="${i+1}">${judul}</option>`;
+             const materiId = getVal(m, ['id', 'id_materi', 'idmateri', 'materiid']);
+             validMateriHTML += `<option value="${materiId}">${judul}</option>`;
          }
       });
       
