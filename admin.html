@@ -2170,12 +2170,14 @@
       let selKelas = document.getElementById('filterKelasNilai');
       let selMateri = document.getElementById('filterMateriNilai');
 
-      // Retrieve persisted selections (fallback to current values)
-      const storedKelas = localStorage.getItem('selectedKelasId') || '';
-      const storedMateri = localStorage.getItem('selectedMateriId') || '';
+      // Retrieve persisted selections (prioritize active element value, then tab-isolated sessionStorage)
+      const currentKelas = selKelas.value;
+      const currentMateri = selMateri.value;
+      const storedKelas = sessionStorage.getItem('selectedKelasId') || '';
+      const storedMateri = sessionStorage.getItem('selectedMateriId') || '';
 
-      let oldKelas = storedKelas || selKelas.value;
-      let oldMateri = storedMateri || selMateri.value;
+      let oldKelas = currentKelas || storedKelas;
+      let oldMateri = currentMateri || storedMateri;
 
       let kls = new Set();
       dataUser.forEach(u => {
@@ -2228,12 +2230,12 @@
          document.getElementById('nilaiTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center">Pilih kelas dan materi terlebih dahulu.</td></tr>';
       }
 
-      // Persist selections on change
+      // Persist selections on change (tab-isolated)
       selKelas.addEventListener('change', () => {
-         localStorage.setItem('selectedKelasId', selKelas.value);
+         sessionStorage.setItem('selectedKelasId', selKelas.value);
       });
       selMateri.addEventListener('change', () => {
-         localStorage.setItem('selectedMateriId', selMateri.value);
+         sessionStorage.setItem('selectedMateriId', selMateri.value);
          renderTableNilai();
       });
 
