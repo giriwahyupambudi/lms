@@ -2507,6 +2507,33 @@
         waktu: durasiVal
       });
       delete draftNilai[`${idMateri}_${username}`];
+
+      // Update dataNilai secara lokal agar tabel langsung tampil tanpa menunggu fetch ulang
+      let existingIdx = dataNilai.findIndex(n => {
+        let nUser = (getVal(n, ['username', 'nisn']) || "").toString().trim();
+        let nMat = (getVal(n, ['id_materi', 'idmateri', 'modul']) || "").toString().trim();
+        return nUser === username && nMat === idMateri;
+      });
+      if (existingIdx !== -1) {
+        // Update entry yang sudah ada
+        dataNilai[existingIdx].nilai = inputVal;
+        dataNilai[existingIdx].skor = inputVal;
+        dataNilai[existingIdx].waktu = durasiVal;
+      } else {
+        // Tambah entry baru
+        dataNilai.push({
+          username: username,
+          nama: nama,
+          kelas: kelas,
+          id_materi: idMateri,
+          idmateri: idMateri,
+          nilai: inputVal,
+          skor: inputVal,
+          waktu: durasiVal,
+          timestamp: new Date().toLocaleString()
+        });
+      }
+
       // Refresh the table to show updated scores
       renderTableNilai();
     }
@@ -2564,6 +2591,29 @@
       });
       dataToSave.forEach(d => {
          delete draftNilai[`${d.id_materi}_${d.username}`];
+         // Update dataNilai secara lokal
+         let existingIdx = dataNilai.findIndex(n => {
+           let nUser = (getVal(n, ['username', 'nisn']) || "").toString().trim();
+           let nMat = (getVal(n, ['id_materi', 'idmateri', 'modul']) || "").toString().trim();
+           return nUser === d.username && nMat === d.id_materi;
+         });
+         if (existingIdx !== -1) {
+           dataNilai[existingIdx].nilai = d.nilai;
+           dataNilai[existingIdx].skor = d.nilai;
+           dataNilai[existingIdx].waktu = d.waktu;
+         } else {
+           dataNilai.push({
+             username: d.username,
+             nama: d.nama,
+             kelas: d.kelas,
+             id_materi: d.id_materi,
+             idmateri: d.id_materi,
+             nilai: d.nilai,
+             skor: d.nilai,
+             waktu: d.waktu,
+             timestamp: new Date().toLocaleString()
+           });
+         }
       });
       // Refresh after bulk save
       renderTableNilai();
