@@ -2166,77 +2166,87 @@
     function populateFilterNilai() {
       let kSelect = document.getElementById('filterKelasNilai');
       let mSelect = document.getElementById('filterMateriNilai');
-      
+
       let selKelas = document.getElementById('filterKelasNilai');
       let selMateri = document.getElementById('filterMateriNilai');
-      
-      let oldKelas = selKelas.value;
-      let oldMateri = selMateri.value;
+
+      // Retrieve persisted selections (fallback to current values)
+      const storedKelas = localStorage.getItem('selectedKelasId') || '';
+      const storedMateri = localStorage.getItem('selectedMateriId') || '';
+
+      let oldKelas = storedKelas || selKelas.value;
+      let oldMateri = storedMateri || selMateri.value;
 
       let kls = new Set();
       dataUser.forEach(u => {
          let k = getVal(u, ['kelas', 'tingkat']);
-         if(k) kls.add(k.toString().trim());
+         if (k) kls.add(k.toString().trim());
       });
-      
+
       selKelas.innerHTML = '<option value="">-- Pilih Kelas --</option>';
       Array.from(kls).sort().forEach(k => {
          selKelas.innerHTML += `<option value="${k}">${k}</option>`;
       });
-      
+
       if (oldKelas) {
-          selKelas.value = oldKelas;
-          
-          // Re-populate materi based on the restored class
-          let tingkatUser = getTingkatFromKelas(oldKelas);
-          let selKelasUpper = oldKelas.toUpperCase();
-          let materiTingkatIni = dataMateri.filter(m => {
-              let mKelasMentah = (getVal(m, ['kelas', 'tingkat']) || "").toString().trim().toUpperCase();
-              let mTingkat = getTingkatSync(m);
-              
-              if (mTingkat === "SEMUA" || mKelasMentah === "SEMUA" || mKelasMentah === "") return true;
+         selKelas.value = oldKelas;
 
-              let mKelasArray = mKelasMentah.split(',').map(k => k.trim());
-              if (selKelasUpper && mKelasArray.includes(selKelasUpper)) return true;
-              if (mKelasArray.includes(tingkatUser)) return true;
-              
-              return false;
-          });
-          
-          selMateri.innerHTML = '<option value="">-- Pilih Materi --</option>';
-          let relativeId = 1;
-          materiTingkatIni.forEach((m) => {
-             let tk = getVal(m, ['kelas', 'tingkat']);
-             let isSemua = !tk || tk.toString().trim() === "" || tk.toString().trim().toUpperCase() === "SEMUA";
-             let actualId = isSemua ? m.rowNumber : relativeId++;
-             
-             let mStatus = (getVal(m, ['status']) || "Aktif").toString().toLowerCase();
-             if (mStatus !== "aktif") return;
+         // Re‑populate materi based on restored class
+         let tingkatUser = getTingkatFromKelas(oldKelas);
+         let selKelasUpper = oldKelas.toUpperCase();
+         let materiTingkatIni = dataMateri.filter(m => {
+            let mKelasMentah = (getVal(m, ['kelas', 'tingkat']) || "").toString().trim().toUpperCase();
+            let mTingkat = getTingkatSync(m);
 
-             let judul = getVal(m, ['judul', 'materi', 'namamateri']) || "Tanpa Judul";
-             selMateri.innerHTML += `<option value="${actualId}">[ID Kuis: ${actualId}] ${judul}</option>`;
-          });
-          
-          if (oldMateri) {
-              selMateri.value = oldMateri;
-              renderTableNilai();
-          } else {
-              document.getElementById('nilaiTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center">Pilih materi untuk menampilkan siswa.</td></tr>';
-          }
+            if (mTingkat === "SEMUA" || mKelasMentah === "SEMUA" || mKelasMentah === "") return true;
+
+            let mKelasArray = mKelasMentah.split(',').map(k => k.trim());
+            if (selKelasUpper && mKelasArray.includes(selKelasUpper)) return true;
+            if (mKelasArray.includes(tingkatUser)) return true;
+            return false;
+         });
+
+         selMateri.innerHTML = '<option value="">-- Pilih Materi --</option>';
+         let relativeId = 1;
+         materiTingkatIni.forEach(m => {
+            let tk = getVal(m, ['kelas', 'tingkat']);
+            let isSemua = !tk || tk.toString().trim() === "" || tk.toString().trim().toUpperCase() === "SEMUA";
+            let actualId = isSemua ? m.rowNumber : relativeId++;
+            let mStatus = (getVal(m, ['status']) || "Aktif").toString().toLowerCase();
+            if (mStatus !== "aktif") return;
+            let judul = getVal(m, ['judul', 'materi', 'namamateri']) || "Tanpa Judul";
+            selMateri.innerHTML += `<option value="${actualId}">[ID Kuis: ${actualId}] ${judul}</option>`;
+         });
+
+         // Restore materi selection if still present
+         if (oldMateri) {
+            selMateri.value = oldMateri;
+            renderTableNilai();
+         } else {
+            document.getElementById('nilaiTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center">Pilih materi untuk menampilkan siswa.</td></tr>';
+         }
       } else {
-          // Default behavior if nothing was selected
-          selMateri.innerHTML = '';
-          document.getElementById('nilaiTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center">Pilih kelas dan materi terlebih dahulu.</td></tr>';
+         // No stored class, show defaults
+         selMateri.innerHTML = '';
+         document.getElementById('nilaiTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center">Pilih kelas dan materi terlebih dahulu.</td></tr>';
       }
 
-      // Menambahkan onchange event pada filter Kelas untuk menyaring Materi
-      // Hapus event listener lama agar tidak dobel
+      // Persist selections on change
+      selKelas.addEventListener('change', () => {
+         localStorage.setItem('selectedKelasId', selKelas.value);
+      });
+      selMateri.addEventListener('change', () => {
+         localStorage.setItem('selectedMateriId', selMateri.value);
+         renderTableNilai();
+      });
+
+      // Existing class change handling for material filtering
       selKelas.removeEventListener('change', onKelasChangeNilai);
       selKelas.addEventListener('change', onKelasChangeNilai);
 
-      // Panggil sekali untuk mengisi dropdown materi pada load awal JIKA belum ada kelas yang direstore
+      // If no class restored, trigger once to fill materi list
       if (!oldKelas) {
-          onKelasChangeNilai();
+         onKelasChangeNilai();
       }
     }
 
@@ -2336,7 +2346,8 @@
            let nMatRaw = (getVal(n, ['id_materi', 'idmateri', 'modul']) || "").toString().trim();
            
            // Use only idmateri for matching
-           let isMateriMatch = nMatRaw === selMateri.toString().trim();
+            let mObjId = mObj ? (getVal(mObj, ['id', 'id_materi', 'idmateri', 'materiid']) || "").toString().trim() : "";
+            let isMateriMatch = (nMatRaw || "").toString().trim() === mObjId;
                                
            return isUserMatch && isMateriMatch;
         });
@@ -2499,6 +2510,8 @@
         waktu: durasiVal
       });
       delete draftNilai[`${idMateri}_${username}`];
+      // Refresh the table to show updated scores
+      renderTableNilai();
     }
 
     async function simpanSemuaNilai() {
@@ -2555,6 +2568,8 @@
       dataToSave.forEach(d => {
          delete draftNilai[`${d.id_materi}_${d.username}`];
       });
+      // Refresh after bulk save
+      renderTableNilai();
     }
 
     // ============================================
