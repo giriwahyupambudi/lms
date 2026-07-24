@@ -702,6 +702,45 @@ function doPost(e) {
                               .setMimeType(ContentService.MimeType.JSON);
        }
     }
+
+     // ACTION: DELETE NILAI BY USERNAME & MATERI (ADMIN PANEL)
+     // ======================================================
+     if (action === "deleteNilaiByUsernameMateri" || action === "hapusNilaiByUsernameMateri") {
+        var sheetNilai = ss.getSheetByName("listNilai");
+        if (!sheetNilai) throw new Error("Sheet listNilai tidak ditemukan");
+        
+        var targetUser = postData.username;
+        var targetMateri = postData.id_materi;
+        
+        var sheetData = sheetNilai.getDataRange().getValues();
+        var headers = sheetData[0];
+        var userCol = -1, materiCol = -1;
+        
+        for(var i = 0; i < headers.length; i++){
+           var h = headers[i].toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+           if(h === "username" || h === "nisn") userCol = i;
+           if(h === "id_materi" || h === "idmateri" || h === "modul") materiCol = i;
+        }
+        
+        if(userCol === -1 || materiCol === -1) {
+          throw new Error("Struktur kolom listNilai tidak lengkap");
+        }
+        
+        var deletedCount = 0;
+        for(var j = sheetData.length - 1; j > 0; j--) {
+           var rowUsername = sheetData[j][userCol].toString().trim();
+           var rowMateri = sheetData[j][materiCol].toString().trim();
+           
+           if(rowUsername === targetUser && rowMateri === targetMateri) {
+              sheetNilai.deleteRow(j + 1);
+              deletedCount++;
+           }
+        }
+        
+        return ContentService.createTextOutput(JSON.stringify({ status: "success", message: deletedCount + " data nilai berhasil dihapus" }))
+                             .setMimeType(ContentService.MimeType.JSON);
+     }
+
     if (action === "updateNilaiBulk") {
          var sheetNilai = ss.getSheetByName("listNilai");
          if (!sheetNilai) throw new Error("Sheet listNilai tidak ditemukan");

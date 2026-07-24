@@ -2487,11 +2487,53 @@
           </td>
           <td style="text-align:center">
              <button class="btn btn-sm btn-outline" onclick="simpanNilai('${username}', '${safeMateri}', '${safeNama}', '${safeKelas}')"><i data-lucide="save"></i> Simpan</button>
+             <button class="btn btn-sm btn-outline" style="color: #ef4444; border-color: #fca5a5; background: #fef2f2; margin-left: 4px;" onclick="hapusNilai('${username}', '${safeMateri}', '${safeNama}')" title="Hapus Nilai"><i data-lucide="trash-2"></i> Hapus</button>
           </td>
         </tr>`;
       });
       tbody.innerHTML = html || '<tr><td colspan="7" style="text-align:center">Tidak ada siswa di kelas ini.</td></tr>';
       restoreSortIcons();
+    }
+
+    async function hapusNilai(username, idMateri, nama) {
+      if (!confirm(`Apakah Anda yakin ingin menghapus nilai untuk ${nama}?`)) return;
+      
+      showOverlay("Menghapus nilai...");
+      try {
+        await postData({
+          action: "deleteNilaiByUsernameMateri",
+          username: username,
+          id_materi: idMateri
+        });
+        
+        delete draftNilai[`${idMateri}_${username}`];
+        
+        // Update dataNilai secara lokal
+        dataNilai = dataNilai.filter(n => {
+          let nUser = (getVal(n, ['username', 'nisn']) || "").toString().trim();
+          let nMat = (getVal(n, ['id_materi', 'idmateri', 'modul']) || "").toString().trim();
+          return !(nUser === username && nMat === idMateri);
+        });
+
+        // Reset input field di DOM jika ada
+        let inputNilai = document.getElementById(`nilai_${username}`);
+        if (inputNilai) {
+          inputNilai.value = "";
+          inputNilai.setAttribute("data-original-value", "");
+        }
+        let durasiInput = document.getElementById(`durasi_${username}`);
+        if (durasiInput) {
+          durasiInput.value = "";
+          durasiInput.setAttribute("data-original-value", "");
+        }
+        
+        renderTableNilai();
+      } catch (e) {
+        console.error(e);
+        alert("Terjadi kesalahan saat menghapus nilai.");
+      } finally {
+        hideOverlay();
+      }
     }
 
     async function simpanNilai(username, idMateri, nama, kelas) {
