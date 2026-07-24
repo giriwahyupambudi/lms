@@ -64,8 +64,8 @@ function doGet(e) {
     var obj = {};
     for (var j = 0; j < headers.length; j++) {
       if (headers[j]) {
-        // Ambil displayData khusus untuk waktu agar format (00:00) aman
-        if (headers[j] === "waktu" || headers[j] === "timestamp") {
+        // Ambil displayData khusus untuk waktu & tanggal agar format (00:00 & YYYY-MM-DD) aman dari pergeseran UTC
+        if (headers[j] === "waktu" || headers[j] === "timestamp" || headers[j] === "tanggal" || headers[j] === "tgl") {
            obj[headers[j]] = displayData[i][j];
         } else {
            obj[headers[j]] = rawData[i][j];
@@ -74,7 +74,8 @@ function doGet(e) {
         // Simpan key dengan huruf asli juga untuk kompatibilitas Admin Panel (CRUD)
         var originalHeader = rawData[0][j].toString().trim();
         if (originalHeader) {
-           if (originalHeader.toLowerCase() === "waktu" || originalHeader.toLowerCase() === "timestamp") {
+           var origLower = originalHeader.toLowerCase();
+           if (origLower === "waktu" || origLower === "timestamp" || origLower === "tanggal" || origLower === "tgl") {
                obj[originalHeader] = displayData[i][j];
            } else {
                obj[originalHeader] = rawData[i][j];

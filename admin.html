@@ -3819,6 +3819,34 @@
     // ============================================
     // MODUL ABSENSI
     // ============================================
+    function getLocalDateString(d) {
+      let dateObj = (d instanceof Date && !isNaN(d)) ? d : (d ? new Date(d) : new Date());
+      if (isNaN(dateObj.getTime())) dateObj = new Date();
+      let y = dateObj.getFullYear();
+      let m = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+      let day = dateObj.getDate().toString().padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function parseTanggalOnly(tglRaw) {
+      if (!tglRaw) return "";
+      let s = tglRaw.toString().trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+      if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
+        let parts = s.split('/');
+        return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+      }
+      try {
+        let d = new Date(s);
+        if (!isNaN(d.getTime())) {
+          return getLocalDateString(d);
+        }
+      } catch (e) {}
+      let match = s.match(/\d{4}-\d{2}-\d{2}/);
+      if (match) return match[0];
+      return s;
+    }
+
     function populateFilterAbsen() {
       let selKelas = document.getElementById('filterKelasAbsen');
       if (!selKelas) return;
@@ -3838,8 +3866,7 @@
       
       let tgl = document.getElementById('filterTanggalAbsen');
       if (!tgl.value) {
-        let today = new Date();
-        tgl.value = today.toISOString().split('T')[0];
+        tgl.value = getLocalDateString();
       }
     }
 
@@ -3863,9 +3890,9 @@
       
       // Ambil data absen hari ini untuk kelas ini
       let existingAbsen = dataAbsen.filter(a => {
-         let aTgl = (getVal(a, ['tanggal']) || "").toString().trim();
+         let aTgl = parseTanggalOnly(getVal(a, ['tanggal']));
          let aKelas = norm(getVal(a, ['kelas']));
-         return aTgl.includes(selTgl) && aKelas === norm(selKelas);
+         return (aTgl === selTgl || aTgl.includes(selTgl)) && aKelas === norm(selKelas);
       });
       
       let html = "";
@@ -4090,7 +4117,7 @@
       thead.innerHTML = headHtml;
       
       let absenBulanIni = dataAbsen.filter(a => {
-         let aTgl = (getVal(a, ['tanggal']) || "").toString().trim();
+         let aTgl = parseTanggalOnly(getVal(a, ['tanggal']));
          let aKelas = norm(getVal(a, ['kelas']));
          return aTgl.startsWith(selBulan) && aKelas === norm(selKelas);
       });
@@ -4107,10 +4134,13 @@
          let myAbsen = absenBulanIni.filter(a => norm(getVal(a, ['nisn', 'username'])) === norm(nisn));
          let absenMap = {};
          myAbsen.forEach(a => {
-            let tgl = getVal(a, ['tanggal']);
-            if(tgl) {
-               let d = parseInt(tgl.split('-')[2], 10);
-               absenMap[d] = getVal(a, ['status']) || "Hadir";
+            let tgl = parseTanggalOnly(getVal(a, ['tanggal']));
+            if(tgl && tgl.includes('-')) {
+               let parts = tgl.split('-');
+               if (parts.length === 3) {
+                 let d = parseInt(parts[2], 10);
+                 absenMap[d] = getVal(a, ['status']) || "Hadir";
+               }
             }
          });
          
