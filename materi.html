@@ -204,32 +204,21 @@
     const titleEl = document.getElementById("displayJudul");
     const container = document.getElementById("materiList");
 
-    try {
-      const res = await fetch(API_URL);
-      const data = await res.json();
-      const getVal = (obj, possibleKeys) => {
-          for (const key in obj) {
-              const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
-              for (const p of possibleKeys) {
-                  if (normKey === p.toLowerCase().replace(/[^a-z0-9]/g, '')) return obj[key];
-              }
-          }
-          return undefined;
-      };
+    const getVal = (obj, possibleKeys) => {
+        if (!obj) return undefined;
+        for (const key in obj) {
+            const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+            for (const p of possibleKeys) {
+                if (normKey === p.toLowerCase().replace(/[^a-z0-9]/g, '')) return obj[key];
+            }
+        }
+        return undefined;
+    };
 
-      const midTarget = getParam("id");
+    const midTarget = getParam("id");
 
-      let m = data.find(item => {
-          let mid = (getVal(item, ['id_materi', 'idmateri', 'id']) || item.rowNumber).toString().trim();
-          return mid === midTarget;
-      });
-
-      if (!midTarget || !m) {
-        titleEl.innerText = "Error";
-        container.innerHTML = '<div class="loader-container"><p style="color:var(--text-muted)">Materi tidak ditemukan</p></div>';
-        return;
-      }
-
+    function renderMateriItem(m) {
+      if (!m) return;
       titleEl.innerText = m.judul || m.Judul || "Materi Pembelajaran";
 
       let link = (m.link || m.Link || "").toString().trim();
@@ -270,16 +259,16 @@
         let match = link.match(/[-\w]{25,}/);
         if (match) {
             let fileId = match[0];
-            embed = `<iframe src="https://drive.google.com/file/d/${fileId}/preview"></iframe>`;
+            embed = `<iframe src="https://drive.google.com/file/d/${fileId}/preview#toolbar=0&navpanes=0&scrollbar=0"></iframe>`;
         }
       } 
       else if (link.toLowerCase().includes(".pdf")) {
-        embed = `<iframe src="${link}"></iframe>`;
+        embed = `<iframe src="${link}#toolbar=0"></iframe>`;
       }
 
       if (embed) {
         container.innerHTML = `
-          <div id="iframeLoader" class="loader-container" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-color); z-index: 10;">
+          <div id="iframeLoader" class="loader-container" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-color); z-index: 10; transition: opacity 0.3s ease;">
             <div class="loader"></div>
             <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Menyiapkan Dokumen...</div>
           </div>
@@ -288,15 +277,22 @@
         tempDiv.innerHTML = embed;
         const iframe = tempDiv.firstChild;
         iframe.style.position = 'absolute';
+        iframe.style.top = '0';
+        iframe.style.left = '0';
         iframe.style.width = '100%';
         iframe.style.height = '100%';
+        iframe.style.border = 'none';
+        iframe.style.background = 'var(--bg-color)';
+        iframe.style.opacity = '0';
+        iframe.style.transition = 'opacity 0.4s ease-in-out';
         iframe.style.zIndex = '1';
         
         iframe.onload = () => {
+          iframe.style.opacity = '1';
           const loader = document.getElementById('iframeLoader');
           if (loader) {
             loader.style.opacity = '0';
-            setTimeout(() => loader.style.display = 'none', 300);
+            setTimeout(() => { if (loader) loader.style.display = 'none'; }, 300);
           }
         };
         container.appendChild(iframe);
@@ -304,14 +300,73 @@
         container.innerHTML = `<div class="loader-container"><a href="${link}" target="_blank" style="display:inline-block; padding:10px 20px; background:var(--primary); color:white; border-radius:8px; text-decoration:none; font-weight:600;">Buka Materi di Tab Baru</a></div>`;
       }
 
-      // Catat progres bahwa materi ini sudah dibuka
       logMateriProgress(midTarget);
+    }
+
+    // 1. Coba muat instan dari cache localStorage jika tersedia (0ms Flash-Free)
+    const cachedStr = localStorage.getItem("cache_materi");
+    let hasLoadedFromCache = false;
+    if (cachedStr) {
+      try {
+        const cachedData = JSON.parse(cachedStr);
+        let mCached = cachedData.find(item => {
+          let mid = (getVal(item, ['id_materi', 'idmateri', 'id']) || item.rowNumber).toString().trim();
+          return mid === midTarget;
+        });
+        if (mCached) {
+          renderMateriItem(mCached);
+          hasLoadedFromCache = true;
+        }
+      } catch (e) {}
+    }
+
+    // 2. Fetch data terbaru dari server
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+
+      let m = data.find(item => {
+          let mid = (getVal(item, ['id_materi', 'idmateri', 'id']) || item.rowNumber).toString().trim();
+          return mid === midTarget;
+      });
+
+      if (!midTarget || !m) {
+        if (!hasLoadedFromCache) {
+          titleEl.innerText = "Error";
+          container.innerHTML = '<div class="loader-container"><p style="color:var(--text-muted)">Materi tidak ditemukan</p></div>';
+        }
+        return;
+      }
+
+      if (!hasLoadedFromCache) {
+        renderMateriItem(m);
+      }
 
     } catch (e) {
-      titleEl.innerText = "Error";
-      container.innerHTML = '<div class="loader-container"><p style="color:var(--text-muted)">Gagal memuat data</p></div>';
+      if (!hasLoadedFromCache) {
+        titleEl.innerText = "Error";
+        container.innerHTML = '<div class="loader-container"><p style="color:var(--text-muted)">Gagal memuat data</p></div>';
+      }
     }
   }
+
+  // Proteksi Anti-Copy & Anti-Print
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('copy', e => e.preventDefault());
+  document.addEventListener('cut', e => e.preventDefault());
+  document.addEventListener('dragstart', e => e.preventDefault());
+  document.addEventListener('selectstart', e => e.preventDefault());
+
+  document.addEventListener('keydown', e => {
+    if (
+      (e.ctrlKey && (['c', 'C', 'p', 'P', 's', 'S', 'u', 'U', 'a', 'A'].includes(e.key))) ||
+      e.key === 'F12' ||
+      (e.ctrlKey && e.shiftKey && (['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)))
+    ) {
+      e.preventDefault();
+      return false;
+    }
+  });
 
   function back() { window.location.href = "dashboard.html"; }
 
