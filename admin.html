@@ -3955,13 +3955,13 @@
       
       tbody.innerHTML = html;
       
-      // Ambil data Jurnal hari ini untuk kelas ini (jika ada)
+      // Ambil data Jurnal hari ini untuk kelas ini (menggunakan getAbsenEffectiveDate)
       let adminName = document.getElementById('admin-name').innerText;
       let existingJurnal = dataJurnal.find(j => {
-         let jTgl = (getVal(j, ['tanggal']) || "").toString().trim();
+         let jTgl = getAbsenEffectiveDate(j);
          let jKelas = norm(getVal(j, ['kelas']));
          let jGuru = norm(getVal(j, ['guru']));
-         return jTgl.includes(selTgl) && jKelas === norm(selKelas) && jGuru === norm(adminName);
+         return (jTgl === selTgl || jTgl.includes(selTgl)) && jKelas === norm(selKelas) && (jGuru === norm(adminName) || !jGuru);
       });
       
       let elTopik = document.getElementById('jurnalTopik');
@@ -4201,7 +4201,7 @@
       let jTbody = document.getElementById('rekapJurnalTableBody');
       if (jTbody) {
          let jurnalBulanIni = dataJurnal.filter(j => {
-            let jTgl = (getVal(j, ['tanggal']) || "").toString().trim();
+            let jTgl = getAbsenEffectiveDate(j);
             let jKelas = norm(getVal(j, ['kelas']));
             return jTgl.startsWith(selBulan) && jKelas === norm(selKelas);
          });
@@ -4210,14 +4210,14 @@
             jTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Tidak ada jurnal untuk bulan ini.</td></tr>';
          } else {
             jurnalBulanIni.sort((a,b) => {
-               let ta = (getVal(a, ['tanggal']) || "").toString();
-               let tb = (getVal(b, ['tanggal']) || "").toString();
+               let ta = getAbsenEffectiveDate(a);
+               let tb = getAbsenEffectiveDate(b);
                return ta.localeCompare(tb);
             });
             
             let jHtml = "";
             jurnalBulanIni.forEach(j => {
-               let tgl = getVal(j, ['tanggal']) || "-";
+               let tgl = getAbsenEffectiveDate(j) || getVal(j, ['tanggal']) || "-";
                let guru = getVal(j, ['guru']) || "-";
                let tpk = getVal(j, ['topik']) || "-";
                let ctt = getVal(j, ['catatan']) || "-";
