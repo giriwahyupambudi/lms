@@ -3845,6 +3845,8 @@
       let match = s.match(/\d{4}-\d{2}-\d{2}/);
       if (match) return match[0];
       return s;
+    }
+
     function getAbsenEffectiveDate(absenRecord) {
       if (!absenRecord) return "";
       let waktu = (getVal(absenRecord, ['waktu', 'timestamp']) || "").toString().trim();
