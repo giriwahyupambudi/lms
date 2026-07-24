@@ -10,8 +10,6 @@
   <link rel="manifest" href="manifest.json">
   <!-- PWA Handler -->
   <script src="pwa-handler.js"></script>
-  <!-- PDF.js for Canvas PDF Rendering -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
   <style>
     :root {
@@ -28,10 +26,6 @@
     * { 
       box-sizing: border-box; 
       -webkit-tap-highlight-color: transparent;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      user-select: none;
     }
 
     body {
@@ -40,10 +34,6 @@
       background-color: var(--bg-color);
       color: var(--text-main);
       overflow-x: hidden;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      user-select: none;
     }
 
     /* HEADER */
@@ -276,17 +266,15 @@
         }
         embed = `<iframe src="${embedUrl}" allowfullscreen></iframe>`;
       }
-      else if (link.includes("drive.google.com") || link.toLowerCase().includes(".pdf")) {
-        let pdfUrl = link;
-        if (link.includes("drive.google.com")) {
-          let match = link.match(/[-\w]{25,}/);
-          if (match) {
-            pdfUrl = `https://drive.google.com/uc?export=download&id=${match[0]}`;
-          }
+      else if (link.includes("drive.google.com")) {
+        let match = link.match(/[-\w]{25,}/);
+        if (match) {
+            let fileId = match[0];
+            embed = `<iframe src="https://drive.google.com/file/d/${fileId}/preview"></iframe>`;
         }
-        renderPDFWithPDFJS(pdfUrl, container, link);
-        logMateriProgress(midTarget);
-        return;
+      } 
+      else if (link.toLowerCase().includes(".pdf")) {
+        embed = `<iframe src="${link}"></iframe>`;
       }
 
       if (embed) {
@@ -312,24 +300,8 @@
           }
         };
         container.appendChild(iframe);
-
-        // Full Coverage transparent overlay to block selection/copying across the entire iframe
-        const overlay = document.createElement('div');
-        overlay.style.position = 'absolute';
-        overlay.style.top = '0';
-        overlay.style.left = '0';
-        overlay.style.right = '0';
-        overlay.style.bottom = '0';
-        overlay.style.width = '100%';
-        overlay.style.height = '100%';
-        overlay.style.zIndex = '5';
-        overlay.style.background = 'transparent';
-        overlay.oncontextmenu = () => false;
-        overlay.onselectstart = () => false;
-        overlay.ondragstart = () => false;
-        container.appendChild(overlay);
       } else {
-        container.innerHTML = `<div class="loader-container"><p style="color:var(--text-muted)">Konten ini tidak mendukung preview langsung.</p></div>`;
+        container.innerHTML = `<div class="loader-container"><a href="${link}" target="_blank" style="display:inline-block; padding:10px 20px; background:var(--primary); color:white; border-radius:8px; text-decoration:none; font-weight:600;">Buka Materi di Tab Baru</a></div>`;
       }
 
       // Catat progres bahwa materi ini sudah dibuka
@@ -340,106 +312,6 @@
       container.innerHTML = '<div class="loader-container"><p style="color:var(--text-muted)">Gagal memuat data</p></div>';
     }
   }
-
-  // FUNGSI RENDER PDF CANVAS (PDF.JS) - 100% UN-COPYABLE
-  async function renderPDFWithPDFJS(url, container, originalLink) {
-    container.innerHTML = `
-      <div id="pdfScrollContainer" style="width: 100%; height: 100%; overflow-y: auto; overflow-x: hidden; padding: 20px 10px; display: flex; flex-direction: column; align-items: center; gap: 20px; -webkit-user-select: none; user-select: none; background: #f1f5f9;">
-        <div id="pdfCanvasLoader" class="loader-container">
-          <div class="loader"></div>
-          <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Memproses Dokumen (Protected Canvas)...</div>
-        </div>
-      </div>
-    `;
-
-    const scrollContainer = document.getElementById('pdfScrollContainer');
-
-    try {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      const loadingTask = pdfjsLib.getDocument(url);
-      const pdf = await loadingTask.promise;
-
-      const loader = document.getElementById('pdfCanvasLoader');
-      if (loader) loader.remove();
-
-      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        const viewport = page.getViewport({ scale: 1.5 });
-
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-        canvas.style.maxWidth = '100%';
-        canvas.style.height = 'auto';
-        canvas.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-        canvas.style.borderRadius = '6px';
-        canvas.style.background = 'white';
-        canvas.oncontextmenu = () => false;
-
-        scrollContainer.appendChild(canvas);
-
-        const renderContext = {
-          canvasContext: context,
-          viewport: viewport
-        };
-        await page.render(renderContext).promise;
-      }
-    } catch (err) {
-      console.warn('PDF.js canvas failed or CORS blocked. Fallback to protected iframe viewer:', err);
-      renderProtectedIframeFallback(originalLink || url, container);
-    }
-  }
-
-  function renderProtectedIframeFallback(url, container) {
-    if (url.includes("drive.google.com")) {
-      let match = url.match(/[-\w]{25,}/);
-      if (match) {
-        let fileId = match[0];
-        let imgUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1600`;
-        let embedUrl = `https://drive.google.com/file/d/${fileId}/preview#toolbar=0&navpanes=0&scrollbar=0`;
-
-        container.innerHTML = `
-          <div id="driveScrollContainer" style="position: absolute; top:0; left:0; width:100%; height:100%; overflow-y:auto; background:#f1f5f9; display:flex; flex-direction:column; align-items:center; padding:15px; -webkit-user-select:none; user-select:none;" oncontextmenu="return false;" onselectstart="return false;" ondragstart="return false;">
-            <div style="position:relative; width:100%; max-width:900px; box-shadow:0 4px 15px rgba(0,0,0,0.15); border-radius:8px; overflow:hidden; background:white;">
-              <img src="${imgUrl}" style="width:100%; height:auto; display:block; -webkit-user-select:none; user-select:none; pointer-events:none;" oncontextmenu="return false;" ondragstart="return false;" onerror="this.style.display='none'; document.getElementById('driveIframeWrapper').style.display='block';">
-            </div>
-            <div id="driveIframeWrapper" style="display:none; position:relative; width:100%; height:100vh; overflow:hidden; border-radius:8px; margin-top:10px;">
-              <iframe src="${embedUrl}" style="position:absolute; top:-56px; left:-5px; width:calc(100% + 10px); height:calc(100% + 60px); border:none; z-index:1; pointer-events:none;"></iframe>
-              <div style="position:absolute; top:0; left:0; right:0; bottom:0; width:100%; height:100%; z-index:10; background:transparent;" oncontextmenu="return false;" onselectstart="return false;" ondragstart="return false;"></div>
-            </div>
-          </div>
-        `;
-        return;
-      }
-    }
-
-    let embedUrl = url.toLowerCase().includes(".pdf") ? `${url}#view=FitH&toolbar=0&navpanes=0&scrollbar=0` : url;
-    container.innerHTML = `
-      <div style="position: absolute; top:0; left:0; width:100%; height:100%; overflow:hidden;">
-        <iframe src="${embedUrl}" style="position:absolute; top:-56px; left:-5px; width:calc(100% + 10px); height:calc(100% + 60px); border:none; z-index:1; pointer-events:none;"></iframe>
-        <div style="position:absolute; top:0; left:0; right:0; bottom:0; width:100%; height:100%; z-index:10; background:transparent;" oncontextmenu="return false;" onselectstart="return false;" ondragstart="return false;"></div>
-      </div>
-    `;
-  }
-
-  // Proteksi Anti-Copy, Anti-Print & Anti-DevTools
-  document.addEventListener('contextmenu', e => e.preventDefault());
-  document.addEventListener('copy', e => e.preventDefault());
-  document.addEventListener('cut', e => e.preventDefault());
-  document.addEventListener('dragstart', e => e.preventDefault());
-  document.addEventListener('selectstart', e => e.preventDefault());
-
-  document.addEventListener('keydown', e => {
-    if (
-      (e.ctrlKey && (['c', 'C', 'p', 'P', 's', 'S', 'u', 'U', 'a', 'A'].includes(e.key))) ||
-      e.key === 'F12' ||
-      (e.ctrlKey && e.shiftKey && (['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)))
-    ) {
-      e.preventDefault();
-      return false;
-    }
-  });
 
   function back() { window.location.href = "dashboard.html"; }
 
