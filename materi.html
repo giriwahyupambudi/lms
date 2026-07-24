@@ -10,6 +10,8 @@
   <link rel="manifest" href="manifest.json">
   <!-- PWA Handler -->
   <script src="pwa-handler.js"></script>
+  <!-- PDF.js for Canvas PDF Rendering -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
   <style>
     :root {
@@ -274,6 +276,11 @@
         }
         embed = `<iframe src="${embedUrl}" allowfullscreen></iframe>`;
       }
+      else if (link.toLowerCase().includes(".pdf")) {
+        renderPDFWithPDFJS(link, container);
+        logMateriProgress(midTarget);
+        return;
+      }
       else if (link.includes("drive.google.com")) {
         let match = link.match(/[-\w]{25,}/);
         if (match) {
@@ -281,9 +288,6 @@
             embed = `<iframe src="https://drive.google.com/file/d/${fileId}/preview#toolbar=0&navpanes=0&scrollbar=0"></iframe>`;
         }
       } 
-      else if (link.toLowerCase().includes(".pdf")) {
-        embed = `<iframe src="${link}#view=FitH&toolbar=0&navpanes=0&scrollbar=0"></iframe>`;
-      }
 
       if (embed) {
         container.innerHTML = `
@@ -315,6 +319,20 @@
           }
         };
         container.appendChild(iframe);
+
+        // Lapisan proteksi transparan di atas header iframe untuk memblokir klik kanan & menu bar
+        const overlay = document.createElement('div');
+        overlay.style.position = 'absolute';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.right = '0';
+        overlay.style.height = '60px';
+        overlay.style.zIndex = '5';
+        overlay.style.background = 'transparent';
+        overlay.oncontextmenu = () => false;
+        overlay.onselectstart = () => false;
+        overlay.ondragstart = () => false;
+        container.appendChild(overlay);
       } else {
         container.innerHTML = `<div class="loader-container"><p style="color:var(--text-muted)">Konten ini tidak mendukung preview langsung.</p></div>`;
       }
@@ -326,6 +344,75 @@
       titleEl.innerText = "Error";
       container.innerHTML = '<div class="loader-container"><p style="color:var(--text-muted)">Gagal memuat data</p></div>';
     }
+  }
+
+  // FUNGSI RENDER PDF CANVAS (PDF.JS) - 100% UN-COPYABLE
+  async function renderPDFWithPDFJS(url, container) {
+    container.innerHTML = `
+      <div id="pdfScrollContainer" style="width: 100%; height: 100%; overflow-y: auto; overflow-x: hidden; padding: 20px 10px; display: flex; flex-direction: column; align-items: center; gap: 20px; -webkit-user-select: none; user-select: none; background: #f1f5f9;">
+        <div id="pdfCanvasLoader" class="loader-container">
+          <div class="loader"></div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Memproses Dokumen (Protected Canvas)...</div>
+        </div>
+      </div>
+    `;
+
+    const scrollContainer = document.getElementById('pdfScrollContainer');
+
+    try {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const loadingTask = pdfjsLib.getDocument(url);
+      const pdf = await loadingTask.promise;
+
+      const loader = document.getElementById('pdfCanvasLoader');
+      if (loader) loader.remove();
+
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const viewport = page.getViewport({ scale: 1.5 });
+
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        canvas.style.maxWidth = '100%';
+        canvas.style.height = 'auto';
+        canvas.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+        canvas.style.borderRadius = '6px';
+        canvas.style.background = 'white';
+        canvas.oncontextmenu = () => false;
+
+        scrollContainer.appendChild(canvas);
+
+        const renderContext = {
+          canvasContext: context,
+          viewport: viewport
+        };
+        await page.render(renderContext).promise;
+      }
+    } catch (err) {
+      console.warn('PDF.js canvas failed, using fallback protected viewer:', err);
+      renderProtectedIframeFallback(url, container);
+    }
+  }
+
+  function renderProtectedIframeFallback(url, container) {
+    let embedUrl = url;
+    if (url.includes("drive.google.com")) {
+      let match = url.match(/[-\w]{25,}/);
+      if (match) {
+        embedUrl = `https://drive.google.com/file/d/${match[0]}/preview#toolbar=0&navpanes=0&scrollbar=0`;
+      }
+    } else if (url.toLowerCase().includes(".pdf")) {
+      embedUrl = `${url}#view=FitH&toolbar=0&navpanes=0&scrollbar=0`;
+    }
+
+    container.innerHTML = `
+      <div style="position: absolute; top:0; left:0; width:100%; height:100%; overflow:hidden;">
+        <iframe src="${embedUrl}" style="width:100%; height:100%; border:none; z-index:1;"></iframe>
+        <div style="position:absolute; top:0; left:0; right:0; height:65px; z-index:5; background:transparent;" oncontextmenu="return false;" onselectstart="return false;" ondragstart="return false;"></div>
+      </div>
+    `;
   }
 
   // Proteksi Anti-Copy, Anti-Print & Anti-DevTools
