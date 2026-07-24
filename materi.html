@@ -392,19 +392,32 @@
   }
 
   function renderProtectedIframeFallback(url, container) {
-    let embedUrl = url;
     if (url.includes("drive.google.com")) {
       let match = url.match(/[-\w]{25,}/);
       if (match) {
-        embedUrl = `https://drive.google.com/file/d/${match[0]}/preview#toolbar=0&navpanes=0&scrollbar=0`;
+        let fileId = match[0];
+        let imgUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1600`;
+        let embedUrl = `https://drive.google.com/file/d/${fileId}/preview#toolbar=0&navpanes=0&scrollbar=0`;
+
+        container.innerHTML = `
+          <div id="driveScrollContainer" style="position: absolute; top:0; left:0; width:100%; height:100%; overflow-y:auto; background:#f1f5f9; display:flex; flex-direction:column; align-items:center; padding:15px; -webkit-user-select:none; user-select:none;" oncontextmenu="return false;" onselectstart="return false;" ondragstart="return false;">
+            <div style="position:relative; width:100%; max-width:900px; box-shadow:0 4px 15px rgba(0,0,0,0.15); border-radius:8px; overflow:hidden; background:white;">
+              <img src="${imgUrl}" style="width:100%; height:auto; display:block; -webkit-user-select:none; user-select:none; pointer-events:none;" oncontextmenu="return false;" ondragstart="return false;" onerror="this.style.display='none'; document.getElementById('driveIframeWrapper').style.display='block';">
+            </div>
+            <div id="driveIframeWrapper" style="display:none; position:relative; width:100%; height:100vh; overflow:hidden; border-radius:8px; margin-top:10px;">
+              <iframe src="${embedUrl}" style="position:absolute; top:-56px; left:-5px; width:calc(100% + 10px); height:calc(100% + 60px); border:none; z-index:1; pointer-events:none;"></iframe>
+              <div style="position:absolute; top:0; left:0; right:0; bottom:0; width:100%; height:100%; z-index:10; background:transparent;" oncontextmenu="return false;" onselectstart="return false;" ondragstart="return false;"></div>
+            </div>
+          </div>
+        `;
+        return;
       }
-    } else if (url.toLowerCase().includes(".pdf")) {
-      embedUrl = `${url}#view=FitH&toolbar=0&navpanes=0&scrollbar=0`;
     }
 
+    let embedUrl = url.toLowerCase().includes(".pdf") ? `${url}#view=FitH&toolbar=0&navpanes=0&scrollbar=0` : url;
     container.innerHTML = `
       <div style="position: absolute; top:0; left:0; width:100%; height:100%; overflow:hidden;">
-        <iframe src="${embedUrl}" style="width:100%; height:100%; border:none; z-index:1; pointer-events:none;"></iframe>
+        <iframe src="${embedUrl}" style="position:absolute; top:-56px; left:-5px; width:calc(100% + 10px); height:calc(100% + 60px); border:none; z-index:1; pointer-events:none;"></iframe>
         <div style="position:absolute; top:0; left:0; right:0; bottom:0; width:100%; height:100%; z-index:10; background:transparent;" oncontextmenu="return false;" onselectstart="return false;" ondragstart="return false;"></div>
       </div>
     `;
