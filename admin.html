@@ -3845,6 +3845,24 @@
       let match = s.match(/\d{4}-\d{2}-\d{2}/);
       if (match) return match[0];
       return s;
+    function getAbsenEffectiveDate(absenRecord) {
+      if (!absenRecord) return "";
+      let waktu = (getVal(absenRecord, ['waktu', 'timestamp']) || "").toString().trim();
+      let tglRaw = (getVal(absenRecord, ['tanggal']) || "").toString().trim();
+
+      // 1. Ekstrak tanggal riil dari timestamp waktu jika ada (misal: "24/7/2026, 10.44.21")
+      if (waktu) {
+        let match = waktu.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+        if (match) {
+          let day = match[1].padStart(2, '0');
+          let month = match[2].padStart(2, '0');
+          let year = match[3];
+          return `${year}-${month}-${day}`;
+        }
+      }
+
+      // 2. Fallback ke kolom tanggal
+      return parseTanggalOnly(tglRaw);
     }
 
     function populateFilterAbsen() {
@@ -3888,9 +3906,9 @@
          return;
       }
       
-      // Ambil data absen hari ini untuk kelas ini
+      // Ambil data absen hari ini untuk kelas ini (menggunakan getAbsenEffectiveDate)
       let existingAbsen = dataAbsen.filter(a => {
-         let aTgl = parseTanggalOnly(getVal(a, ['tanggal']));
+         let aTgl = getAbsenEffectiveDate(a);
          let aKelas = norm(getVal(a, ['kelas']));
          return (aTgl === selTgl || aTgl.includes(selTgl)) && aKelas === norm(selKelas);
       });
@@ -4117,7 +4135,7 @@
       thead.innerHTML = headHtml;
       
       let absenBulanIni = dataAbsen.filter(a => {
-         let aTgl = parseTanggalOnly(getVal(a, ['tanggal']));
+         let aTgl = getAbsenEffectiveDate(a);
          let aKelas = norm(getVal(a, ['kelas']));
          return aTgl.startsWith(selBulan) && aKelas === norm(selKelas);
       });
@@ -4134,7 +4152,7 @@
          let myAbsen = absenBulanIni.filter(a => norm(getVal(a, ['nisn', 'username'])) === norm(nisn));
          let absenMap = {};
          myAbsen.forEach(a => {
-            let tgl = parseTanggalOnly(getVal(a, ['tanggal']));
+            let tgl = getAbsenEffectiveDate(a);
             if(tgl && tgl.includes('-')) {
                let parts = tgl.split('-');
                if (parts.length === 3) {
