@@ -268,7 +268,7 @@
 
       if (embed) {
         container.innerHTML = `
-          <div id="iframeLoader" class="loader-container" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-color); z-index: 10; transition: opacity 0.3s ease;">
+          <div id="iframeLoader" class="loader-container" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-color); z-index: 110; transition: opacity 0.3s ease;">
             <div class="loader"></div>
             <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Menyiapkan Dokumen...</div>
           </div>
@@ -277,15 +277,16 @@
         tempDiv.innerHTML = embed;
         const iframe = tempDiv.firstChild;
         iframe.style.position = 'absolute';
-        iframe.style.top = '0';
+        iframe.style.top = '-50px';
         iframe.style.left = '0';
         iframe.style.width = '100%';
-        iframe.style.height = '100%';
+        iframe.style.height = 'calc(100% + 50px)';
         iframe.style.border = 'none';
         iframe.style.background = 'var(--bg-color)';
         iframe.style.opacity = '0';
         iframe.style.transition = 'opacity 0.4s ease-in-out';
         iframe.style.zIndex = '1';
+        iframe.style.pointerEvents = 'none';
         
         iframe.onload = () => {
           iframe.style.opacity = '1';
@@ -296,6 +297,26 @@
           }
         };
         container.appendChild(iframe);
+
+        // Fullscreen Transparent Shield Overlay (100% Full Coverage)
+        const fullShield = document.createElement('div');
+        fullShield.id = 'fullShieldOverlay';
+        fullShield.style.position = 'absolute';
+        fullShield.style.top = '0';
+        fullShield.style.left = '0';
+        fullShield.style.right = '0';
+        fullShield.style.bottom = '0';
+        fullShield.style.width = '100%';
+        fullShield.style.height = '100%';
+        fullShield.style.zIndex = '100';
+        fullShield.style.background = 'rgba(255,255,255,0.001)';
+        fullShield.style.cursor = 'default';
+        fullShield.oncontextmenu = () => false;
+        fullShield.onselectstart = () => false;
+        fullShield.ondragstart = () => false;
+        fullShield.oncopy = () => false;
+        fullShield.oncut = () => false;
+        container.appendChild(fullShield);
       } else {
         container.innerHTML = `<div class="loader-container"><a href="${link}" target="_blank" style="display:inline-block; padding:10px 20px; background:var(--primary); color:white; border-radius:8px; text-decoration:none; font-weight:600;">Buka Materi di Tab Baru</a></div>`;
       }
