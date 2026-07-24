@@ -26,6 +26,10 @@
     * { 
       box-sizing: border-box; 
       -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
     }
 
     body {
@@ -34,6 +38,10 @@
       background-color: var(--bg-color);
       color: var(--text-main);
       overflow-x: hidden;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
     }
 
     /* HEADER */
@@ -270,12 +278,11 @@
         let match = link.match(/[-\w]{25,}/);
         if (match) {
             let fileId = match[0];
-            let dlUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-            embed = `<iframe src="https://docs.google.com/gview?url=${encodeURIComponent(dlUrl)}&embedded=true"></iframe>`;
+            embed = `<iframe src="https://drive.google.com/file/d/${fileId}/preview#toolbar=0&navpanes=0&scrollbar=0"></iframe>`;
         }
       } 
       else if (link.toLowerCase().includes(".pdf")) {
-        embed = `<iframe src="${link}#view=FitH&toolbar=0"></iframe>`;
+        embed = `<iframe src="${link}#view=FitH&toolbar=0&navpanes=0&scrollbar=0"></iframe>`;
       }
 
       if (embed) {
@@ -309,7 +316,7 @@
         };
         container.appendChild(iframe);
       } else {
-        container.innerHTML = `<div class="loader-container"><a href="${link}" target="_blank" style="display:inline-block; padding:10px 20px; background:var(--primary); color:white; border-radius:8px; text-decoration:none; font-weight:600;">Buka Materi di Tab Baru</a></div>`;
+        container.innerHTML = `<div class="loader-container"><p style="color:var(--text-muted)">Konten ini tidak mendukung preview langsung.</p></div>`;
       }
 
       // Catat progres bahwa materi ini sudah dibuka
@@ -320,6 +327,24 @@
       container.innerHTML = '<div class="loader-container"><p style="color:var(--text-muted)">Gagal memuat data</p></div>';
     }
   }
+
+  // Proteksi Anti-Copy, Anti-Print & Anti-DevTools
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('copy', e => e.preventDefault());
+  document.addEventListener('cut', e => e.preventDefault());
+  document.addEventListener('dragstart', e => e.preventDefault());
+  document.addEventListener('selectstart', e => e.preventDefault());
+
+  document.addEventListener('keydown', e => {
+    if (
+      (e.ctrlKey && (['c', 'C', 'p', 'P', 's', 'S', 'u', 'U', 'a', 'A'].includes(e.key))) ||
+      e.key === 'F12' ||
+      (e.ctrlKey && e.shiftKey && (['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)))
+    ) {
+      e.preventDefault();
+      return false;
+    }
+  });
 
   function back() { window.location.href = "dashboard.html"; }
 
