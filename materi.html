@@ -90,7 +90,10 @@
       right: 0;
       background: var(--bg-color);
       transition: all 0.3s ease;
-      overflow: hidden;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
     }
 
     .viewer:fullscreen {
@@ -103,6 +106,8 @@
       height: 100%;
       border: none;
       background: white;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
     }
 
     /* ANIMASI LOADING */
@@ -288,9 +293,11 @@
         iframe.style.zIndex = '1';
 
         if (isPDF) {
-          iframe.style.top = '-55px';
-          iframe.style.height = 'calc(100% + 55px)';
+          iframe.setAttribute('scrolling', 'yes');
+          iframe.style.top = '-50px';
+          iframe.style.height = 'calc(100% + 50px)';
           iframe.style.pointerEvents = 'auto';
+          iframe.style.touchAction = 'pan-y';
         } else {
           iframe.style.top = '0';
           iframe.style.height = '100%';
@@ -315,13 +322,17 @@
           topShield.style.top = '0';
           topShield.style.left = '0';
           topShield.style.right = '0';
-          topShield.style.height = '70px';
+          topShield.style.height = '50px';
           topShield.style.zIndex = '100';
           topShield.style.background = 'rgba(255,255,255,0.001)';
+          topShield.style.touchAction = 'pan-y';
           topShield.oncontextmenu = (e) => { e.preventDefault(); return false; };
           topShield.onselectstart = (e) => { e.preventDefault(); return false; };
           topShield.ondragstart = (e) => { e.preventDefault(); return false; };
           topShield.onmousedown = (e) => { e.preventDefault(); return false; };
+          topShield.ontouchstart = (e) => {
+            // Mencegah mousedown pada tombol popout tapi mengizinkan touch swipe vertical
+          };
           container.appendChild(topShield);
         }
       } else {
