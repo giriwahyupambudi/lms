@@ -288,9 +288,9 @@
         iframe.style.zIndex = '1';
 
         if (isPDF) {
-          iframe.style.top = '-50px';
-          iframe.style.height = 'calc(100% + 50px)';
-          iframe.style.pointerEvents = 'none';
+          iframe.style.top = '-55px';
+          iframe.style.height = 'calc(100% + 55px)';
+          iframe.style.pointerEvents = 'auto';
         } else {
           iframe.style.top = '0';
           iframe.style.height = '100%';
@@ -307,64 +307,22 @@
         };
         container.appendChild(iframe);
 
-        // Pasangkan Fullscreen Shield Overlay HANYA jika materi berupa dokumen PDF
+        // Pelindung Permanen Header Atas Google Drive (Blokir Tombol Pop-Out / Open in New Tab)
         if (isPDF) {
-          // 1. Permanent Top Toolbar Shield (Blokir tombol pop-out Google Drive secara permanen)
           const topShield = document.createElement('div');
           topShield.id = 'topShieldOverlay';
           topShield.style.position = 'absolute';
           topShield.style.top = '0';
           topShield.style.left = '0';
           topShield.style.right = '0';
-          topShield.style.height = '65px';
-          topShield.style.zIndex = '101';
+          topShield.style.height = '70px';
+          topShield.style.zIndex = '100';
           topShield.style.background = 'rgba(255,255,255,0.001)';
-          topShield.oncontextmenu = () => false;
-          topShield.onselectstart = () => false;
-          topShield.ondragstart = () => false;
+          topShield.oncontextmenu = (e) => { e.preventDefault(); return false; };
+          topShield.onselectstart = (e) => { e.preventDefault(); return false; };
+          topShield.ondragstart = (e) => { e.preventDefault(); return false; };
           topShield.onmousedown = (e) => { e.preventDefault(); return false; };
           container.appendChild(topShield);
-
-          // 2. Fullscreen Dynamic Scroll Shield (Izinkan scroll mulus di Komputer & HP, kunci seleksi)
-          const fullShield = document.createElement('div');
-          fullShield.id = 'fullShieldOverlay';
-          fullShield.style.position = 'absolute';
-          fullShield.style.top = '65px';
-          fullShield.style.left = '0';
-          fullShield.style.right = '0';
-          fullShield.style.bottom = '0';
-          fullShield.style.width = '100%';
-          fullShield.style.height = 'calc(100% - 65px)';
-          fullShield.style.zIndex = '100';
-          fullShield.style.background = 'rgba(255,255,255,0.001)';
-          fullShield.style.cursor = 'default';
-
-          let scrollTimer = null;
-          const handleScrollInteraction = () => {
-            iframe.style.pointerEvents = 'auto';
-            if (scrollTimer) clearTimeout(scrollTimer);
-            scrollTimer = setTimeout(() => {
-              iframe.style.pointerEvents = 'none';
-            }, 400);
-          };
-
-          fullShield.addEventListener('wheel', handleScrollInteraction, { passive: true });
-          fullShield.addEventListener('touchstart', handleScrollInteraction, { passive: true });
-          fullShield.addEventListener('touchmove', handleScrollInteraction, { passive: true });
-
-          fullShield.oncontextmenu = (e) => { e.preventDefault(); return false; };
-          fullShield.onselectstart = (e) => { e.preventDefault(); return false; };
-          fullShield.ondragstart = (e) => { e.preventDefault(); return false; };
-          fullShield.oncopy = (e) => { e.preventDefault(); return false; };
-          fullShield.oncut = (e) => { e.preventDefault(); return false; };
-          fullShield.onmousedown = (e) => {
-            if (iframe.style.pointerEvents === 'none') {
-              e.preventDefault();
-              return false;
-            }
-          };
-
-          container.appendChild(fullShield);
         }
       } else {
         container.innerHTML = `<div class="loader-container"><a href="${link}" target="_blank" style="display:inline-block; padding:10px 20px; background:var(--primary); color:white; border-radius:8px; text-decoration:none; font-weight:600;">Buka Materi di Tab Baru</a></div>`;
