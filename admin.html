@@ -5274,24 +5274,19 @@ ${formatInfoText}
 
 ${peerComparisonText}
 
-PETUNJUK GAYA BAHASA & EVALUASI UNTUK SISWA:
-1. "catatan" (UMPAN BALIK PERSONAL DARI GURU UNTUK SISWA):
-   - Gunakan gaya bahasa Guru yang HANGAT, PERSONAL, MENDUKUNG, dan MANUSIAWI (Sangat ramah, bukan seperti robot/mesin).
-   - Awali dengan sapaan nama depan siswa (contoh: "Halo ${firstName}, ..." atau "Kerja bagus, ${firstName}! ...").
-   - Sampaikan apresiasi kelebihan tugasnya, lalu berikan petunjuk bimbingan bagian mana yang perlu diperbaiki/diperdalam beserta solusinya.
-   - Akhiri dengan kalimat pemacu semangat belajar yang hangat (contoh: "Tingkatkan terus prestasimu ya!").
-   - (DILARANG menggunakan bahasa kaku/mesin, dan DILARANG menyebut nama siswa lain atau kata plagiasi di catatan siswa ini).
+PETUNJUK EVALUASI:
+1. "catatan" (UNTUK SISWA): Tulis seperti catatan guru di buku tugas - natural, jujur, dan manusiawi. Sebutkan nama depan siswa sekali di awal. Tunjukkan apa yang sudah benar, apa yang perlu diperbaiki secara spesifik, dan satu saran singkat. Tidak perlu banyak pujian atau kalimat motivasi berlebihan - cukup jujur dan konstruktif seperti guru yang peduli.
 
-2. "catatan_guru" (PRAKTIS KHUSUS GURU): Bandingkan Dokumen Siswa ini (${namaSiswa}) dengan DAFTAR HASIL PENGERJAAN SISWA LAIN di atas:
-   - Jika HANYA GANTI NAMA FILE (Struktur XML format & seluruh teks 100% persis sama dengan file teman), tulis: "⚠️ FILE DUPLIKAT (GANTI NAMA): Persis 100% dengan file milik [Nama Siswa B] ([Kelas])".
-   - Jika COPY-PASTE ISI TEKS TEMAN (Isi teks/paragraf >70% sama kata-per-kata), tulis: "⚠️ COPY-PASTE TEKS ([%]% Mirip): Copy isi file milik [Nama Siswa B] ([Kelas])".
-   - Jika PENGERJAAN MANDIRI (tidak ada kemiripan tinggi dengan siswa lain), tulis: "✅ Mandiri (Tidak ada indikasi jiplak file/teks)".
+2. "catatan_guru" (KHUSUS GURU): Bandingkan dokumen ${namaSiswa} dengan daftar siswa lain di atas:
+   - Jika teks & format persis sama 100%: "⚠️ FILE DUPLIKAT (GANTI NAMA): sama persis dengan file milik [Nama] ([Kelas])".
+   - Jika isi teks >70% mirip: "⚠️ COPY-PASTE TEKS ([%]%): dari file milik [Nama] ([Kelas])".
+   - Jika mandiri: "✅ Mandiri".
 
-Jawab HANYA dengan format JSON murni berikut tanpa pembungkus markdown lain:
+Jawab HANYA format JSON murni:
 {
   "nilai": 85,
-  "catatan": "Halo ${firstName}, pengerjaan tugas kamu pada bagian pertama sudah sangat rapi! Namun untuk bagian kedua, coba perhatikan lagi penjelasan fungsinya agar lebih lengkap ya. Semangat terus belajarnya!",
-  "catatan_guru": "✅ Mandiri (Tidak ada indikasi jiplak file/teks)"
+  "catatan": "Aditya, bagian formatting sudah benar. Pada soal nomor 2, penjelasan fungsi komponen masih kurang lengkap - perlu tambahkan cara kerjanya. Cek kembali materi halaman 12.",
+  "catatan_guru": "✅ Mandiri"
 }`;
 
           let rawResp = await callGeminiAPI(apiKey, promptText, (msg) => {
