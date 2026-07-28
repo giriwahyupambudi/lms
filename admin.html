@@ -2445,11 +2445,31 @@
            let mJudulNorm = norm(mJudulRaw);
 
            let isMateriMatch = false;
-           if (nMatNorm !== "") {
-               isMateriMatch = (nMatNorm === mIdNorm || (mJudulNorm !== "" && nMatNorm === mJudulNorm));
+
+           // 1. Exact normalized match
+           if (nMatNorm !== "" && (nMatNorm === mIdNorm || (mJudulNorm !== "" && nMatNorm === mJudulNorm))) {
+               isMateriMatch = true;
+           } else if (nJudulNorm !== "" && ((mJudulNorm !== "" && nJudulNorm === mJudulNorm) || (mIdNorm !== "" && nJudulNorm === mIdNorm))) {
+               isMateriMatch = true;
            }
-           if (!isMateriMatch && nJudulNorm !== "") {
-               isMateriMatch = (mJudulNorm !== "" && nJudulNorm === mJudulNorm) || (mIdNorm !== "" && nJudulNorm === mIdNorm);
+
+           // 2. Meaningful substring match
+           let nCombined = nMatNorm || nJudulNorm;
+           let mCombined = mJudulNorm || mIdNorm;
+
+           if (!isMateriMatch && nCombined.length >= 4 && mCombined.length >= 4) {
+               if (nCombined.includes(mCombined) || mCombined.includes(nCombined)) {
+                   isMateriMatch = true;
+               }
+           }
+
+           // 3. Digit match
+           if (!isMateriMatch) {
+               let nDigits = nCombined.replace(/[^0-9]/g, '');
+               let mDigits = mCombined.replace(/[^0-9]/g, '');
+               if (nDigits !== "" && (nDigits === mDigits || nDigits === mIdNorm)) {
+                   isMateriMatch = true;
+               }
            }
 
            return isUserMatch && isMateriMatch;
@@ -3037,7 +3057,7 @@
 
             const isUploadType = ["praktik", "tugas", "ujian praktik"].includes(tipe);
 
-            // Pencocokan Nilai menggunakan username, nama, mid, dan judul materi
+            // Pencocokan Nilai menggunakan username, nama, mid, judul materi, dan digit nomor materi
             const filteredNilai = dataNilai.filter(n => {
                 const nUser = norm(getVal(n, ['username', 'nisn']));
                 const nNama = (getVal(n, ['nama', 'namasiswa', 'namalengkap']) || "").toString().trim().toLowerCase();
@@ -3057,11 +3077,31 @@
                 const idxStr = (idx + 1).toString();
 
                 let isMateriMatch = false;
-                if (nMatNorm !== "") {
-                    isMateriMatch = (nMatNorm === mIdNorm || nMatNorm === idxStr || (mJudulNorm !== "" && nMatNorm === mJudulNorm));
+
+                // 1. Exact normalized match
+                if (nMatNorm !== "" && (nMatNorm === mIdNorm || nMatNorm === idxStr || (mJudulNorm !== "" && nMatNorm === mJudulNorm))) {
+                    isMateriMatch = true;
+                } else if (nJudulNorm !== "" && ((mJudulNorm !== "" && nJudulNorm === mJudulNorm) || (mIdNorm !== "" && nJudulNorm === mIdNorm) || nJudulNorm === idxStr)) {
+                    isMateriMatch = true;
                 }
-                if (!isMateriMatch && nJudulNorm !== "") {
-                    isMateriMatch = (mJudulNorm !== "" && nJudulNorm === mJudulNorm) || (mIdNorm !== "" && nJudulNorm === mIdNorm) || nJudulNorm === idxStr;
+
+                // 2. Meaningful substring match (e.g. "engine12" inside "praktikengine12")
+                let nCombined = nMatNorm || nJudulNorm;
+                let mCombined = mJudulNorm || mIdNorm;
+
+                if (!isMateriMatch && nCombined.length >= 4 && mCombined.length >= 4) {
+                    if (nCombined.includes(mCombined) || mCombined.includes(nCombined)) {
+                        isMateriMatch = true;
+                    }
+                }
+
+                // 3. Digit index match (e.g. "Engine 12" -> digits 12 vs idx+1 -> 12)
+                if (!isMateriMatch) {
+                    let nDigits = nCombined.replace(/[^0-9]/g, '');
+                    let mDigits = mCombined.replace(/[^0-9]/g, '');
+                    if (nDigits !== "" && (nDigits === mDigits || nDigits === idxStr || nDigits === mIdNorm)) {
+                        isMateriMatch = true;
+                    }
                 }
 
                 return isUserMatch && isMateriMatch;
@@ -3069,8 +3109,11 @@
 
             if (filteredNilai.length > 0) {
               const scores = filteredNilai.map(n => {
-                  if (tipe === "survey") return 100;
-                  return parseInt(getVal(n, ['nilai', 'skor']) || 0);
+                  let rawVal = getVal(n, ['nilai', 'skor']);
+                  let nTipe = (getVal(n, ['tipe', 'tipeevaluasi']) || "").toString().toLowerCase();
+                  if (nTipe === "survey" && (!rawVal || rawVal === "" || rawVal === "-")) return 100;
+                  let parsedVal = parseInt(rawVal, 10);
+                  return isNaN(parsedVal) ? 0 : parsedVal;
               }).filter(val => !isNaN(val));
               if (scores.length > 0) {
                   const maxS = Math.max(...scores);
