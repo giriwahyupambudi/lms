@@ -1548,14 +1548,9 @@
           let match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
           if (match) {
               let fileId = match[1];
-              if (isMobile) {
-                  // Di Layar HP: Gunakan Google Drive Mobile Viewer yang otomatis 100% responsif menyusuaikan lebar layar HP
-                  iframeUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-              } else {
-                  // Di Laptop/Desktop: Gunakan Microsoft Office Web Viewer resmi
-                  let dlUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-                  iframeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(dlUrl)}`;
-              }
+              let dlUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+              // Gunakan Microsoft Office Web Viewer resmi di seluruh perangkat (HP & Laptop)
+              iframeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(dlUrl)}`;
           }
       } else if (url.includes('docs.google.com/presentation')) {
           let embedUrl = url;
