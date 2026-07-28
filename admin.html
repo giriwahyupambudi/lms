@@ -4685,7 +4685,8 @@ TUGAS ANDA:
         let sObj = dataSettings.find(s => getVal(s, ['key', 'pengaturan']) === "GEMINI_API_KEY");
         if (sObj) savedKey = getVal(sObj, ['value', 'nilai', 'val']) || '';
       }
-      document.getElementById('geminiApiKeyInput').value = savedKey;
+      const inpKey = document.getElementById('geminiApiKeyInput');
+      if (inpKey) inpKey.value = savedKey;
 
       let selKls = document.getElementById('modalKelasKoreksiAI');
       let klsSet = new Set();
