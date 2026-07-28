@@ -2985,29 +2985,21 @@
       // Helper: Normalisasi string untuk pencocokan
       const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
 
-      // 1. Ambil Siswa di Kelas Ini
-      const students = dataUser.filter(u => norm(getVal(u, ['kelas', 'tingkat'])) === norm(selKelas));
-      
-      // 2. Ambil Materi yang Sesuai (Filter by Tingkat, Status Aktif) - DISINKRONKAN DENGAN dashboard.html
-      const myTingkat = getTingkatSync({ kelas: selKelas });
-      const selKelasUpper = selKelas.toUpperCase();
-
-      const materials = dataMateri.filter(m => {
-        const mStatus = (getVal(m, ['status']) || "Aktif").toString().toLowerCase();
-        if (mStatus !== "aktif") return false;
-
-        const mKelasMentah = (getVal(m, ['kelas', 'tingkat']) || "").toString().trim().toUpperCase();
-        const mTingkat = getTingkatSync(m);
-        
-        if (mTingkat === "SEMUA" || mKelasMentah === "SEMUA" || mKelasMentah === "") return true;
-
-        let mKelasArray = mKelasMentah.split(',').map(k => k.trim());
-        
-        if (selKelasUpper && mKelasArray.includes(selKelasUpper)) return true;
-        if (mKelasArray.includes(myTingkat)) return true;
-
-        return false;
+      // 1. Ambil Siswa di Kelas Ini (Toleran Format Nama Kelas)
+      const students = dataUser.filter(u => {
+        let r = (getVal(u, ['role', 'peran']) || "").toString().toLowerCase().trim();
+        if (r === "admin" || r === "guru") return false;
+        let k = norm(getVal(u, ['kelas', 'tingkat']));
+        let sk = norm(selKelas);
+        return k === sk || k.includes(sk) || sk.includes(k);
       });
+      
+      // 2. Ambil Seluruh Materi Tugas yang Ada
+      let materials = dataMateri.filter(m => {
+        let j = getVal(m, ['judul', 'materi', 'namamateri']);
+        return j && j.toString().trim() !== "";
+      });
+      if (materials.length === 0) materials = dataMateri;
 
       // 3. Render Header
       let headerHtml = `<tr><th style="position: sticky; left: 0; background: #f1f5f9; z-index: 11; min-width: 200px; border-right: 2px solid #e2e8f0;">Nama Siswa</th>`;
