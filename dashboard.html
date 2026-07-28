@@ -1173,11 +1173,15 @@
             viewBtnHTML = `<button class="btn-action" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; grid-column: 1 / -1; margin-top: 2px;" onclick="openViewModal('${previewUrl}')"><i data-lucide="eye" style="width:14px"></i> Lihat Dokumen Tugas Anda</button>`;
           }
 
+          let mapelName = (m.mapel || m.Mapel || m.matapelajaran || m.MataPelajaran || "Umum").toString().trim();
+          let matchedGuru = dataGuruMentah.find(g => (g.mapel || "").toString().trim().toLowerCase() === mapelName.toLowerCase());
+          let namaGuru = matchedGuru && matchedGuru.nama ? matchedGuru.nama : "Guru Pengampu";
+
           let ketText = quizKeterangan.get(mid.toString()) || "";
           let feedbackHTML = ketText ? `
           <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 12px; margin-top:10px; font-size:0.8rem; color:#166534; line-height:1.4;">
              <div style="font-weight:700; display:flex; align-items:center; gap:4px; margin-bottom:2px; color:#15803d;">
-               <i data-lucide="message-square" style="width:14px; height:14px;"></i> Catatan Evaluation / Feedback AI:
+               <i data-lucide="message-square" style="width:14px; height:14px;"></i> Catatan Evaluasi AI / Guru:
              </div>
              <div>${ketText}</div>
           </div>` : "";
