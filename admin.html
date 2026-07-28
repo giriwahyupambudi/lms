@@ -4908,7 +4908,14 @@ TUGAS ANDA:
             let nMid = (getVal(n, ['id_materi', 'idmateri']) || '').toString().trim();
             let nJudul = norm(getVal(n, ['judul', 'materi']));
             let scoreVal = getVal(n, ['nilai', 'skor']);
-            return nUser === norm(usernameSiswa) && (norm(nMid) === norm(idMateriVal) || nJudul === norm(judulMateriVal)) && scoreVal !== "" && scoreVal !== null && scoreVal !== undefined;
+            
+            let matchUser = nUser === norm(usernameSiswa);
+            let matchMat = (norm(nMid) === norm(idMateriVal) || (judulMateriVal !== '' && nJudul === norm(judulMateriVal)));
+            if (!matchUser || !matchMat) return false;
+
+            if (scoreVal === "" || scoreVal === null || scoreVal === undefined || scoreVal === "-" || scoreVal === "Selesai" || scoreVal === "Belum") return false;
+            let num = Number(scoreVal);
+            return !isNaN(num) && num > 0;
           });
           if (hasNilai) skippedAlreadyScoredCount++;
           return !hasNilai;
