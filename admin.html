@@ -2980,6 +2980,8 @@
 
       students.forEach(s => {
         const username = norm(getVal(s, ['username', 'nisn']));
+        const sNamaRaw = (getVal(s, ['nama', 'namalengkap', 'namasiswa']) || "").toString().trim().toLowerCase();
+        const sNamaNorm = norm(sNamaRaw);
         const nama = getVal(s, ['nama']) || username;
         
         bodyHtml += `<tr><td style="position: sticky; left: 0; background: #fff; z-index: 9; font-weight: 600; border-right: 2px solid #e2e8f0;">${nama}</td>`;
@@ -2989,7 +2991,7 @@
 
         materials.forEach((m, idx) => {
           // PENTING: Sisi siswa menghitung ID dari index materi yang SUDAH DIFILTER per tingkat ATAU idmateri eksplisit
-          const mid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (idx + 1)).toString();
+          const mid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (idx + 1)).toString().trim();
           const mJudul = norm(getVal(m, ['judul', 'materi']));
           const tipe = (getVal(m, ['tipeevaluasi', 'tipe_evaluasi', 'tipe']) || "Praktik").toLowerCase();
           
@@ -3004,18 +3006,28 @@
                 const tUser = norm(getVal(t, ['username']));
                 const tMid = (getVal(t, ['id_materi', 'materi']) || "").toString().trim();
                 const tJudul = norm(getVal(t, ['materi', 'judul']));
-                return tUser === username && (tMid === mid || (mJudul !== "" && tJudul === mJudul));
+                return (tUser === username || (sNamaNorm !== "" && tUser === sNamaNorm)) && (tMid === mid || (mJudul !== "" && tJudul === mJudul));
             });
 
             const isUploadType = ["praktik", "tugas", "ujian praktik"].includes(tipe);
 
-            // Pencocokan Nilai menggunakan mid yang sudah disinkronkan
+            // Pencocokan Nilai menggunakan username, nama, mid, dan judul materi
             const filteredNilai = dataNilai.filter(n => {
                 const nUser = norm(getVal(n, ['username', 'nisn']));
+                const nNama = (getVal(n, ['nama', 'namasiswa', 'namalengkap']) || "").toString().trim().toLowerCase();
+                const nNamaNorm = norm(nNama);
+
+                const isUserMatch = (nUser !== "" && nUser === username) ||
+                                  (sNamaRaw !== "" && nNama === sNamaRaw) ||
+                                  (sNamaNorm !== "" && (nNamaNorm === sNamaNorm || nUser === sNamaNorm));
+
                 const nMid = (getVal(n, ['id_materi', 'idmateri']) || "").toString().trim();
                 const nJudul = norm(getVal(n, ['judul', 'materi', 'judul_materi']));
-                
-                return nUser === username && (nMid === mid || (mJudul !== "" && nJudul === mJudul));
+
+                const isMateriMatch = (nMid !== "" && (nMid === mid || nMid === (idx + 1).toString())) ||
+                                      (mJudul !== "" && (nJudul === mJudul || nJudul.includes(mJudul) || mJudul.includes(nJudul)));
+
+                return isUserMatch && isMateriMatch;
             });
 
             if (filteredNilai.length > 0) {
