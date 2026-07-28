@@ -1092,7 +1092,7 @@
     }
 
     const getVal = (obj, possibleKeys) => {
-      // Optimasi: Cache key yang sudah dinormalisasi ke dalam object itu sendiri agar tidak diulang-ulang
+      if (!obj) return "";
       if (!obj._norm) {
          Object.defineProperty(obj, '_norm', { value: {}, enumerable: false });
          for (const key in obj) {
@@ -1102,9 +1102,12 @@
       }
       for (const p of possibleKeys) {
         const pNorm = p.toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (obj._norm[pNorm] !== undefined && obj._norm[pNorm] !== "") return obj._norm[pNorm];
+        if (obj._norm[pNorm] !== undefined && obj._norm[pNorm] !== null) {
+          let str = obj._norm[pNorm].toString().trim();
+          if (str !== "") return obj._norm[pNorm];
+        }
       }
-      return undefined;
+      return "";
     };
 
     function showTab(tabName) {
