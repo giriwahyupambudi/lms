@@ -1,4 +1,4 @@
-const CACHE_NAME = 'al-ilmi-lms-v6';
+const CACHE_NAME = 'al-ilmi-lms-v7';
 const ASSETS_TO_CACHE = [
   'index.html',
   'dashboard.html',

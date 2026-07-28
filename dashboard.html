@@ -9,6 +9,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="manifest" href="manifest.json">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.3/dist/docx-preview.min.js"></script>
   <!-- PWA Handler -->
   <script src="pwa-handler.js"></script>
 
@@ -1526,15 +1528,17 @@
       window.location.href = "index.html"; 
     }
 
-    function openViewModal(url) {
+    async function openViewModal(url) {
       document.getElementById('viewFileModal').style.display = 'flex';
       const iframe = document.getElementById('viewFileIframe');
+      const docxContainer = document.getElementById('docxPreviewContainer');
       const loader = document.getElementById('viewFileLoading');
       const newTabBtn = document.getElementById('viewFileNewTabBtn');
       
-      iframe.src = ""; // Clear
-      let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
-      let iframeUrl = url;
+      iframe.src = "";
+      iframe.style.display = 'none';
+      if (docxContainer) { docxContainer.style.display = 'none'; docxContainer.innerHTML = ''; }
+      loader.style.display = 'flex';
 
       if(newTabBtn) {
           let tabUrl = url;
@@ -1544,14 +1548,41 @@
           newTabBtn.href = tabUrl;
       }
 
-      if (url.includes('drive.google.com')) {
-          let match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-          if (match) {
-              let fileId = match[1];
-              let dlUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-              // Gunakan Microsoft Office Web Viewer resmi di seluruh perangkat (HP & Laptop)
-              iframeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(dlUrl)}`;
+      let match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+
+      // Coba render DOCX secara lokal jika library docx-preview tersedia
+      if (match && typeof docx !== 'undefined') {
+        let fileId = match[1];
+        let dlUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+        try {
+          let res = await fetch(dlUrl);
+          if (res.ok) {
+            let ab = await res.arrayBuffer();
+            if (ab && ab.byteLength > 100) {
+              await docx.renderAsync(ab, docxContainer, null, {
+                inWrapper: true,
+                ignoreWidth: false,
+                ignoreHeight: false,
+                experimental: false
+              });
+              loader.style.display = 'none';
+              docxContainer.style.display = 'block';
+              return;
+            }
           }
+        } catch (e) {
+          console.warn("Client-side DOCX render fallback to iframe:", e);
+        }
+      }
+
+      // Fallback ke iframe viewer resmi
+      iframe.style.display = 'block';
+      let iframeUrl = url;
+
+      if (match) {
+          let fileId = match[1];
+          let dlUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+          iframeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(dlUrl)}`;
       } else if (url.includes('docs.google.com/presentation')) {
           let embedUrl = url;
           if (url.includes("/pub")) {
@@ -1559,9 +1590,9 @@
           } else if (url.includes("/edit")) {
               embedUrl = url.replace(/\/edit.*$/, "/embed");
           } else if (!url.includes("/embed")) {
-              let match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-              if (match) {
-                  embedUrl = `https://docs.google.com/presentation/d/${match[1]}/embed`;
+              let mPres = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+              if (mPres) {
+                  embedUrl = `https://docs.google.com/presentation/d/${mPres[1]}/embed`;
               }
           }
           
@@ -1611,13 +1642,14 @@
           </a>
         </div>
       </div>
-      <div style="flex:1; background:#f1f5f9; position:relative;">
+      <div style="flex:1; background:#f1f5f9; position:relative; overflow:auto;">
+        <div id="docxPreviewContainer" style="width:100%; height:100%; overflow:auto; background:#f1f5f9; display:none; padding:12px;"></div>
         <iframe id="viewFileIframe" style="width:100%; height:100%; border:none; position:relative; z-index:2;"
           src=""></iframe>
         <div id="viewFileLoading"
           style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); display:flex; flex-direction:column; align-items:center; gap:12px; z-index:1;">
           <i data-lucide="loader-2" class="spin-anim" style="width:32px; height:32px; color:#2563eb;"></i>
-          <span style="font-weight:500; color:#64748b; font-size:0.9rem;">Memuat dokumen dari Google Drive...</span>
+          <span style="font-weight:500; color:#64748b; font-size:0.9rem;">Memuat dokumen...</span>
         </div>
       </div>
     </div>
