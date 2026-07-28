@@ -4585,8 +4585,8 @@
       for (let i = 0; i < listTugas.length; i++) {
         let t = listTugas[i];
         let namaSiswa = getVal(t, ['nama', 'namalengkap', 'username']) || "Siswa";
-        let fileUrl = getVal(t, ['file', 'fileurl', 'url', 'link']) || "";
-        let materiTugas = getVal(t, ['materi', 'tugas']) || selMateri || "Tugas Word";
+        let fileUrl = getVal(t, ['link_tugas', 'linktugas', 'file', 'fileurl', 'url', 'link', 'drive', 'tugas']) || "";
+        let materiTugas = getVal(t, ['materi', 'tugas', 'idmateri', 'id_materi']) || selMateri || "Tugas Word";
         let kelasSiswa = getVal(t, ['kelas']) || selKelas || "X";
         let usernameSiswa = getVal(t, ['username', 'nisn']) || "";
 
@@ -4601,20 +4601,26 @@
         try {
           let docxDetails = null;
 
-          if (fileUrl.includes("drive.google.com") || fileUrl.includes("docs.google.com") || fileUrl.toLowerCase().includes(".docx")) {
-            let downloadUrl = fileUrl;
+          if (fileUrl.includes("drive.google.com") || fileUrl.includes("docs.google.com") || fileUrl.toLowerCase().includes(".docx") || fileUrl.includes("google")) {
             let fileMatch = fileUrl.match(/[-\w]{25,}/);
+            let downloadUrls = [];
             if (fileMatch) {
-              downloadUrl = `https://docs.google.com/uc?export=download&id=${fileMatch[0]}`;
+              let fId = fileMatch[0];
+              downloadUrls.push(`https://docs.google.com/document/d/${fId}/export?format=docx`);
+              downloadUrls.push(`https://drive.google.com/uc?export=download&id=${fId}`);
             }
-            
-            try {
-              let fRes = await fetch(downloadUrl);
-              if (fRes.ok) {
-                let ab = await fRes.arrayBuffer();
-                docxDetails = await parseDocxFormattingDetails(ab);
-              }
-            } catch(fe) {}
+            downloadUrls.push(fileUrl);
+
+            for (let dUrl of downloadUrls) {
+              try {
+                let fRes = await fetch(dUrl);
+                if (fRes.ok) {
+                  let ab = await fRes.arrayBuffer();
+                  docxDetails = await parseDocxFormattingDetails(ab);
+                  if (docxDetails && docxDetails.fullText) break;
+                }
+              } catch(fe) {}
+            }
           }
 
           let formatInfoText = docxDetails ? `
