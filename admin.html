@@ -2706,9 +2706,6 @@
         nama: nama,
         kelas: kelas,
         id_materi: idMateri,
-        idmateri: idMateri,
-        materi: mJudulText,
-        judul: mJudulText,
         nilai: inputVal,
         waktu: durasiVal
       });
@@ -2782,17 +2779,12 @@
             
             // Hanya simpan jika ada perubahan nilai atau durasi dari aslinya
             if (currentNilai !== originalNilai || currentDurasi !== originalDurasi) {
-                let selOption = document.getElementById('filterMateriNilai').options[document.getElementById('filterMateriNilai').selectedIndex];
-                let mJudulText = selOption ? selOption.text.toString().trim() : "";
                 let nama = tr.querySelector('td:nth-child(2)').childNodes[0].nodeValue.trim();
                 dataToSave.push({
                    username: username,
                    nama: nama,
                    kelas: selKelas,
                    id_materi: selMateri,
-                   idmateri: selMateri,
-                   materi: mJudulText,
-                   judul: mJudulText,
                    nilai: currentNilai,
                    waktu: currentDurasi
                 });
@@ -5273,9 +5265,6 @@ Jawab HANYA dengan format JSON murni berikut tanpa pembungkus markdown lain:
               nama: namaSiswa,
               kelas: kelasSiswa,
               id_materi: idMateriVal,
-              idmateri: idMateriVal,
-              materi: judulMateriVal,
-              judul: judulMateriVal,
               tipe: "Praktik",
               nilai: finalScore,
               keterangan: finalNote
