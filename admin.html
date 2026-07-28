@@ -5098,9 +5098,12 @@ TUGAS ANDA:
 
       let allMatchingTugas = dataLogTugas.filter(t => {
         let k = norm(getVal(t, ['kelas']));
-        let m = norm(getVal(t, ['materi', 'tugas', 'judul']));
+        let tMat = norm(getVal(t, ['materi', 'tugas', 'judul']));
+        let tMid = norm(getVal(t, ['idmateri', 'id_materi']));
+        let selMatNorm = norm(selMateri);
+
         let matchK = !selKelas || k === norm(selKelas);
-        let matchM = !selMateri || m === norm(selMateri);
+        let matchM = !selMateri || tMat === selMatNorm || tMid === selMatNorm;
         return matchK && matchM;
       });
 
