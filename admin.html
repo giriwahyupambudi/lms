@@ -5261,16 +5261,17 @@ ${formatInfoText}
 ${peerComparisonText}
 
 PETUNJUK EVALUASI & PLAGIARISME:
-1. Evaluasi secara kritis dan edukatif sesuai kriteria yang diminta oleh Guru pada prompt di atas (baik itu tentang konten, ejaan, tata bahasa, maupun format).
+1. Evaluasi secara kritis dan edukatif sesuai kriteria yang diminta oleh Guru pada prompt di atas.
 2. Jika ada Dokumen Master Guru, hitung presisi kemiripan dengan Kunci Jawaban / File Master Guru.
-3. DETEKSI PLAGIARISME / KEMIRIPAN: Bandingkan Dokumen Siswa ini (${namaSiswa}) dengan DAFTAR HASIL PENGERJAAN SISWA LAIN di atas. Jika terdapat kemiripan tinggi (di atas 70%) atau indikasi jiplak kata-demi-kata dengan siswa tertentu, SEBUTKAN NAMA SISWA tersebut pada catatan umpan balik (contoh: "Kemiripan 90% dengan [Nama Siswa]").
-4. Berikan nilai angka akhir (0 - 100).
-5. Tuliskan catatan umpan balik (feedback) yang jelas dan spesifik dalam 1-2 kalimat.
+3. DETEKSI PLAGIARISME / KEMIRIPAN: Bandingkan Dokumen Siswa ini (${namaSiswa}) dengan DAFTAR HASIL PENGERJAAN SISWA LAIN di atas. Jika terdapat kemiripan tinggi (di atas 70%) atau indikasi jiplak kata-demi-kata dengan siswa tertentu, SEBUTKAN NAMA SISWA tersebut pada "catatan_guru".
+4. PENTING: "catatan" HANYA berisi umpan balik edukatif untuk siswa (DILARANG mencantumkan nama siswa lain / kata plagiasi di catatan siswa).
+5. "catatan_guru" BERISI catatan rahasia khusus Guru (termasuk deteksi plagiasi/kemiripan dengan nama siswa lain jika ada).
 
 Jawab HANYA dengan format JSON murni berikut tanpa pembungkus markdown lain:
 {
   "nilai": 85,
-  "catatan": "Tuliskan catatan umpan balik di sini."
+  "catatan": "Tuliskan catatan umpan balik edukatif untuk siswa di sini (tanpa menyebut nama siswa lain).",
+  "catatan_guru": "Tuliskan catatan rahasia khusus Guru di sini (termasuk deteksi plagiasi/kemiripan dengan nama siswa lain)."
 }`;
 
           let rawResp = await callGeminiAPI(apiKey, promptText, (msg) => {
@@ -5279,13 +5280,14 @@ Jawab HANYA dengan format JSON murni berikut tanpa pembungkus markdown lain:
           });
           rawResp = rawResp.replace(/```json/gi, '').replace(/```/g, '').trim();
           
-          let parsedEval = { nilai: 80, catatan: "Tugas telah dievaluasi AI." };
+          let parsedEval = { nilai: 80, catatan: "Tugas telah dievaluasi AI.", catatan_guru: "Tidak ada indikasi plagiasi." };
           try {
             parsedEval = JSON.parse(rawResp);
           } catch(eJson) {}
 
           let finalScore = Math.min(100, Math.max(0, parseInt(parsedEval.nilai || 80, 10)));
           let finalNote = parsedEval.catatan || "Telah dievaluasi AI.";
+          let teacherNote = parsedEval.catatan_guru || "Evaluasi AI selesai.";
 
           let existingNilaiRow = dataNilai.find(n => {
             let nUser = norm(getVal(n, ['username', 'nisn']));
@@ -5306,7 +5308,8 @@ Jawab HANYA dengan format JSON murni berikut tanpa pembungkus markdown lain:
               id_materi: idMateriVal,
               tipe: "Praktik",
               nilai: finalScore,
-              keterangan: finalNote
+              keterangan: finalNote,
+              catatan_guru: teacherNote
             })
           };
 
