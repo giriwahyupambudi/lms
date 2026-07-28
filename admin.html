@@ -5262,18 +5262,18 @@ ${formatInfoText}
 
 ${peerComparisonText}
 
-PETUNJUK EVALUASI & PLAGIARISME:
-1. Evaluasi secara kritis dan edukatif sesuai kriteria yang diminta oleh Guru pada prompt di atas.
-2. Jika ada Dokumen Master Guru, hitung presisi kemiripan dengan Kunci Jawaban / File Master Guru.
-3. DETEKSI PLAGIARISME / KEMIRIPAN: Bandingkan Dokumen Siswa ini (${namaSiswa}) dengan DAFTAR HASIL PENGERJAAN SISWA LAIN di atas. Jika terdapat kemiripan tinggi (di atas 70%) atau indikasi jiplak kata-demi-kata dengan siswa tertentu, SEBUTKAN NAMA SISWA tersebut pada "catatan_guru".
-4. PENTING: "catatan" HANYA berisi umpan balik edukatif untuk siswa (DILARANG mencantumkan nama siswa lain / kata plagiasi di catatan siswa).
-5. "catatan_guru" BERISI catatan rahasia khusus Guru (termasuk deteksi plagiasi/kemiripan dengan nama siswa lain jika ada).
+PETUNJUK KHUSUS EVALUASI & PLAGIARISME:
+1. "catatan" (UNTUK SISWA): Buat catatan SINGKAT, RINGKAS, PADAT (maksimal 1 kalimat), profesional, dan TANPA LEBAY. Contoh: "Jawaban baik dan sesuai instruksi." DILARANG sebut nama siswa lain atau kata plagiasi di catatan siswa.
+2. "catatan_guru" (PRAKTIS KHUSUS GURU): Bandingkan Dokumen Siswa ini (${namaSiswa}) dengan DAFTAR HASIL PENGERJAAN SISWA LAIN di atas:
+   - Jika HANYA GANTI NAMA FILE (Metadata format & seluruh teks 100% persis sama dengan file teman), tulis: "⚠️ FILE DUPLIKAT (GANTI NAMA): Persis 100% dengan file milik [Nama Siswa B]".
+   - Jika COPY-PASTE ISI TEKS TEMAN (Isi teks/paragraf >70% sama kata-per-kata), tulis: "⚠️ COPY-PASTE TEKS ([%]% Mirip): Copy isi file milik [Nama Siswa B]".
+   - Jika PENGERJAAN MANDIRI (tidak ada kemiripan tinggi dengan siswa lain), tulis: "✅ Mandiri (Tidak ada indikasi jiplak file/teks)".
 
 Jawab HANYA dengan format JSON murni berikut tanpa pembungkus markdown lain:
 {
   "nilai": 85,
-  "catatan": "Tuliskan catatan umpan balik edukatif untuk siswa di sini (tanpa menyebut nama siswa lain).",
-  "catatan_guru": "Tuliskan catatan rahasia khusus Guru di sini (termasuk deteksi plagiasi/kemiripan dengan nama siswa lain)."
+  "catatan": "Jawaban baik dan sesuai instruksi.",
+  "catatan_guru": "✅ Mandiri (Tidak ada indikasi jiplak file/teks)"
 }`;
 
           let rawResp = await callGeminiAPI(apiKey, promptText, (msg) => {
