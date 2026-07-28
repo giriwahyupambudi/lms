@@ -345,6 +345,19 @@
               </div>
               <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">Batas ukuran file tugas yang dikirim siswa (dalam Megabyte).</p>
             </div>
+
+            <div class="form-group" style="max-width: 500px; margin-top: 24px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:16px;">
+              <label style="font-weight:600; color:var(--primary); display:flex; align-items:center; gap:6px;">
+                <i data-lucide="sparkles"></i> Google Gemini API Key (Koreksi AI)
+              </label>
+              <div style="display:flex; gap:10px; margin-top:6px;">
+                <input type="password" id="settingGeminiApiKey" class="form-control" placeholder="Masukkan Gemini API Key Anda..." style="flex:1;">
+                <button class="btn btn-primary" onclick="saveSettingGeminiApiKey()"><i data-lucide="save"></i> Simpan ke Server</button>
+              </div>
+              <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">
+                API Key ini akan tersimpan permanen di database Google Sheets (sheet <b>pengaturan</b>) dan terisi otomatis saat Anda mengoreksi tugas AI.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -1250,6 +1263,15 @@
           let sizeSetting = dataSettings.find(s => getVal(s, ['key', 'pengaturan']) === "MAX_UPLOAD_SIZE");
           if (sizeSetting) {
             document.getElementById('settingMaxUpload').value = getVal(sizeSetting, ['value', 'nilai']) || "5";
+          }
+
+          let geminiSetting = dataSettings.find(s => getVal(s, ['key', 'pengaturan']) === "GEMINI_API_KEY");
+          if (geminiSetting) {
+            let keyVal = getVal(geminiSetting, ['value', 'nilai', 'val']) || "";
+            if (keyVal) {
+              if (document.getElementById('settingGeminiApiKey')) document.getElementById('settingGeminiApiKey').value = keyVal;
+              localStorage.setItem('gemini_api_key', keyVal);
+            }
           }
         }
 
@@ -2163,6 +2185,29 @@
       
       let data = { "key": "FOLDER_TUGAS", "value": folderId };
       await postData({ action: "saveData", sheet: "settings", rowNumber: rowNum, data: JSON.stringify(data) });
+    }
+
+    async function saveSettingGeminiApiKey() {
+      let val = document.getElementById('settingGeminiApiKey').value.trim();
+      if (!val) {
+        alert("API Key tidak boleh kosong.");
+        return;
+      }
+
+      let rowNum = "";
+      if (Array.isArray(dataSettings)) {
+        let existing = dataSettings.find(s => getVal(s, ['key', 'pengaturan']) === "GEMINI_API_KEY");
+        if (existing && existing.rowNumber) rowNum = existing.rowNumber;
+      }
+
+      let data = { "key": "GEMINI_API_KEY", "value": val };
+      await postData({ action: "saveData", sheet: "settings", rowNumber: rowNum, data: JSON.stringify(data) });
+
+      localStorage.setItem('gemini_api_key', val);
+      if (document.getElementById('geminiApiKeyInput')) {
+        document.getElementById('geminiApiKeyInput').value = val;
+      }
+      alert("Google Gemini API Key berhasil disimpan ke database (sheet pengaturan)!");
     }
 
     // ============================================
@@ -4291,10 +4336,10 @@
     </div>
 
     <div class="form-group" style="margin-bottom:16px;">
-      <label style="font-weight:600; font-size:0.9rem;">Instruksi / Aturan Format Pengetikan Tugas</label>
-      <textarea id="instruksiTugasAI" class="form-control" rows="5" style="font-family:inherit; font-size:0.88rem; line-height:1.5;" placeholder="Tuliskan aturan format pengetikan..."></textarea>
+      <label style="font-weight:600; font-size:0.9rem;">Instruksi / Prompt Evaluasi AI dari Guru (Bebas)</label>
+      <textarea id="instruksiTugasAI" class="form-control" rows="5" style="font-family:inherit; font-size:0.88rem; line-height:1.5;" placeholder="Ketikkan prompt atau instruksi evaluasi bebas yang Anda inginkan..."></textarea>
       <small style="color:var(--text-muted); font-size:0.78rem; display:block; margin-top:4px;">
-        Contoh: Judul dokumen harus dicetak tebal (Bold). Istilah bahasa Inggris harus dicetak miring (Italic). Teks paragraf rata kanan-kiri (Justify).
+        💡 <b>Bebas & Fleksibel:</b> Tuliskan kriteria evaluasi apa saja (misal: evaluasi ringkasan materi, kerapian ejaan, tata bahasa, kepatuhan format, atau pembandingan dengan Kunci Jawaban Guru).
       </small>
     </div>
 
@@ -4664,39 +4709,39 @@
 - Frasa GARIS BAWAH (Underline): ${docxDetails.underlinePhrases.length ? docxDetails.underlinePhrases.join(", ") : "(Tidak ada)"}
 - Jenis Font: ${docxDetails.fonts.join(", ") || "Standar"}
 - Ukuran Font: ${docxDetails.fontSizes.join(", ") || "Standar"}
-- Teks Dokumen: ${docxDetails.fullText.substring(0, 1500)}
-` : `Catatan: File disimpan di Drive (${fileUrl}). Evaluasi kepatuhan berdasarkan standar format pengetikan.`;
+- Teks Dokumen Siswa: ${docxDetails.fullText.substring(0, 2000)}
+` : `Catatan: File disimpan di Drive (${fileUrl}). Evaluasi kepatuhan berdasarkan instruksi Guru.`;
 
           let masterInfoText = masterDocxData ? `
-METADATA DOKUMEN MASTER GURU (KUNCI JAWABAN):
-- Frasa Wajib TEBAL (Bold) di Master: ${masterDocxData.boldPhrases.length ? masterDocxData.boldPhrases.join(", ") : "(Tidak ada)"}
-- Frasa Wajib MIRING (Italic) di Master: ${masterDocxData.italicPhrases.length ? masterDocxData.italicPhrases.join(", ") : "(Tidak ada)"}
-- Frasa Wajib GARIS BAWAH (Underline) di Master: ${masterDocxData.underlinePhrases.length ? masterDocxData.underlinePhrases.join(", ") : "(Tidak ada)"}
-- Jenis Font Master: ${masterDocxData.fonts.join(", ") || "Standar"} (${masterDocxData.fontSizes.join(", ") || "Standar"})
-- Perataan Paragraf Master: ${masterDocxData.alignments.join(", ") || "Standar"}
-- Teks Dokumen Master: ${masterDocxData.fullText.substring(0, 1500)}
+DOKUMEN MASTER GURU / KUNCI JAWABAN (ACUAN):
+- Teks Dokumen Master: ${masterDocxData.fullText.substring(0, 2000)}
+- Detail Format Master (Bold/Italic/Underline/Font):
+  * Bold: ${masterDocxData.boldPhrases.length ? masterDocxData.boldPhrases.join(", ") : "(Tidak ada)"}
+  * Italic: ${masterDocxData.italicPhrases.length ? masterDocxData.italicPhrases.join(", ") : "(Tidak ada)"}
+  * Underline: ${masterDocxData.underlinePhrases.length ? masterDocxData.underlinePhrases.join(", ") : "(Tidak ada)"}
 ` : "";
 
-          let promptText = `Anda adalah asisten penilai tugas pengetikan Word (.docx) untuk Guru LMS.
-Tugas Anda adalah membandingkan dan menilai dokumen pengetikan siswa (${namaSiswa}) berdasarkan DOKUMEN MASTER KUNCI JAWABAN GURU dan Aturan Format berikut.
+          let promptText = `Anda adalah asisten penilai tugas otomatis untuk Guru di LMS.
+Tugas Anda adalah membandingkan dan menilai hasil pengerjaan siswa (${namaSiswa}) berdasarkan PROMPT & ATURAN DARI GURU berikut.
+
+ATURAN & PROMPT EVALUASI DARI GURU:
+${instruksi}
 
 ${masterInfoText}
 
-ATURAN FORMAT DARI GURU:
-${instruksi}
-
-METADATA FORMAT TERDETEKSI PADA DOKUMEN SISWA (${namaSiswa}):
+KONTEN & METADATA TERDETEKSI PADA DOKUMEN SISWA (${namaSiswa}):
 ${formatInfoText}
 
 PETUNJUK EVALUASI:
-1. Jika Dokumen Master Guru ada, bandingkan seberapa presisi siswa meniru format Bold, Italic, Underline, Font, dan ejaan dari Dokumen Master Guru.
-2. Hitung nilai akhir (0 - 100).
-3. Berikan catatan umpan balik (feedback) singkat dalam 1-2 kalimat (sebutkan frasa/kata spesifik yang kurang miring/tebal dibanding File Master Guru jika ada).
+1. Evaluasi secara kritis dan edukatif sesuai kriteria yang diminta oleh Guru pada prompt di atas (baik itu tentang konten, ejaan, tata bahasa, maupun format).
+2. Jika ada Dokumen Master Guru, hitung presisi kemiripan dengan Kunci Jawaban / File Master Guru.
+3. Berikan nilai angka akhir (0 - 100).
+4. Tuliskan catatan umpan balik (feedback) yang jelas dan spesifik dalam 1-2 kalimat.
 
 Jawab HANYA dengan format JSON murni berikut tanpa pembungkus markdown lain:
 {
   "nilai": 85,
-  "catatan": "Format meniru 90% File Master Guru. Kata 'Hardware' pada paragraf 2 belum dicetak miring seperti pada File Master."
+  "catatan": "Tuliskan catatan umpan balik di sini."
 }`;
 
           let rawResp = await callGeminiAPI(apiKey, promptText);
