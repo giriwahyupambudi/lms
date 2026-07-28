@@ -2434,8 +2434,8 @@
                              (nUserRaw !== "" && (nUserRaw === uNamaRaw || nUserRaw === username.toLowerCase())) ||
                              (nNamaRaw !== "" && nNamaRaw === uNamaRaw);
 
-           let nMatRaw = (getVal(n, ['id_materi', 'idmateri', 'modul']) || "").toString().trim();
-           let nJudulRaw = (getVal(n, ['judul', 'materi', 'judul_materi']) || "").toString().trim();
+           let nMatRaw = (getVal(n, ['id_materi', 'idmateri', 'modul', 'materi', 'judul']) || "").toString();
+           let nJudulRaw = (getVal(n, ['judul', 'materi', 'judul_materi']) || "").toString();
            let nMatNorm = norm(nMatRaw);
            let nJudulNorm = norm(nJudulRaw);
 
@@ -2446,10 +2446,10 @@
 
            let isMateriMatch = false;
            if (nMatNorm !== "") {
-               isMateriMatch = (nMatRaw === mIdRaw || nMatNorm === mIdNorm || (mJudulNorm !== "" && nMatNorm === mJudulNorm));
+               isMateriMatch = (nMatNorm === mIdNorm || (mJudulNorm !== "" && nMatNorm === mJudulNorm));
            }
-           if (!isMateriMatch && nJudulNorm !== "" && mJudulNorm !== "") {
-               isMateriMatch = (nJudulNorm === mJudulNorm || nJudulNorm === mIdNorm);
+           if (!isMateriMatch && nJudulNorm !== "") {
+               isMateriMatch = (mJudulNorm !== "" && nJudulNorm === mJudulNorm) || (mIdNorm !== "" && nJudulNorm === mIdNorm);
            }
 
            return isUserMatch && isMateriMatch;
@@ -3037,7 +3037,7 @@
 
             const isUploadType = ["praktik", "tugas", "ujian praktik"].includes(tipe);
 
-            // Pencocokan Nilai menggunakan username, nama, mid, dan judul materi (tanpa matching string kosong)
+            // Pencocokan Nilai menggunakan username, nama, mid, dan judul materi
             const filteredNilai = dataNilai.filter(n => {
                 const nUser = norm(getVal(n, ['username', 'nisn']));
                 const nNama = (getVal(n, ['nama', 'namasiswa', 'namalengkap']) || "").toString().trim().toLowerCase();
@@ -3047,15 +3047,21 @@
                                   (sNamaRaw !== "" && nNama === sNamaRaw) ||
                                   (sNamaNorm !== "" && (nNamaNorm === sNamaNorm || nUser === sNamaNorm));
 
-                const nMid = (getVal(n, ['id_materi', 'idmateri', 'modul']) || "").toString().trim();
-                const nJudul = norm(getVal(n, ['judul', 'materi', 'judul_materi']));
+                const nMatRaw = (getVal(n, ['id_materi', 'idmateri', 'modul', 'materi', 'judul']) || "").toString();
+                const nJudulRaw = (getVal(n, ['judul', 'materi', 'judul_materi']) || "").toString();
+                const nMatNorm = norm(nMatRaw);
+                const nJudulNorm = norm(nJudulRaw);
+
+                const mIdNorm = norm(mid);
+                const mJudulNorm = norm(mJudul);
+                const idxStr = (idx + 1).toString();
 
                 let isMateriMatch = false;
-                if (nMid !== "") {
-                    isMateriMatch = (nMid === mid || nMid === (idx + 1).toString() || (mJudul !== "" && nMid === mJudul));
+                if (nMatNorm !== "") {
+                    isMateriMatch = (nMatNorm === mIdNorm || nMatNorm === idxStr || (mJudulNorm !== "" && nMatNorm === mJudulNorm));
                 }
-                if (!isMateriMatch && nJudul !== "" && mJudul !== "") {
-                    isMateriMatch = (nJudul === mJudul || nJudul === mid);
+                if (!isMateriMatch && nJudulNorm !== "") {
+                    isMateriMatch = (mJudulNorm !== "" && nJudulNorm === mJudulNorm) || (mIdNorm !== "" && nJudulNorm === mIdNorm) || nJudulNorm === idxStr;
                 }
 
                 return isUserMatch && isMateriMatch;
