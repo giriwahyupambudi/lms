@@ -840,10 +840,14 @@
     document.getElementById("user-fullname").innerText = user.nama;
     document.getElementById("user-kelas-info").innerText = "Tingkat " + getTingkat(user) + " • " + (user.kelas || "Tanpa Kelas");
 
-    window.onload = () => { 
+    // Jalankan pemuatan data cache & sync secara instan tanpa menunggu CDN / window.onload
+    loadCachedData();
+    document.addEventListener("DOMContentLoaded", () => {
       loadCachedData();
       loadAllData(); 
-    };
+    });
+    // Fallback pemicu sync
+    setTimeout(() => { loadAllData(); }, 300);
 
     function loadCachedData() {
       try {
@@ -882,12 +886,19 @@
 
       try {
         const t = new Date().getTime(); // Cache buster
+        const fetchWithTimeout = (url, ms = 6000) => {
+          return Promise.race([
+            fetch(url),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms))
+          ]).catch(() => ({ json: async () => [] }));
+        };
+
         const [resMateri, resListNilai, resUser, resLogTugas, resGuru] = await Promise.all([
-          fetch(`${API_URL}?sheet=materi&_t=${t}`).catch(() => ({ json: async () => [] })),
-          fetch(`${API_URL}?sheet=listNilai&_t=${t}`).catch(() => ({ json: async () => [] })),
-          fetch(`${API_URL}?sheet=user&_t=${t}`).catch(() => ({ json: async () => [] })),
-          fetch(`${API_URL}?sheet=logTugas&_t=${t}`).catch(() => ({ json: async () => [] })),
-          fetch(`${API_URL}?sheet=public_guru&_t=${t}`).catch(() => ({ json: async () => [] }))
+          fetchWithTimeout(`${API_URL}?sheet=materi&_t=${t}`),
+          fetchWithTimeout(`${API_URL}?sheet=listNilai&_t=${t}`),
+          fetchWithTimeout(`${API_URL}?sheet=user&_t=${t}`),
+          fetchWithTimeout(`${API_URL}?sheet=logTugas&_t=${t}`),
+          fetchWithTimeout(`${API_URL}?sheet=public_guru&_t=${t}`)
         ]);
 
         const dataMateri = await resMateri.json();
