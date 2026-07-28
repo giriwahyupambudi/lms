@@ -1522,27 +1522,29 @@
       const newTabBtn = document.getElementById('viewFileNewTabBtn');
       
       iframe.src = ""; // Clear
-      loader.style.display = 'flex';
-
+      let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
       let iframeUrl = url;
 
       if(newTabBtn) {
-          // Jika url adalah url preview, ubah jadi url view biasa untuk dibuka di tab baru
           let tabUrl = url;
           if (tabUrl.includes('/preview')) {
               tabUrl = tabUrl.replace('/preview', '/view');
           }
           newTabBtn.href = tabUrl;
       }
-      // Gunakan Google Docs Viewer (gview) karena file terbukti publik
-      // Ini mengatasi bug Google Drive yang error jika user login banyak akun
+
       if (url.includes('drive.google.com')) {
           let match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
           if (match) {
               let fileId = match[1];
-              let dlUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-              // Gunakan Microsoft Office Web Viewer resmi agar tampilan .docx 100% presisi dan rapi
-              iframeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(dlUrl)}`;
+              if (isMobile) {
+                  // Di Layar HP: Gunakan Google Drive Mobile Viewer yang otomatis 100% responsif menyusuaikan lebar layar HP
+                  iframeUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+              } else {
+                  // Di Laptop/Desktop: Gunakan Microsoft Office Web Viewer resmi
+                  let dlUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                  iframeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(dlUrl)}`;
+              }
           }
       } else if (url.includes('docs.google.com/presentation')) {
           let embedUrl = url;
