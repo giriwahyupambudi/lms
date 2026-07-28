@@ -2446,29 +2446,39 @@
 
            let isMateriMatch = false;
 
-           // 1. Exact normalized match
+           // 1. Direct exact match
            if (nMatNorm !== "" && (nMatNorm === mIdNorm || (mJudulNorm !== "" && nMatNorm === mJudulNorm))) {
                isMateriMatch = true;
            } else if (nJudulNorm !== "" && ((mJudulNorm !== "" && nJudulNorm === mJudulNorm) || (mIdNorm !== "" && nJudulNorm === mIdNorm))) {
                isMateriMatch = true;
            }
 
-           // 2. Meaningful substring match
-           let nCombined = nMatNorm || nJudulNorm;
-           let mCombined = mJudulNorm || mIdNorm;
-
-           if (!isMateriMatch && nCombined.length >= 4 && mCombined.length >= 4) {
-               if (nCombined.includes(mCombined) || mCombined.includes(nCombined)) {
+           // 2. Known spreadsheet variant aliases
+           if (!isMateriMatch) {
+               const aliasMap = {
+                   "engine12": ["engine1", "survey1"],
+                   "engine14": ["engine3"],
+                   "5": ["engine4"],
+                   "6": ["engine5"],
+                   "7": ["engine8"],
+                   "8": ["engine6"],
+                   "9": ["engine7"]
+               };
+               const nId = nMatNorm || nJudulNorm;
+               if (aliasMap[nId] && aliasMap[nId].includes(mIdNorm)) {
                    isMateriMatch = true;
                }
            }
 
-           // 3. Digit match
+           // 3. Meaningful substring match (minimum 5 chars)
            if (!isMateriMatch) {
-               let nDigits = nCombined.replace(/[^0-9]/g, '');
-               let mDigits = mCombined.replace(/[^0-9]/g, '');
-               if (nDigits !== "" && (nDigits === mDigits || nDigits === mIdNorm)) {
-                   isMateriMatch = true;
+               let nCombined = nMatNorm || nJudulNorm;
+               let mCombined = mJudulNorm || mIdNorm;
+
+               if (nCombined.length >= 5 && mCombined.length >= 5) {
+                   if (nCombined.includes(mCombined) || mCombined.includes(nCombined)) {
+                       isMateriMatch = true;
+                   }
                }
            }
 
@@ -3070,29 +3080,39 @@
 
                 let isMateriMatch = false;
 
-                // 1. Exact normalized match
+                // 1. Direct exact match
                 if (nMatNorm !== "" && (nMatNorm === mIdNorm || nMatNorm === idxStr || (mJudulNorm !== "" && nMatNorm === mJudulNorm))) {
                     isMateriMatch = true;
                 } else if (nJudulNorm !== "" && ((mJudulNorm !== "" && nJudulNorm === mJudulNorm) || (mIdNorm !== "" && nJudulNorm === mIdNorm) || nJudulNorm === idxStr)) {
                     isMateriMatch = true;
                 }
 
-                // 2. Meaningful substring match (e.g. "engine12" inside "praktikengine12")
-                let nCombined = nMatNorm || nJudulNorm;
-                let mCombined = mJudulNorm || mIdNorm;
-
-                if (!isMateriMatch && nCombined.length >= 4 && mCombined.length >= 4) {
-                    if (nCombined.includes(mCombined) || mCombined.includes(nCombined)) {
+                // 2. Known spreadsheet variant aliases
+                if (!isMateriMatch) {
+                    const aliasMap = {
+                        "engine12": ["engine1", "survey1"],
+                        "engine14": ["engine3"],
+                        "5": ["engine4"],
+                        "6": ["engine5"],
+                        "7": ["engine8"],
+                        "8": ["engine6"],
+                        "9": ["engine7"]
+                    };
+                    const nId = nMatNorm || nJudulNorm;
+                    if (aliasMap[nId] && aliasMap[nId].includes(mIdNorm)) {
                         isMateriMatch = true;
                     }
                 }
 
-                // 3. Digit index match (e.g. "Engine 12" -> digits 12 vs idx+1 -> 12)
+                // 3. Meaningful substring match (minimum 5 chars)
                 if (!isMateriMatch) {
-                    let nDigits = nCombined.replace(/[^0-9]/g, '');
-                    let mDigits = mCombined.replace(/[^0-9]/g, '');
-                    if (nDigits !== "" && (nDigits === mDigits || nDigits === idxStr || nDigits === mIdNorm)) {
-                        isMateriMatch = true;
+                    let nCombined = nMatNorm || nJudulNorm;
+                    let mCombined = mJudulNorm || mIdNorm;
+
+                    if (nCombined.length >= 5 && mCombined.length >= 5) {
+                        if (nCombined.includes(mCombined) || mCombined.includes(nCombined)) {
+                            isMateriMatch = true;
+                        }
                     }
                 }
 
