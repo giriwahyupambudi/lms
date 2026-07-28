@@ -4383,13 +4383,6 @@
 
     <!-- TAB 2: EKSEKUSI KOREKSI MASSAL -->
     <div id="aiTabContentEksekusi" style="display:none;">
-      <div class="form-group" style="margin-bottom:16px;">
-        <label style="font-weight:600; font-size:0.88rem;">Google Gemini API Key</label>
-        <div style="display:flex; gap:8px;">
-          <input type="password" id="geminiApiKeyInput" class="form-control" placeholder="API Key tersimpan otomatis..." style="flex:1;">
-          <button class="btn" style="background:#f1f5f9; border:1px solid #cbd5e1;" onclick="toggleShowApiKey()"><i data-lucide="eye" id="eyeIconApiKey"></i></button>
-        </div>
-      </div>
 
       <div id="koreksiAiStatusBox" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:16px; font-size:0.85rem; max-height:180px; overflow-y:auto;">
         <div id="koreksiAiProgressText" style="font-weight:600; color:var(--primary); margin-bottom:6px;">Menyiapkan file tugas siswa...</div>
@@ -4578,15 +4571,24 @@
       chatBox.scrollTop = chatBox.scrollHeight;
     }
 
+    function getActiveGeminiApiKey() {
+      let savedKey = localStorage.getItem('gemini_api_key') || '';
+      if (!savedKey && Array.isArray(dataSettings)) {
+        let sObj = dataSettings.find(s => getVal(s, ['key', 'pengaturan']) === "GEMINI_API_KEY");
+        if (sObj) savedKey = getVal(sObj, ['value', 'nilai', 'val']) || '';
+      }
+      return savedKey;
+    }
+
     async function kirimPesanDiskusiAI() {
       const inputEl = document.getElementById('aiChatInputText');
       const text = inputEl.value.trim();
-      const apiKey = document.getElementById('geminiApiKeyInput').value.trim() || localStorage.getItem('gemini_api_key') || '';
+      const apiKey = getActiveGeminiApiKey();
       const selMateri = document.getElementById('modalMateriKoreksiAI').value || "Materi";
 
       if (!text) return;
       if (!apiKey) {
-        alert("Masukkan Google Gemini API Key Anda terlebih dahulu di menu Pengaturan.");
+        alert("Google Gemini API Key belum diatur. Silakan isi API Key pada menu Pengaturan Sistem terlebih dahulu.");
         return;
       }
 
@@ -4839,21 +4841,20 @@ TUGAS ANDA:
     }
 
     async function jalankanKoreksiAIMassal() {
-      const apiKey = document.getElementById('geminiApiKeyInput').value.trim();
+      const apiKey = getActiveGeminiApiKey();
       const instruksi = document.getElementById('instruksiTugasAI').value.trim();
       const selKelas = document.getElementById('modalKelasKoreksiAI').value;
       const selMateri = document.getElementById('modalMateriKoreksiAI').value;
 
       if (!apiKey) {
-        alert("Masukkan Google Gemini API Key Anda terlebih dahulu.");
+        alert("Google Gemini API Key belum diatur. Silakan isi API Key pada menu Pengaturan Sistem terlebih dahulu.");
         return;
       }
       if (!instruksi) {
-        alert("Masukkan instruksi / aturan format tugas.");
+        alert("Kriteria/instruksi tugas belum terisi. Silakan susun kriteria pada tab Diskusi terlebih dahulu.");
         return;
       }
 
-      localStorage.setItem('gemini_api_key', apiKey);
       localStorage.setItem('gemini_instruksi_tugas', instruksi);
 
       const statusBox = document.getElementById('koreksiAiStatusBox');
