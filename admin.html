@@ -2395,8 +2395,12 @@
       }
 
       let students = dataUser.filter(u => {
-         let kelas = getVal(u, ['kelas', 'tingkat']);
-         return (kelas || "").toString().trim() === selKelas.toString().trim();
+         let r = (getVal(u, ['role', 'peran']) || "").toString().toLowerCase().trim();
+         if (r === "admin" || r === "guru") return false;
+         if (!selKelas || norm(selKelas) === "semua" || norm(selKelas) === "") return true;
+         let k = norm(getVal(u, ['kelas', 'tingkat']));
+         let sk = norm(selKelas);
+         return k === sk || k.includes(sk) || sk.includes(k);
       });
       
       let selMateriOption = document.getElementById('filterMateriNilai').options[document.getElementById('filterMateriNilai').selectedIndex];
@@ -2404,7 +2408,8 @@
 
       let mObj = dataMateri.find(m => {
           let mId = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || "").toString().trim();
-          return mId === selMateri.toString().trim();
+          let mJudul = (getVal(m, ['judul', 'materi']) || "").toString().trim();
+          return mId === selMateri.toString().trim() || norm(mJudul) === norm(selMateriJudul);
       });
       let mJudulClean = mObj ? norm(getVal(mObj, ['judul', 'materi'])) : "";
       let rawTipe = mObj ? (getVal(mObj, ['tipeevaluasi', 'tipe_evaluasi', 'tipe']) || "Praktik").toLowerCase() : "praktik";
@@ -2415,17 +2420,33 @@
         let nama = getVal(u, ['nama', 'namalengkap', 'namasiswa']) || "-";
 
         let userNilaiData = dataNilai.filter(n => {
-           let nUserRaw = (getVal(n, ['username', 'nisn']) || "").toString().trim();
-           let nNamaRaw = (getVal(n, ['nama', 'namasiswa', 'namalengkap']) || "").toString().trim();
-           
-           let isUserMatch = (nUserRaw === username) || 
-                             (nNamaRaw !== "" && nNamaRaw.toLowerCase() === nama.toString().trim().toLowerCase()) || 
-                             (nUserRaw !== "" && nUserRaw.toLowerCase() === nama.toString().trim().toLowerCase());
-                             
+           let nUserRaw = (getVal(n, ['username', 'nisn']) || "").toString().trim().toLowerCase();
+           let nUserNorm = norm(nUserRaw);
+           let nNamaRaw = (getVal(n, ['nama', 'namasiswa', 'namalengkap']) || "").toString().trim().toLowerCase();
+           let nNamaNorm = norm(nNamaRaw);
+
+           let uUserNorm = norm(username);
+           let uNamaRaw = nama.toString().trim().toLowerCase();
+           let uNamaNorm = norm(uNamaRaw);
+
+           let isUserMatch = (nUserNorm !== "" && nUserNorm === uUserNorm) ||
+                             (nNamaNorm !== "" && (nNamaNorm === uNamaNorm || nNamaNorm === uNamaRaw || nNamaRaw === uNamaRaw)) ||
+                             (nUserRaw !== "" && (nUserRaw === uNamaRaw || nUserRaw === username.toLowerCase())) ||
+                             (nNamaRaw !== "" && nNamaRaw === uNamaRaw);
+
            let nMatRaw = (getVal(n, ['id_materi', 'idmateri', 'modul']) || "").toString().trim();
-           let mObjId = mObj ? (getVal(mObj, ['idmateri', 'id_materi', 'materiid']) || "").toString().trim() : "";
-           let isMateriMatch = (nMatRaw || "").toString().trim() === mObjId;
-                               
+           let nJudulRaw = (getVal(n, ['judul', 'materi', 'judul_materi']) || "").toString().trim();
+           let nMatNorm = norm(nMatRaw);
+           let nJudulNorm = norm(nJudulRaw);
+
+           let mIdRaw = mObj ? (getVal(mObj, ['idmateri', 'id_materi', 'materiid']) || "").toString().trim() : selMateri.toString().trim();
+           let mJudulRaw = mObj ? (getVal(mObj, ['judul', 'materi']) || "").toString().trim() : selMateriJudul;
+           let mIdNorm = norm(mIdRaw);
+           let mJudulNorm = norm(mJudulRaw);
+
+           let isMateriMatch = (nMatRaw !== "" && (nMatRaw === mIdRaw || nMatNorm === mIdNorm || nMatNorm === mJudulNorm)) ||
+                               (nJudulRaw !== "" && (nJudulNorm === mJudulNorm || nJudulNorm === mIdNorm || nJudulNorm.includes(mJudulNorm) || mJudulNorm.includes(nJudulNorm)));
+
            return isUserMatch && isMateriMatch;
         });
         
