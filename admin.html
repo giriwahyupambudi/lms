@@ -3030,12 +3030,30 @@
         return k === sk || k.includes(sk) || sk.includes(k);
       });
       
-      // 2. Ambil Seluruh Materi Tugas yang Ada
+      // 2. Ambil Materi yang Sesuai untuk Kelas & Tingkat Ini (Status Aktif)
+      const myTingkat = getTingkatSync({ kelas: selKelas });
+      const selKelasUpper = selKelas.toUpperCase().trim();
+
       let materials = dataMateri.filter(m => {
-        let j = getVal(m, ['judul', 'materi', 'namamateri']);
-        return j && j.toString().trim() !== "";
+        const mStatus = (getVal(m, ['status']) || "Aktif").toString().toLowerCase();
+        if (mStatus !== "aktif") return false;
+
+        const mKelasMentah = (getVal(m, ['kelas', 'tingkat']) || "").toString().trim().toUpperCase();
+        const mTingkat = getTingkatSync(m);
+        
+        if (mTingkat === "SEMUA" || mKelasMentah === "SEMUA" || mKelasMentah === "") return true;
+
+        let mKelasArray = mKelasMentah.split(',').map(k => k.trim());
+        
+        if (selKelasUpper && mKelasArray.includes(selKelasUpper)) return true;
+        if (mKelasArray.includes(myTingkat)) return true;
+        if (mTingkat === myTingkat) return true;
+
+        return false;
       });
-      if (materials.length === 0) materials = dataMateri;
+      if (materials.length === 0) {
+        materials = dataMateri.filter(m => (getVal(m, ['status']) || "Aktif").toString().toLowerCase() === "aktif");
+      }
 
       // 3. Render Header
       let headerHtml = `<tr><th style="position: sticky; left: 0; background: #f1f5f9; z-index: 11; min-width: 200px; border-right: 2px solid #e2e8f0;">Nama Siswa</th>`;
