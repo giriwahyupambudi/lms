@@ -840,7 +840,42 @@
     document.getElementById("user-fullname").innerText = user.nama;
     document.getElementById("user-kelas-info").innerText = "Tingkat " + getTingkat(user) + " • " + (user.kelas || "Tanpa Kelas");
 
-    window.onload = () => { loadAllData(); };
+    window.onload = () => { 
+      loadCachedData();
+      loadAllData(); 
+    };
+
+    function loadCachedData() {
+      try {
+        const cMateri = localStorage.getItem("cache_materi");
+        const cListNilai = localStorage.getItem("cache_listNilai");
+        const cUser = localStorage.getItem("cache_user");
+        const cLogTugas = localStorage.getItem("cache_logTugas");
+        const cGuru = localStorage.getItem("cache_guru");
+        const cLast = localStorage.getItem("cache_lastUpdated");
+
+        if (cMateri) {
+          allMateriMentah = JSON.parse(cMateri);
+          allProgresMentah = cListNilai ? JSON.parse(cListNilai) : [];
+          allLogTugasMentah = cLogTugas ? JSON.parse(cLogTugas) : [];
+          allGuruMentah = cGuru ? JSON.parse(cGuru) : [];
+
+          renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah, allGuruMentah);
+          if (cListNilai && cUser) {
+            renderRanking(JSON.parse(cListNilai), JSON.parse(cUser));
+          }
+          if (cLast) {
+            const syncStatus = document.getElementById("syncStatus");
+            if (syncStatus) {
+              syncStatus.innerHTML = `<i data-lucide="check-circle" style="width:12px; height:12px; color:#10b981;"></i> <span style="color:#10b981;">${cLast}</span>`;
+            }
+            if (window.lucide) lucide.createIcons();
+          }
+        }
+      } catch (e) {
+        console.warn("Gagal memuat cache lokal:", e);
+      }
+    }
 
     async function loadAllData() {
       const syncStatus = document.getElementById("syncStatus");
@@ -848,7 +883,7 @@
       try {
         const t = new Date().getTime(); // Cache buster
         const [resMateri, resListNilai, resUser, resLogTugas, resGuru] = await Promise.all([
-          fetch(`${API_URL}?sheet=materi&_t=${t}`),
+          fetch(`${API_URL}?sheet=materi&_t=${t}`).catch(() => ({ json: async () => [] })),
           fetch(`${API_URL}?sheet=listNilai&_t=${t}`).catch(() => ({ json: async () => [] })),
           fetch(`${API_URL}?sheet=user&_t=${t}`).catch(() => ({ json: async () => [] })),
           fetch(`${API_URL}?sheet=logTugas&_t=${t}`).catch(() => ({ json: async () => [] })),
@@ -861,35 +896,47 @@
         const dataLogTugas = await resLogTugas.json();
         const dataGuru = await resGuru.json();
 
-        // Save to cache
-        localStorage.setItem("cache_materi", JSON.stringify(dataMateri));
-        localStorage.setItem("cache_listNilai", JSON.stringify(dataListNilai));
-        localStorage.setItem("cache_user", JSON.stringify(dataUser));
-        localStorage.setItem("cache_logTugas", JSON.stringify(dataLogTugas));
-        localStorage.setItem("cache_guru", JSON.stringify(dataGuru));
+        // Save to cache JIKA data valid
+        if (Array.isArray(dataMateri) && dataMateri.length > 0) {
+          localStorage.setItem("cache_materi", JSON.stringify(dataMateri));
+          allMateriMentah = dataMateri;
+        }
+        if (Array.isArray(dataListNilai)) {
+          localStorage.setItem("cache_listNilai", JSON.stringify(dataListNilai));
+          allProgresMentah = dataListNilai;
+        }
+        if (Array.isArray(dataUser)) {
+          localStorage.setItem("cache_user", JSON.stringify(dataUser));
+        }
+        if (Array.isArray(dataLogTugas)) {
+          localStorage.setItem("cache_logTugas", JSON.stringify(dataLogTugas));
+          allLogTugasMentah = dataLogTugas;
+        }
+        if (Array.isArray(dataGuru)) {
+          localStorage.setItem("cache_guru", JSON.stringify(dataGuru));
+          allGuruMentah = dataGuru;
+        }
 
         const now = new Date();
         const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
         localStorage.setItem("cache_lastUpdated", timeString);
 
-        // Simpan ke variabel global
-        allMateriMentah = dataMateri;
-        allProgresMentah = dataListNilai;
-        allLogTugasMentah = dataLogTugas;
-        allGuruMentah = dataGuru;
-
         // Re-render with fresh data silently
         renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah, allGuruMentah);
-        renderRanking(dataListNilai, dataUser);
+        renderRanking(allProgresMentah, dataUser && dataUser.length > 0 ? dataUser : (localStorage.getItem("cache_user") ? JSON.parse(localStorage.getItem("cache_user")) : []));
 
         // Update indicator
-        syncStatus.innerHTML = `<i data-lucide="check-circle" style="width:12px; height:12px; color:#10b981;"></i> <span style="color:#10b981;">${timeString}</span>`;
-        lucide.createIcons();
+        if (syncStatus) {
+          syncStatus.innerHTML = `<i data-lucide="check-circle" style="width:12px; height:12px; color:#10b981;"></i> <span style="color:#10b981;">${timeString}</span>`;
+        }
+        if (window.lucide) lucide.createIcons();
 
       } catch (e) {
         console.error("Gagal menyinkronkan data", e);
-        syncStatus.innerHTML = `<i data-lucide="wifi-off" style="width:12px; height:12px; color:#ef4444;"></i> <span style="color:#ef4444;">Offline</span>`;
-        lucide.createIcons();
+        if (syncStatus) {
+          syncStatus.innerHTML = `<i data-lucide="wifi-off" style="width:12px; height:12px; color:#ef4444;"></i> <span style="color:#ef4444;">Offline</span>`;
+        }
+        if (window.lucide) lucide.createIcons();
       }
     }
 
