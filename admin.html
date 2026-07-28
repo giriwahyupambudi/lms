@@ -5263,16 +5263,16 @@ ${formatInfoText}
 ${peerComparisonText}
 
 PETUNJUK KHUSUS EVALUASI & PLAGIARISME:
-1. "catatan" (UNTUK SISWA): Buat catatan SINGKAT, RINGKAS, PADAT (maksimal 1 kalimat), profesional, dan TANPA LEBAY. Contoh: "Jawaban baik dan sesuai instruksi." DILARANG sebut nama siswa lain atau kata plagiasi di catatan siswa.
+1. "catatan" (UNTUK SISWA): Tuliskan umpan balik SPESIFIK yang menyebutkan DETAIL KESALAHAN atau kekurangan tugas siswa (maksimal 1-2 kalimat ringkas, konstruktif, tanpa kata lebay). Contoh: "Perlu melengkapi penjelasan fungsi komponen pada nomor 2." DILARANG sebut nama siswa lain atau kata plagiasi di catatan siswa.
 2. "catatan_guru" (PRAKTIS KHUSUS GURU): Bandingkan Dokumen Siswa ini (${namaSiswa}) dengan DAFTAR HASIL PENGERJAAN SISWA LAIN di atas:
-   - Jika HANYA GANTI NAMA FILE (Metadata format & seluruh teks 100% persis sama dengan file teman), tulis: "⚠️ FILE DUPLIKAT (GANTI NAMA): Persis 100% dengan file milik [Nama Siswa B]".
+   - Jika HANYA GANTI NAMA FILE (Struktur XML format & seluruh teks 100% persis sama dengan file teman), tulis: "⚠️ FILE DUPLIKAT (GANTI NAMA): Persis 100% dengan file milik [Nama Siswa B]".
    - Jika COPY-PASTE ISI TEKS TEMAN (Isi teks/paragraf >70% sama kata-per-kata), tulis: "⚠️ COPY-PASTE TEKS ([%]% Mirip): Copy isi file milik [Nama Siswa B]".
    - Jika PENGERJAAN MANDIRI (tidak ada kemiripan tinggi dengan siswa lain), tulis: "✅ Mandiri (Tidak ada indikasi jiplak file/teks)".
 
 Jawab HANYA dengan format JSON murni berikut tanpa pembungkus markdown lain:
 {
   "nilai": 85,
-  "catatan": "Jawaban baik dan sesuai instruksi.",
+  "catatan": "Perlu melengkapi penjelasan fungsi komponen pada soal nomor 2.",
   "catatan_guru": "✅ Mandiri (Tidak ada indikasi jiplak file/teks)"
 }`;
 
