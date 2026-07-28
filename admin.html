@@ -4456,25 +4456,29 @@
           const textContent = await page.getTextContent();
 
           for (let item of textContent.items) {
-            if (!item.str) continue;
-            let str = item.str;
+            if (!item.str || item.str.trim().length <= 1) continue;
+            let str = item.str.trim();
             fullText += str + " ";
 
-            let fontName = (item.fontName || "").toLowerCase();
-            if (fontName.includes("bold") || fontName.includes("bd")) {
-              if (str.trim().length > 1) boldPhrases.push(str.trim());
-            }
-            if (fontName.includes("italic") || fontName.includes("oblique") || fontName.includes("it")) {
-              if (str.trim().length > 1) italicPhrases.push(str.trim());
-            }
+            let fontKey = item.fontName || "";
+            let styleObj = textContent.styles ? textContent.styles[fontKey] : null;
+            let fontNameStr = fontKey.toLowerCase();
+            let fontFamilyStr = styleObj && styleObj.fontFamily ? styleObj.fontFamily.toLowerCase() : "";
+            let combined = fontNameStr + " " + fontFamilyStr;
+
+            let isBold = combined.includes("bold") || combined.includes("bd") || combined.includes("b+") || combined.includes("heavy") || combined.includes("black") || combined.includes("w6") || combined.includes("w7") || combined.includes("w8") || combined.includes("700") || combined.includes("800");
+            let isItalic = combined.includes("italic") || combined.includes("oblique") || combined.includes("it") || combined.includes("i+") || combined.includes("slanted");
+
+            if (isBold && !boldPhrases.includes(str)) boldPhrases.push(str);
+            if (isItalic && !italicPhrases.includes(str)) italicPhrases.push(str);
           }
           fullText += "\n";
         }
 
         return {
           fullText: fullText.trim(),
-          boldPhrases: boldPhrases.slice(0, 35),
-          italicPhrases: italicPhrases.slice(0, 35),
+          boldPhrases: boldPhrases.slice(0, 50),
+          italicPhrases: italicPhrases.slice(0, 50),
           underlinePhrases: [],
           fonts: ["PDF Export Font"],
           fontSizes: ["PDF Font Size"],
@@ -4500,13 +4504,16 @@
 
       try {
         const arrayBuffer = await file.arrayBuffer();
-        if (file.name.toLowerCase().endsWith('.pdf')) {
+
+        // 1. Coba parse sebagai DOCX terlebih dahulu (menangani file Word yang diberi nama .docx.pdf atau .docx)
+        masterDocxData = await parseDocxFormattingDetails(arrayBuffer);
+
+        // 2. Jika parse DOCX gagal (karena PDF murni), jalankan parser PDF tingkat lanjut
+        if (!masterDocxData || !masterDocxData.fullText) {
           masterDocxData = await parsePdfFormattingDetails(arrayBuffer);
-        } else {
-          masterDocxData = await parseDocxFormattingDetails(arrayBuffer);
         }
 
-        if (masterDocxData) {
+        if (masterDocxData && masterDocxData.fullText) {
           statusEl.innerText = `✅ File Master "${file.name}" berhasil dibaca! (${masterDocxData.boldPhrases.length} frasa tebal, ${masterDocxData.italicPhrases.length} frasa miring terdeteksi)`;
           statusEl.style.color = "#10b981";
         } else {
