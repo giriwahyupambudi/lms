@@ -11,6 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <link rel="manifest" href="manifest.json">
   <script src="pwa-handler.js" defer></script>
 
@@ -4281,11 +4282,11 @@
 
     <div class="form-group" style="margin-bottom:16px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:10px; padding:14px;">
       <label style="font-weight:600; font-size:0.9rem; color:var(--primary); display:flex; align-items:center; gap:6px;">
-        <i data-lucide="file-check"></i> Upload File Master / Kunci Jawaban (.docx Guru) - Opsional
+        <i data-lucide="file-check"></i> Upload File Master / Kunci Jawaban (.docx / .pdf Guru) - Opsional
       </label>
-      <input type="file" id="masterDocxFileInput" class="form-control" accept=".docx" onchange="onMasterFileSelected(this)" style="margin-top:6px; background:#fff;">
+      <input type="file" id="masterDocxFileInput" class="form-control" accept=".docx,.pdf" onchange="onMasterFileSelected(this)" style="margin-top:6px; background:#fff;">
       <small id="masterFileStatusText" style="color:var(--text-muted); font-size:0.78rem; display:block; margin-top:4px; font-weight:500;">
-        Jika diunggah, AI akan membandingkan pengetikan siswa 1-ke-1 dengan dokumen contoh milik Guru ini.
+        Jika diunggah, AI akan membandingkan pengetikan siswa 1-ke-1 dengan dokumen contoh (.docx / .pdf) milik Guru ini.
       </small>
     </div>
 
@@ -4325,21 +4326,72 @@
     // ============================================
     let masterDocxData = null;
 
+    async function parsePdfFormattingDetails(arrayBuffer) {
+      if (typeof pdfjsLib === 'undefined') return null;
+      try {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        const pdfDoc = await loadingTask.promise;
+
+        let fullText = "";
+        let boldPhrases = [];
+        let italicPhrases = [];
+
+        for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+          const page = await pdfDoc.getPage(pageNum);
+          const textContent = await page.getTextContent();
+
+          for (let item of textContent.items) {
+            if (!item.str) continue;
+            let str = item.str;
+            fullText += str + " ";
+
+            let fontName = (item.fontName || "").toLowerCase();
+            if (fontName.includes("bold") || fontName.includes("bd")) {
+              if (str.trim().length > 1) boldPhrases.push(str.trim());
+            }
+            if (fontName.includes("italic") || fontName.includes("oblique") || fontName.includes("it")) {
+              if (str.trim().length > 1) italicPhrases.push(str.trim());
+            }
+          }
+          fullText += "\n";
+        }
+
+        return {
+          fullText: fullText.trim(),
+          boldPhrases: boldPhrases.slice(0, 35),
+          italicPhrases: italicPhrases.slice(0, 35),
+          underlinePhrases: [],
+          fonts: ["PDF Export Font"],
+          fontSizes: ["PDF Font Size"],
+          alignments: ["Standard"]
+        };
+      } catch (e) {
+        console.error("Parsing PDF Error:", e);
+        return null;
+      }
+    }
+
     async function onMasterFileSelected(inputEl) {
       const statusEl = document.getElementById('masterFileStatusText');
       if (!inputEl.files || !inputEl.files[0]) {
         masterDocxData = null;
-        statusEl.innerText = "Jika diunggah, AI akan membandingkan pengetikan siswa 1-ke-1 dengan dokumen contoh milik Guru ini.";
+        statusEl.innerText = "Jika diunggah, AI akan membandingkan pengetikan siswa 1-ke-1 dengan dokumen contoh (.docx / .pdf) milik Guru ini.";
         statusEl.style.color = "var(--text-muted)";
         return;
       }
       const file = inputEl.files[0];
-      statusEl.innerText = `Memproses File Master: ${file.name}...`;
+      statusEl.innerText = `Memproses File Master (${file.name})...`;
       statusEl.style.color = "var(--primary)";
 
       try {
         const arrayBuffer = await file.arrayBuffer();
-        masterDocxData = await parseDocxFormattingDetails(arrayBuffer);
+        if (file.name.toLowerCase().endsWith('.pdf')) {
+          masterDocxData = await parsePdfFormattingDetails(arrayBuffer);
+        } else {
+          masterDocxData = await parseDocxFormattingDetails(arrayBuffer);
+        }
+
         if (masterDocxData) {
           statusEl.innerText = `✅ File Master "${file.name}" berhasil dibaca! (${masterDocxData.boldPhrases.length} frasa tebal, ${masterDocxData.italicPhrases.length} frasa miring terdeteksi)`;
           statusEl.style.color = "#10b981";
