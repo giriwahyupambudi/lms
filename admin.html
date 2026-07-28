@@ -4337,6 +4337,14 @@
           Jika diunggah, AI akan membandingkan pengetikan siswa 1-ke-1 dengan dokumen contoh (.docx / .pdf) milik Guru ini.
         </small>
       </div>
+
+      <!-- Opsi Filter Siswa Menyusul (Pengaman Nilai Lama) -->
+      <div style="margin-top:12px; padding-top:10px; border-top:1px solid #e2e8f0; display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" id="chkOnlyUnscoredAi" checked style="width:18px; height:18px; cursor:pointer; accent-color:var(--primary);">
+        <label for="chkOnlyUnscoredAi" style="font-size:0.83rem; font-weight:600; color:#1e293b; cursor:pointer; margin:0;">
+          🔒 Hanya koreksi siswa yang BELUM memiliki nilai (Siswa Menyusul — Nilai siswa lama 100% aman)
+        </label>
+      </div>
     </div>
 
     <!-- Tab Buttons -->
@@ -4869,6 +4877,9 @@ TUGAS ANDA:
 
       const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
 
+      const chkOnlyUnscored = document.getElementById('chkOnlyUnscoredAi');
+      const onlyUnscored = chkOnlyUnscored ? chkOnlyUnscored.checked : false;
+
       let listTugas = dataLogTugas.filter(t => {
         let k = norm(getVal(t, ['kelas']));
         let m = norm(getVal(t, ['materi', 'tugas', 'judul']));
@@ -4877,8 +4888,31 @@ TUGAS ANDA:
         return matchK && matchM;
       });
 
+      if (onlyUnscored) {
+        listTugas = listTugas.filter(t => {
+          let usernameSiswa = getVal(t, ['username', 'nisn']) || "";
+          let rawMateriTugas = getVal(t, ['materi', 'tugas', 'idmateri', 'id_materi']) || selMateri || "Tugas Word";
+          let parentMat = dataMateri.find(pm => {
+            let mJudul = getVal(pm, ['judul', 'materi']);
+            let mId = getVal(pm, ['idmateri', 'id_materi', 'materiid']);
+            return norm(mJudul) === norm(rawMateriTugas) || norm(mId) === norm(rawMateriTugas) || norm(mJudul) === norm(selMateri) || norm(mId) === norm(selMateri);
+          });
+          let idMateriVal = parentMat ? (getVal(parentMat, ['idmateri', 'id_materi']) || rawMateriTugas) : rawMateriTugas;
+          let judulMateriVal = parentMat ? (getVal(parentMat, ['judul', 'materi']) || rawMateriTugas) : rawMateriTugas;
+
+          let hasNilai = dataNilai.some(n => {
+            let nUser = norm(getVal(n, ['username', 'nisn']));
+            let nMid = (getVal(n, ['id_materi', 'idmateri']) || '').toString().trim();
+            let nJudul = norm(getVal(n, ['judul', 'materi']));
+            let scoreVal = getVal(n, ['nilai', 'skor']);
+            return nUser === norm(usernameSiswa) && (norm(nMid) === norm(idMateriVal) || nJudul === norm(judulMateriVal)) && scoreVal !== "" && scoreVal !== null && scoreVal !== undefined;
+          });
+          return !hasNilai;
+        });
+      }
+
       if (listTugas.length === 0) {
-        progressText.innerText = "Tidak ada file pengumpulan tugas yang sesuai filter.";
+        progressText.innerText = onlyUnscored ? "Semua siswa yang mengumpulkan tugas ini sudah memiliki nilai! (Nilai siswa lama 100% aman)." : "Tidak ada file pengumpulan tugas yang sesuai filter.";
         btn.disabled = false;
         return;
       }
