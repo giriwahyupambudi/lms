@@ -1253,23 +1253,23 @@
           if (ketText !== "") {
             const escapeHtmlStr = (str) => (str || "").toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
             let cleanText = escapeHtmlStr(ketText);
-            let isLong = ketText.length > 60;
-            let previewSnippet = escapeHtmlStr(isLong ? ketText.substring(0, 60) + "..." : ketText);
+            let isLong = ketText.length > 70;
 
             if (isLong) {
+              let cleanSnippet = escapeHtmlStr(ketText.substring(0, 70));
+              let safeMid = mid.toString().replace(/[^a-zA-Z0-9_-]/g, '_');
               feedbackHTML = `
-              <details style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:8px 12px; margin-top:10px; font-size:0.8rem; color:#166534; line-height:1.4;">
-                 <summary style="font-weight:600; color:#15803d; cursor:pointer; user-select:none; outline:none;">
-                   <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px;">
-                     <span style="display:inline-flex; align-items:center; gap:4px; font-weight:700; color:#15803d;">
-                       <i data-lucide="message-square" style="width:14px; height:14px; flex-shrink:0;"></i> Catatan Evaluasi:
-                     </span>
-                     <span style="color:#2563eb; font-weight:600; font-size:0.75rem; text-decoration:underline;">...selengkapnya</span>
-                   </div>
-                   <div style="font-weight:400; color:#166534; margin-top:2px; font-style:italic;">${previewSnippet}</div>
-                 </summary>
-                 <div style="margin-top:6px; padding-top:6px; border-top:1px dashed #bbf7d0; color:#166534; font-weight:400; font-style:normal;">${cleanText}</div>
-              </details>`;
+              <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:8px 12px; margin-top:10px; font-size:0.8rem; color:#166534; line-height:1.4;">
+                 <div style="font-weight:700; display:flex; align-items:center; gap:4px; margin-bottom:4px; color:#15803d;">
+                   <i data-lucide="message-square" style="width:14px; height:14px; flex-shrink:0;"></i> Catatan Evaluasi Guru:
+                 </div>
+                 <div id="fbPrevBox_${safeMid}">
+                    ${cleanSnippet}... <span onclick="document.getElementById('fbPrevBox_${safeMid}').style.display='none'; document.getElementById('fbFullBox_${safeMid}').style.display='block';" style="color:#2563eb; font-weight:700; cursor:pointer; text-decoration:underline;">...selengkapnya</span>
+                 </div>
+                 <div id="fbFullBox_${safeMid}" style="display:none;">
+                    ${cleanText} <span onclick="document.getElementById('fbFullBox_${safeMid}').style.display='none'; document.getElementById('fbPrevBox_${safeMid}').style.display='block';" style="color:#059669; font-weight:700; cursor:pointer; text-decoration:underline; margin-left:4px;">(Sembunyikan)</span>
+                 </div>
+              </div>`;
             } else {
               feedbackHTML = `
               <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:8px 12px; margin-top:10px; font-size:0.8rem; color:#166534; line-height:1.4;">
