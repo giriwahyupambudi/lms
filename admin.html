@@ -5221,11 +5221,18 @@ TUGAS ANDA:
           }
 
           let existingPeerTexts = [];
-          allMatchingTugas.forEach(peerTask => {
+          dataLogTugas.forEach(peerTask => {
             let peerUser = getVal(peerTask, ['username', 'nisn']);
             let peerName = getVal(peerTask, ['nama', 'namalengkap']) || peerUser;
-            if (norm(peerUser) !== norm(usernameSiswa) && peerTask._parsedText) {
-              existingPeerTexts.push(`- Siswa: ${peerName} -> Teks: "${peerTask._parsedText.substring(0, 400)}"`);
+            let peerKelas = getVal(peerTask, ['kelas']) || "";
+            let peerMat = norm(getVal(peerTask, ['materi', 'tugas', 'judul']));
+            let peerMid = norm(getVal(peerTask, ['idmateri', 'id_materi']));
+            let selMatNorm = norm(selMateri);
+
+            let isSameMateri = !selMateri || peerMat === selMatNorm || peerMid === selMatNorm || peerMat === norm(idMateriVal) || peerMid === norm(idMateriVal);
+
+            if (norm(peerUser) !== norm(usernameSiswa) && isSameMateri && peerTask._parsedText) {
+              existingPeerTexts.push(`- Siswa: ${peerName} (${peerKelas}) -> Teks: "${peerTask._parsedText.substring(0, 400)}"`);
             }
           });
 
