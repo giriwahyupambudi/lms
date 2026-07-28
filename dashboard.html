@@ -1195,7 +1195,10 @@
           if (ketText !== "") {
             let safeMid = mid.toString().replace(/[^a-zA-Z0-9_-]/g, '_');
             let isLong = ketText.length > 85;
-            let previewText = isLong ? ketText.substring(0, 85) + "..." : ketText;
+            const escapeHtmlStr = (str) => (str || "").toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+            let cleanKet = escapeHtmlStr(ketText);
+            let cleanPreview = escapeHtmlStr(isLong ? ketText.substring(0, 85) + "..." : ketText);
+
             feedbackHTML = `
             <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 12px; margin-top:10px; font-size:0.8rem; color:#166534; line-height:1.4;">
                <div style="font-weight:700; display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; color:#15803d;">
@@ -1204,8 +1207,8 @@
                  </span>
                  ${isLong ? `<button onclick="toggleFeedback('${safeMid}')" id="btnToggleFb_${safeMid}" style="background:none; border:none; color:#15803d; font-weight:700; font-size:0.75rem; cursor:pointer; display:inline-flex; align-items:center; gap:2px; padding:0;"><span id="txtToggleFb_${safeMid}">Lihat Selengkapnya</span> <i id="iconToggleFb_${safeMid}" data-lucide="chevron-down" style="width:14px; height:14px;"></i></button>` : ''}
                </div>
-               <div id="fbPreview_${safeMid}">${previewText}</div>
-               ${isLong ? `<div id="fbFull_${safeMid}" style="display:none;">${ketText}</div>` : ''}
+               <div id="fbPreview_${safeMid}">${cleanPreview}</div>
+               ${isLong ? `<div id="fbFull_${safeMid}" style="display:none;">${cleanKet}</div>` : ''}
             </div>`;
           }
 
