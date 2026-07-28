@@ -4880,7 +4880,7 @@ TUGAS ANDA:
       const chkOnlyUnscored = document.getElementById('chkOnlyUnscoredAi');
       const onlyUnscored = chkOnlyUnscored ? chkOnlyUnscored.checked : false;
 
-      let listTugas = dataLogTugas.filter(t => {
+      let allMatchingTugas = dataLogTugas.filter(t => {
         let k = norm(getVal(t, ['kelas']));
         let m = norm(getVal(t, ['materi', 'tugas', 'judul']));
         let matchK = !selKelas || k === norm(selKelas);
@@ -4888,8 +4888,11 @@ TUGAS ANDA:
         return matchK && matchM;
       });
 
+      let listTugas = allMatchingTugas;
+      let skippedAlreadyScoredCount = 0;
+
       if (onlyUnscored) {
-        listTugas = listTugas.filter(t => {
+        listTugas = allMatchingTugas.filter(t => {
           let usernameSiswa = getVal(t, ['username', 'nisn']) || "";
           let rawMateriTugas = getVal(t, ['materi', 'tugas', 'idmateri', 'id_materi']) || selMateri || "Tugas Word";
           let parentMat = dataMateri.find(pm => {
@@ -4907,18 +4910,19 @@ TUGAS ANDA:
             let scoreVal = getVal(n, ['nilai', 'skor']);
             return nUser === norm(usernameSiswa) && (norm(nMid) === norm(idMateriVal) || nJudul === norm(judulMateriVal)) && scoreVal !== "" && scoreVal !== null && scoreVal !== undefined;
           });
+          if (hasNilai) skippedAlreadyScoredCount++;
           return !hasNilai;
         });
       }
 
       if (listTugas.length === 0) {
-        progressText.innerText = onlyUnscored ? "Semua siswa yang mengumpulkan tugas ini sudah memiliki nilai! (Nilai siswa lama 100% aman)." : "Tidak ada file pengumpulan tugas yang sesuai filter.";
+        progressText.innerText = onlyUnscored ? `Seluruh ${allMatchingTugas.length} siswa sudah memiliki nilai di database. (Hilangkan centang pengaman di atas jika ingin mengoreksi ulang seluruh siswa).` : "Tidak ada file pengumpulan tugas yang sesuai filter.";
         btn.disabled = false;
         return;
       }
 
-      progressText.innerText = `Menemukan ${listTugas.length} tugas. Memulai analisis AI...`;
-      logEl.innerText += `Memulai proses ${listTugas.length} file tugas...\n`;
+      progressText.innerText = `Memproses ${listTugas.length} tugas${skippedAlreadyScoredCount > 0 ? ` (${skippedAlreadyScoredCount} siswa lama dilewati)` : ''}...`;
+      logEl.innerText += `Memulai proses ${listTugas.length} file tugas${skippedAlreadyScoredCount > 0 ? ` (Dilewati ${skippedAlreadyScoredCount} siswa yang sudah ada nilai)` : ''}...\n`;
 
       let successCount = 0;
       let payloads = [];
