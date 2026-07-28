@@ -4314,17 +4314,28 @@
       <button class="icon-btn" onclick="closeModalKoreksiAI()"><i data-lucide="x"></i></button>
     </div>
 
-    <!-- Pilihan Kelas & Materi di Atas Modal -->
-    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:16px;">
-      <div style="display:flex; gap:10px; align-items:center;">
-        <div style="flex:1;">
+    <!-- Pilihan Kelas, Materi, & Upload File Master di Atas Modal -->
+    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:16px;">
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <div style="flex:1; min-width:140px;">
           <label style="font-weight:600; font-size:0.8rem; color:var(--text-muted);">Pilih Kelas</label>
           <select id="modalKelasKoreksiAI" class="form-control" style="margin-top:4px;"></select>
         </div>
-        <div style="flex:1;">
+        <div style="flex:1; min-width:180px;">
           <label style="font-weight:600; font-size:0.8rem; color:var(--text-muted);">Pilih Materi / Tugas</label>
           <select id="modalMateriKoreksiAI" class="form-control" style="margin-top:4px;" onchange="onMateriAiSelectionChanged()"></select>
         </div>
+      </div>
+
+      <!-- Upload File Master Guru (Selalu Terlihat) -->
+      <div style="margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1;">
+        <label style="font-weight:600; font-size:0.85rem; color:var(--primary); display:flex; align-items:center; gap:6px;">
+          <i data-lucide="file-check"></i> Upload File Master / Kunci Jawaban (.docx / .pdf Guru) - Opsional
+        </label>
+        <input type="file" id="masterDocxFileInput" class="form-control" accept=".docx,.pdf" onchange="onMasterFileSelected(this)" style="margin-top:6px; background:#fff;">
+        <small id="masterFileStatusText" style="color:var(--text-muted); font-size:0.78rem; display:block; margin-top:4px; font-weight:500;">
+          Jika diunggah, AI akan membandingkan pengetikan siswa 1-ke-1 dengan dokumen contoh (.docx / .pdf) milik Guru ini.
+        </small>
       </div>
     </div>
 
@@ -4378,16 +4389,6 @@
           <input type="password" id="geminiApiKeyInput" class="form-control" placeholder="API Key tersimpan otomatis..." style="flex:1;">
           <button class="btn" style="background:#f1f5f9; border:1px solid #cbd5e1;" onclick="toggleShowApiKey()"><i data-lucide="eye" id="eyeIconApiKey"></i></button>
         </div>
-      </div>
-
-      <div class="form-group" style="margin-bottom:16px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:10px; padding:14px;">
-        <label style="font-weight:600; font-size:0.88rem; color:var(--primary); display:flex; align-items:center; gap:6px;">
-          <i data-lucide="file-check"></i> Upload File Master / Kunci Jawaban (.docx / .pdf Guru) - Opsional
-        </label>
-        <input type="file" id="masterDocxFileInput" class="form-control" accept=".docx,.pdf" onchange="onMasterFileSelected(this)" style="margin-top:6px; background:#fff;">
-        <small id="masterFileStatusText" style="color:var(--text-muted); font-size:0.78rem; display:block; margin-top:4px; font-weight:500;">
-          Jika diunggah, AI akan membandingkan pengetikan siswa 1-ke-1 dengan dokumen contoh (.docx / .pdf) milik Guru ini.
-        </small>
       </div>
 
       <div id="koreksiAiStatusBox" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:16px; font-size:0.85rem; max-height:180px; overflow-y:auto;">
