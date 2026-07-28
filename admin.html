@@ -4279,6 +4279,16 @@
       </small>
     </div>
 
+    <div class="form-group" style="margin-bottom:16px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:10px; padding:14px;">
+      <label style="font-weight:600; font-size:0.9rem; color:var(--primary); display:flex; align-items:center; gap:6px;">
+        <i data-lucide="file-check"></i> Upload File Master / Kunci Jawaban (.docx Guru) - Opsional
+      </label>
+      <input type="file" id="masterDocxFileInput" class="form-control" accept=".docx" onchange="onMasterFileSelected(this)" style="margin-top:6px; background:#fff;">
+      <small id="masterFileStatusText" style="color:var(--text-muted); font-size:0.78rem; display:block; margin-top:4px; font-weight:500;">
+        Jika diunggah, AI akan membandingkan pengetikan siswa 1-ke-1 dengan dokumen contoh milik Guru ini.
+      </small>
+    </div>
+
     <div class="form-group" style="margin-bottom:16px;">
       <label style="font-weight:600; font-size:0.9rem;">Instruksi / Aturan Format Pengetikan Tugas</label>
       <textarea id="instruksiTugasAI" class="form-control" rows="5" style="font-family:inherit; font-size:0.88rem; line-height:1.5;" placeholder="Tuliskan aturan format pengetikan..."></textarea>
@@ -4313,6 +4323,36 @@
     // ============================================
     // MODUL KOREKSI AI MASSAL TUGAS WORD (.DOCX)
     // ============================================
+    let masterDocxData = null;
+
+    async function onMasterFileSelected(inputEl) {
+      const statusEl = document.getElementById('masterFileStatusText');
+      if (!inputEl.files || !inputEl.files[0]) {
+        masterDocxData = null;
+        statusEl.innerText = "Jika diunggah, AI akan membandingkan pengetikan siswa 1-ke-1 dengan dokumen contoh milik Guru ini.";
+        statusEl.style.color = "var(--text-muted)";
+        return;
+      }
+      const file = inputEl.files[0];
+      statusEl.innerText = `Memproses File Master: ${file.name}...`;
+      statusEl.style.color = "var(--primary)";
+
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        masterDocxData = await parseDocxFormattingDetails(arrayBuffer);
+        if (masterDocxData) {
+          statusEl.innerText = `✅ File Master "${file.name}" berhasil dibaca! (${masterDocxData.boldPhrases.length} frasa tebal, ${masterDocxData.italicPhrases.length} frasa miring terdeteksi)`;
+          statusEl.style.color = "#10b981";
+        } else {
+          statusEl.innerText = `⚠️ Tidak dapat mengekstrak detail format dari file Master.`;
+          statusEl.style.color = "#ef4444";
+        }
+      } catch (e) {
+        statusEl.innerText = `❌ Gagal membaca file Master: ${e.message}`;
+        statusEl.style.color = "#ef4444";
+      }
+    }
+
     function openModalKoreksiAI() {
       const modal = document.getElementById('modalKoreksiAI');
       if (!modal) return;
@@ -4534,21 +4574,36 @@
 - Teks Dokumen: ${docxDetails.fullText.substring(0, 1500)}
 ` : `Catatan: File disimpan di Drive (${fileUrl}). Evaluasi kepatuhan berdasarkan standar format pengetikan.`;
 
-          let promptText = `Anda adalah asisten penilai tugas pengetikan Word (.docx) untuk Guru.
-Tugas Anda adalah menilai dokumen pengetikan siswa (${namaSiswa}) berdasarkan Aturan Format dari Guru berikut:
+          let masterInfoText = masterDocxData ? `
+METADATA DOKUMEN MASTER GURU (KUNCI JAWABAN):
+- Frasa Wajib TEBAL (Bold) di Master: ${masterDocxData.boldPhrases.length ? masterDocxData.boldPhrases.join(", ") : "(Tidak ada)"}
+- Frasa Wajib MIRING (Italic) di Master: ${masterDocxData.italicPhrases.length ? masterDocxData.italicPhrases.join(", ") : "(Tidak ada)"}
+- Frasa Wajib GARIS BAWAH (Underline) di Master: ${masterDocxData.underlinePhrases.length ? masterDocxData.underlinePhrases.join(", ") : "(Tidak ada)"}
+- Jenis Font Master: ${masterDocxData.fonts.join(", ") || "Standar"} (${masterDocxData.fontSizes.join(", ") || "Standar"})
+- Perataan Paragraf Master: ${masterDocxData.alignments.join(", ") || "Standar"}
+- Teks Dokumen Master: ${masterDocxData.fullText.substring(0, 1500)}
+` : "";
 
-ATURAN FORMAT TUGAS:
+          let promptText = `Anda adalah asisten penilai tugas pengetikan Word (.docx) untuk Guru LMS.
+Tugas Anda adalah membandingkan dan menilai dokumen pengetikan siswa (${namaSiswa}) berdasarkan DOKUMEN MASTER KUNCI JAWABAN GURU dan Aturan Format berikut.
+
+${masterInfoText}
+
+ATURAN FORMAT DARI GURU:
 ${instruksi}
 
-METADATA FORMAT TERDETEKSI PADA DOKUMEN SISWA:
+METADATA FORMAT TERDETEKSI PADA DOKUMEN SISWA (${namaSiswa}):
 ${formatInfoText}
 
-PETUNJUK OUTPUT:
-Hitung nilai (0 - 100) dan berikan catatan umpan balik (feedback) singkat dalam 1-2 kalimat.
+PETUNJUK EVALUASI:
+1. Jika Dokumen Master Guru ada, bandingkan seberapa presisi siswa meniru format Bold, Italic, Underline, Font, dan ejaan dari Dokumen Master Guru.
+2. Hitung nilai akhir (0 - 100).
+3. Berikan catatan umpan balik (feedback) singkat dalam 1-2 kalimat (sebutkan frasa/kata spesifik yang kurang miring/tebal dibanding File Master Guru jika ada).
+
 Jawab HANYA dengan format JSON murni berikut tanpa pembungkus markdown lain:
 {
   "nilai": 85,
-  "catatan": "Judul sudah tebal. Istilah 'Hardware' pada paragraf 2 belum dicetak miring."
+  "catatan": "Format meniru 90% File Master Guru. Kata 'Hardware' pada paragraf 2 belum dicetak miring seperti pada File Master."
 }`;
 
           const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
