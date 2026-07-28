@@ -1190,9 +1190,10 @@
           let matchedGuru = dataGuruMentah.find(g => (g.mapel || "").toString().trim().toLowerCase() === mapelName.toLowerCase());
           let namaGuru = matchedGuru && matchedGuru.nama ? matchedGuru.nama : "Guru Pengampu";
 
-          let ketText = quizKeterangan.get(mid.toString()) || "";
+          let ketText = (quizKeterangan.get(mid.toString()) || "").toString().trim();
           let feedbackHTML = "";
-          if (ketText) {
+          if (ketText !== "") {
+            let safeMid = mid.toString().replace(/[^a-zA-Z0-9_-]/g, '_');
             let isLong = ketText.length > 85;
             let previewText = isLong ? ketText.substring(0, 85) + "..." : ketText;
             feedbackHTML = `
@@ -1201,10 +1202,10 @@
                  <span style="display:flex; align-items:center; gap:4px;">
                    <i data-lucide="message-square" style="width:14px; height:14px;"></i> Catatan Evaluasi Guru:
                  </span>
-                 ${isLong ? `<button onclick="toggleFeedback('${mid}')" id="btnToggleFb_${mid}" style="background:none; border:none; color:#15803d; font-weight:700; font-size:0.75rem; cursor:pointer; display:inline-flex; align-items:center; gap:2px; padding:0;"><span id="txtToggleFb_${mid}">Lihat Selengkapnya</span> <i id="iconToggleFb_${mid}" data-lucide="chevron-down" style="width:14px; height:14px;"></i></button>` : ''}
+                 ${isLong ? `<button onclick="toggleFeedback('${safeMid}')" id="btnToggleFb_${safeMid}" style="background:none; border:none; color:#15803d; font-weight:700; font-size:0.75rem; cursor:pointer; display:inline-flex; align-items:center; gap:2px; padding:0;"><span id="txtToggleFb_${safeMid}">Lihat Selengkapnya</span> <i id="iconToggleFb_${safeMid}" data-lucide="chevron-down" style="width:14px; height:14px;"></i></button>` : ''}
                </div>
-               <div id="fbPreview_${mid}">${previewText}</div>
-               ${isLong ? `<div id="fbFull_${mid}" style="display:none;">${ketText}</div>` : ''}
+               <div id="fbPreview_${safeMid}">${previewText}</div>
+               ${isLong ? `<div id="fbFull_${safeMid}" style="display:none;">${ketText}</div>` : ''}
             </div>`;
           }
 
@@ -1259,6 +1260,7 @@
 
         lucide.createIcons();
       } catch (e) {
+        console.error("Error in renderMateri:", e);
         list.innerHTML = "<p>Gagal memuat materi.</p>";
         const upNextContainer = document.getElementById("upNextContainer");
         if (upNextContainer) upNextContainer.style.display = "none";
