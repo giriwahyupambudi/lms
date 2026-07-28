@@ -2534,7 +2534,7 @@
         }
 
         let urutanUploadNo = uploadOrderMap.get(username);
-        let urutanBadge = urutanUploadNo ? `<span class="badge" style="background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; font-weight:700; font-size:0.75rem; padding:2px 6px; border-radius:6px; margin-right:4px;" title="Urutan Upload ke-${urutanUploadNo}">#${urutanUploadNo}</span>` : '';
+        let urutanBadge = urutanUploadNo ? `<span class="badge" style="background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; font-weight:700; font-size:0.82rem; padding:4px 10px; border-radius:8px;" title="Waktu Submit: ${waktuSubmit}">#${urutanUploadNo}</span>` : '<span style="color:var(--text-muted); font-size:0.8rem;">-</span>';
 
         // Tentukan style & warning jika belum upload tapi sudah dinilai/sedang dinilai
         let inputStyle = "";
@@ -2551,7 +2551,7 @@
         html += `<tr>
           <td>${i+1}</td>
           <td style="font-weight:500;">${nama} ${fileLinkHTML}<br><small style="color:var(--text-muted)">${username}</small></td>
-          <td style="text-align:center; font-size:0.85rem;">${urutanBadge}${waktuSubmit}</td>
+          <td style="text-align:center;">${urutanBadge}</td>
           <td style="text-align:center">
              <input type="text" id="durasi_${username}" class="form-control" value="${durasiRender}" data-original-value="${durasiOriginal}" oninput="updateDraft('${safeMateri}', '${username}', 'durasi', this.value)" placeholder="00:00" style="max-width:70px; display:inline-block; text-align:center; padding: 0.3rem;">
           </td>
