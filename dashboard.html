@@ -1541,7 +1541,8 @@
           if (match) {
               let fileId = match[1];
               let dlUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-              iframeUrl = `https://docs.google.com/gview?url=${encodeURIComponent(dlUrl)}&embedded=true`;
+              // Gunakan Microsoft Office Web Viewer resmi agar tampilan .docx 100% presisi dan rapi
+              iframeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(dlUrl)}`;
           }
       } else if (url.includes('docs.google.com/presentation')) {
           let embedUrl = url;
