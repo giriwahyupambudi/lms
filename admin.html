@@ -2441,6 +2441,30 @@
         return { u, username, nama, maxNilai, statusKuis: maxNilai !== "" ? "Tuntas" : "Belum", waktuSubmit, durasiKuis, rawDate, upload, isUploadType };
       });
 
+      // Hitung urutan upload kronologis (#1, #2, #3...) untuk seluruh siswa yang telah mengumpulkan
+      let uploadTimes = [];
+      mappedStudents.forEach(item => {
+        let tTime = item.rawDate;
+        if (!tTime && item.upload) {
+          let tW = getVal(item.upload, ['waktu', 'timestamp', 'tanggal']);
+          if (tW) {
+            try {
+              let d = new Date(tW);
+              if (!isNaN(d.getTime())) tTime = d.getTime();
+            } catch(e) {}
+          }
+        }
+        if (tTime && tTime > 0) {
+          uploadTimes.push({ username: item.username, time: tTime });
+        }
+      });
+
+      uploadTimes.sort((a, b) => a.time - b.time);
+      let uploadOrderMap = new Map();
+      uploadTimes.forEach((entry, idx) => {
+        uploadOrderMap.set(entry.username, idx + 1);
+      });
+
       let html = '';
 
       if (sortState.nilai.col) {
@@ -2496,7 +2520,6 @@
            let fileUrl = getVal(upload, ['link_tugas', 'file']) || "#";
            fileLinkHTML = `<br><a href="${fileUrl}" target="_blank" style="font-size:0.7rem; color:var(--primary); text-decoration:none; display:inline-flex; align-items:center; gap:2px; margin-top:4px;"><i data-lucide="external-link" style="width:12px; height:12px;"></i> Lihat Tugas</a>`;
            
-           // Jika waktuSubmit kosong (belum dinilai), pakai waktu upload dari logTugas
            if (waktuSubmit === "-") {
                let tWaktu = getVal(upload, ['waktu', 'timestamp']);
                if (tWaktu) {
@@ -2509,6 +2532,9 @@
                }
            }
         }
+
+        let urutanUploadNo = uploadOrderMap.get(username);
+        let urutanBadge = urutanUploadNo ? `<span class="badge" style="background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; font-weight:700; font-size:0.75rem; padding:2px 6px; border-radius:6px; margin-right:4px;" title="Urutan Upload ke-${urutanUploadNo}">#${urutanUploadNo}</span>` : '';
 
         // Tentukan style & warning jika belum upload tapi sudah dinilai/sedang dinilai
         let inputStyle = "";
@@ -2525,7 +2551,7 @@
         html += `<tr>
           <td>${i+1}</td>
           <td style="font-weight:500;">${nama} ${fileLinkHTML}<br><small style="color:var(--text-muted)">${username}</small></td>
-          <td style="text-align:center; font-size:0.85rem;">${waktuSubmit}</td>
+          <td style="text-align:center; font-size:0.85rem;">${urutanBadge}${waktuSubmit}</td>
           <td style="text-align:center">
              <input type="text" id="durasi_${username}" class="form-control" value="${durasiRender}" data-original-value="${durasiOriginal}" oninput="updateDraft('${safeMateri}', '${username}', 'durasi', this.value)" placeholder="00:00" style="max-width:70px; display:inline-block; text-align:center; padding: 0.3rem;">
           </td>
@@ -4928,8 +4954,18 @@ TUGAS ANDA:
         return;
       }
 
+      // Urutkan listTugas secara kronologis sesuai waktu upload (Paling awal upload = Urutan #1)
+      listTugas.sort((a, b) => {
+        let tA = getVal(a, ['waktu', 'timestamp', 'tanggal']);
+        let tB = getVal(b, ['waktu', 'timestamp', 'tanggal']);
+        let timeA = 0, timeB = 0;
+        try { if (tA) timeA = new Date(tA).getTime() || 0; } catch(e) {}
+        try { if (tB) timeB = new Date(tB).getTime() || 0; } catch(e) {}
+        return timeA - timeB;
+      });
+
       progressText.innerText = `Memproses ${listTugas.length} tugas${skippedAlreadyScoredCount > 0 ? ` (${skippedAlreadyScoredCount} siswa lama dilewati)` : ''}...`;
-      logEl.innerText += `Memulai proses ${listTugas.length} file tugas${skippedAlreadyScoredCount > 0 ? ` (Dilewati ${skippedAlreadyScoredCount} siswa yang sudah ada nilai)` : ''}...\n`;
+      logEl.innerText += `Memulai proses ${listTugas.length} file tugas sesuai urutan upload${skippedAlreadyScoredCount > 0 ? ` (Dilewati ${skippedAlreadyScoredCount} siswa yang sudah ada nilai)` : ''}...\n`;
 
       let successCount = 0;
       let payloads = [];
@@ -4943,6 +4979,9 @@ TUGAS ANDA:
         let kelasSiswa = getVal(t, ['kelas']) || selKelas || "X";
         let usernameSiswa = getVal(t, ['username', 'nisn']) || "";
 
+        logEl.innerText += `[${i+1}/${listTugas.length}] (Urutan Upload #${i+1}) Memproses ${namaSiswa}... `;
+        logEl.scrollTop = logEl.scrollHeight;
+
         let parentMat = dataMateri.find(m => {
           let mJudul = getVal(m, ['judul', 'materi']);
           let mId = getVal(m, ['idmateri', 'id_materi', 'materiid']);
@@ -4952,8 +4991,6 @@ TUGAS ANDA:
         let idMateriVal = parentMat ? (getVal(parentMat, ['idmateri', 'id_materi']) || rawMateriTugas) : rawMateriTugas;
         let judulMateriVal = parentMat ? (getVal(parentMat, ['judul', 'materi']) || rawMateriTugas) : rawMateriTugas;
         let isoTimestamp = new Date().toISOString();
-
-        logEl.innerText += `[${i+1}/${listTugas.length}] Memproses ${namaSiswa}... `;
         logEl.scrollTop = logEl.scrollHeight;
 
         if (!fileUrl) {
