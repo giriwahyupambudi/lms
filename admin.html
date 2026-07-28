@@ -4304,64 +4304,105 @@
     // Removed Jurnal JS Functions
   </script>
 
-<!-- MODAL KOREKSI AI TUGAS WORD (.DOCX) -->
+<!-- MODAL KOREKSI AI MASSAL (DENGAN DISKUSI INTERAKTIF & LOGIKA PER MATERI) -->
 <div id="modalKoreksiAI" class="modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center; padding:16px;">
-  <div class="modal-content" style="background:#fff; border-radius:16px; width:100%; max-width:650px; max-height:90vh; overflow-y:auto; padding:24px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
-    <div style="display:flex; justify-space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:12px;">
+  <div class="modal-content" style="background:#fff; border-radius:16px; width:100%; max-width:720px; max-height:92vh; overflow-y:auto; padding:24px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid var(--border-color); padding-bottom:12px;">
       <h2 style="font-size:1.2rem; font-weight:700; margin:0; display:flex; align-items:center; gap:8px; color:var(--primary);">
-        <i data-lucide="sparkles"></i> Koreksi AI Massal Tugas Word (.docx)
+        <i data-lucide="sparkles"></i> Koreksi AI Massal & Diskusi Logika
       </h2>
       <button class="icon-btn" onclick="closeModalKoreksiAI()"><i data-lucide="x"></i></button>
     </div>
 
-    <div class="form-group" style="margin-bottom:16px;">
-      <label style="font-weight:600; font-size:0.9rem;">Google Gemini API Key (Gratis)</label>
-      <div style="display:flex; gap:8px;">
-        <input type="password" id="geminiApiKeyInput" class="form-control" placeholder="Tempelkan Gemini API Key Anda di sini..." style="flex:1;">
-        <button class="btn" style="background:#f1f5f9; border:1px solid #cbd5e1;" onclick="toggleShowApiKey()"><i data-lucide="eye" id="eyeIconApiKey"></i></button>
-      </div>
-      <small style="color:var(--text-muted); font-size:0.78rem; display:block; margin-top:4px;">
-        🔒 <b>Tersimpan Otomatis:</b> API Key akan tersimpan di browser Anda (cukup diisi 1x saja). Belum punya API Key? Dapatkan gratis di <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--primary); font-weight:600; text-decoration:underline;">Google AI Studio</a>.
-      </small>
-    </div>
-
-    <div class="form-group" style="margin-bottom:16px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:10px; padding:14px;">
-      <label style="font-weight:600; font-size:0.9rem; color:var(--primary); display:flex; align-items:center; gap:6px;">
-        <i data-lucide="file-check"></i> Upload File Master / Kunci Jawaban (.docx / .pdf Guru) - Opsional
-      </label>
-      <input type="file" id="masterDocxFileInput" class="form-control" accept=".docx,.pdf" onchange="onMasterFileSelected(this)" style="margin-top:6px; background:#fff;">
-      <small id="masterFileStatusText" style="color:var(--text-muted); font-size:0.78rem; display:block; margin-top:4px; font-weight:500;">
-        Jika diunggah, AI akan membandingkan pengetikan siswa 1-ke-1 dengan dokumen contoh (.docx / .pdf) milik Guru ini.
-      </small>
-    </div>
-
-    <div class="form-group" style="margin-bottom:16px;">
-      <label style="font-weight:600; font-size:0.9rem;">Instruksi / Prompt Evaluasi AI dari Guru (Bebas)</label>
-      <textarea id="instruksiTugasAI" class="form-control" rows="5" style="font-family:inherit; font-size:0.88rem; line-height:1.5;" placeholder="Ketikkan prompt atau instruksi evaluasi bebas yang Anda inginkan..."></textarea>
-      <small style="color:var(--text-muted); font-size:0.78rem; display:block; margin-top:4px;">
-        💡 <b>Bebas & Fleksibel:</b> Tuliskan kriteria evaluasi apa saja (misal: evaluasi ringkasan materi, kerapian ejaan, tata bahasa, kepatuhan format, atau pembandingan dengan Kunci Jawaban Guru).
-      </small>
-    </div>
-
-    <div class="form-group" style="margin-bottom:16px;">
-      <label style="font-weight:600; font-size:0.9rem;">Pilih Kelas & Materi Tugas</label>
-      <div style="display:flex; gap:10px;">
-        <select id="modalKelasKoreksiAI" class="form-control" style="flex:1;"></select>
-        <select id="modalMateriKoreksiAI" class="form-control" style="flex:1;"></select>
+    <!-- Pilihan Kelas & Materi di Atas Modal -->
+    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:16px;">
+      <div style="display:flex; gap:10px; align-items:center;">
+        <div style="flex:1;">
+          <label style="font-weight:600; font-size:0.8rem; color:var(--text-muted);">Pilih Kelas</label>
+          <select id="modalKelasKoreksiAI" class="form-control" style="margin-top:4px;"></select>
+        </div>
+        <div style="flex:1;">
+          <label style="font-weight:600; font-size:0.8rem; color:var(--text-muted);">Pilih Materi / Tugas</label>
+          <select id="modalMateriKoreksiAI" class="form-control" style="margin-top:4px;" onchange="onMateriAiSelectionChanged()"></select>
+        </div>
       </div>
     </div>
 
-    <div id="koreksiAiStatusBox" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:16px; font-size:0.85rem; max-height:180px; overflow-y:auto;">
-      <div id="koreksiAiProgressText" style="font-weight:600; color:var(--primary); margin-bottom:6px;">Menyiapkan file tugas siswa...</div>
-      <div id="koreksiAiLog" style="font-family:monospace; color:#334155; white-space:pre-wrap; font-size:0.8rem; line-height:1.4;"></div>
-    </div>
-
-    <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--border-color); padding-top:16px;">
-      <button class="btn" onclick="closeModalKoreksiAI()" style="background:#f1f5f9;">Batal</button>
-      <button class="btn btn-primary" id="btnJalankanKoreksiAI" onclick="jalankanKoreksiAIMassal()" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border:none; display:flex; align-items:center; gap:6px;">
-        <i data-lucide="zap"></i> Jalankan Koreksi AI Massal
+    <!-- Tab Buttons -->
+    <div style="display:flex; gap:8px; border-bottom:2px solid #e2e8f0; margin-bottom:16px;">
+      <button id="tabBtnAiDiskusi" onclick="switchAiTab('diskusi')" style="padding:10px 16px; border:none; background:none; font-weight:600; font-size:0.88rem; color:var(--primary); border-bottom:2px solid var(--primary); margin-bottom:-2px; cursor:pointer; display:flex; align-items:center; gap:6px;">
+        <i data-lucide="message-square"></i> 1. Diskusi & Penyelarasan Kriteria AI
+      </button>
+      <button id="tabBtnAiEksekusi" onclick="switchAiTab('eksekusi')" style="padding:10px 16px; border:none; background:none; font-weight:600; font-size:0.88rem; color:var(--text-muted); cursor:pointer; display:flex; align-items:center; gap:6px;">
+        <i data-lucide="zap"></i> 2. Eksekusi Koreksi Massal
       </button>
     </div>
+
+    <!-- TAB 1: DISKUSI INTERAKTIF -->
+    <div id="aiTabContentDiskusi" style="display:block;">
+      <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:12px; margin-bottom:12px; font-size:0.82rem; color:#1e40af;">
+        💬 <b>Diskusi Interaktif dengan AI:</b> Sampaikan logika / kriteria penilaian yang Anda inginkan untuk materi ini. AI akan merespons dua arah dan menyelaraskan kriteria hingga Anda setuju!
+      </div>
+
+      <!-- Chat History Container -->
+      <div id="aiChatHistoryBox" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:12px; padding:14px; height:240px; overflow-y:auto; margin-bottom:12px; display:flex; flex-direction:column; gap:10px;">
+      </div>
+
+      <!-- Input Chat -->
+      <div style="display:flex; gap:8px; margin-bottom:14px;">
+        <input type="text" id="aiChatInputText" class="form-control" placeholder="Ketikkan kriteria / instruksi tambahan Anda di sini..." style="flex:1;" onkeypress="if(event.key==='Enter') kirimPesanDiskusiAI()">
+        <button class="btn btn-primary" onclick="kirimPesanDiskusiAI()" style="display:flex; align-items:center; gap:6px;"><i data-lucide="send"></i> Kirim</button>
+      </div>
+
+      <!-- Draft Kriteria Akhir Hasil Diskusi -->
+      <div class="form-group" style="margin-bottom:16px;">
+        <label style="font-weight:600; font-size:0.88rem; color:#0f172a;">Kriteria Evaluasi Terkonfirmasi untuk Materi Ini:</label>
+        <textarea id="instruksiTugasAI" class="form-control" rows="4" style="font-family:inherit; font-size:0.85rem; line-height:1.4; background:#fafafa;" placeholder="Kriteria hasil diskusi dengan AI akan muncul di sini..."></textarea>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-color); padding-top:14px;">
+        <button class="btn" onclick="simpanKriteriaMateriSekarang()" style="background:#f1f5f9; color:#334155; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+          <i data-lucide="save"></i> 💾 Simpan Kriteria untuk Materi Ini
+        </button>
+        <button class="btn btn-primary" onclick="switchAiTab('eksekusi')" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border:none; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+          ✅ Kriteria Sesuai! Lanjut Eksekusi Massal <i data-lucide="arrow-right"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 2: EKSEKUSI KOREKSI MASSAL -->
+    <div id="aiTabContentEksekusi" style="display:none;">
+      <div class="form-group" style="margin-bottom:16px;">
+        <label style="font-weight:600; font-size:0.88rem;">Google Gemini API Key</label>
+        <div style="display:flex; gap:8px;">
+          <input type="password" id="geminiApiKeyInput" class="form-control" placeholder="API Key tersimpan otomatis..." style="flex:1;">
+          <button class="btn" style="background:#f1f5f9; border:1px solid #cbd5e1;" onclick="toggleShowApiKey()"><i data-lucide="eye" id="eyeIconApiKey"></i></button>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:16px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:10px; padding:14px;">
+        <label style="font-weight:600; font-size:0.88rem; color:var(--primary); display:flex; align-items:center; gap:6px;">
+          <i data-lucide="file-check"></i> Upload File Master / Kunci Jawaban (.docx / .pdf Guru) - Opsional
+        </label>
+        <input type="file" id="masterDocxFileInput" class="form-control" accept=".docx,.pdf" onchange="onMasterFileSelected(this)" style="margin-top:6px; background:#fff;">
+        <small id="masterFileStatusText" style="color:var(--text-muted); font-size:0.78rem; display:block; margin-top:4px; font-weight:500;">
+          Jika diunggah, AI akan membandingkan pengetikan siswa 1-ke-1 dengan dokumen contoh (.docx / .pdf) milik Guru ini.
+        </small>
+      </div>
+
+      <div id="koreksiAiStatusBox" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:16px; font-size:0.85rem; max-height:180px; overflow-y:auto;">
+        <div id="koreksiAiProgressText" style="font-weight:600; color:var(--primary); margin-bottom:6px;">Menyiapkan file tugas siswa...</div>
+        <div id="koreksiAiLog" style="font-family:monospace; color:#334155; white-space:pre-wrap; font-size:0.8rem; line-height:1.4;"></div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-color); padding-top:14px;">
+        <button class="btn" onclick="switchAiTab('diskusi')" style="background:#f1f5f9;">⬅️ Kembali ke Diskusi</button>
+        <button class="btn btn-primary" id="btnJalankanKoreksiAI" onclick="jalankanKoreksiAIMassal()" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border:none; display:flex; align-items:center; gap:6px;">
+          <i data-lucide="zap"></i> Jalankan Koreksi AI Massal
+        </button>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -4450,17 +4491,198 @@
       }
     }
 
+    let currentMateriAiChat = [];
+
+    function switchAiTab(tabName) {
+      const tabDiskusi = document.getElementById('aiTabContentDiskusi');
+      const tabEksekusi = document.getElementById('aiTabContentEksekusi');
+      const btnDiskusi = document.getElementById('tabBtnAiDiskusi');
+      const btnEksekusi = document.getElementById('tabBtnAiEksekusi');
+
+      if (!tabDiskusi || !tabEksekusi) return;
+
+      if (tabName === 'diskusi') {
+        tabDiskusi.style.display = 'block';
+        tabEksekusi.style.display = 'none';
+        btnDiskusi.style.color = 'var(--primary)';
+        btnDiskusi.style.borderBottom = '2px solid var(--primary)';
+        btnEksekusi.style.color = 'var(--text-muted)';
+        btnEksekusi.style.borderBottom = 'none';
+      } else {
+        tabDiskusi.style.display = 'none';
+        tabEksekusi.style.display = 'block';
+        btnEksekusi.style.color = 'var(--primary)';
+        btnEksekusi.style.borderBottom = '2px solid var(--primary)';
+        btnDiskusi.style.color = 'var(--text-muted)';
+        btnDiskusi.style.borderBottom = 'none';
+      }
+      lucide.createIcons();
+    }
+
+    function onMateriAiSelectionChanged() {
+      const selMateri = document.getElementById('modalMateriKoreksiAI').value;
+      loadMateriAiPromptAndChat(selMateri);
+    }
+
+    function loadMateriAiPromptAndChat(materiKey) {
+      const normM = (materiKey || "default").toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+      const storageKey = `AI_MATERI_DATA_${normM}`;
+
+      let savedData = null;
+      let rawLocal = localStorage.getItem(storageKey);
+      if (rawLocal) {
+        try { savedData = JSON.parse(rawLocal); } catch(e) {}
+      }
+
+      if (!savedData && Array.isArray(dataSettings)) {
+        let dbObj = dataSettings.find(s => getVal(s, ['key', 'pengaturan']) === storageKey);
+        if (dbObj) {
+          try { savedData = JSON.parse(getVal(dbObj, ['value', 'nilai', 'val'])); } catch(e) {}
+        }
+      }
+
+      const promptTa = document.getElementById('instruksiTugasAI');
+
+      if (savedData && savedData.promptText) {
+        promptTa.value = savedData.promptText;
+        currentMateriAiChat = savedData.chatHistory || [];
+      } else {
+        promptTa.value = `1. Evaluasi pekerjaan pengetikan/tugas siswa secara menyeluruh.
+2. Periksa kerapian teks, ejaan, tata bahasa, dan kelengkapan materi.
+3. Bandingkan dengan File Master Guru (jika ada).
+4. Berikan nilai akhir (0 - 100) dan catatan umpan balik yang spesifik.`;
+
+        let namaMateriDisplay = materiKey || "Tugas Ini";
+        currentMateriAiChat = [
+          { sender: 'ai', text: `Halo Pak/Bu Guru! Saya siap membantu menyusun kriteria penilaian khusus untuk **${namaMateriDisplay}**.\n\nSilakan sampaikan logika atau aturan penilaian yang Anda inginkan (misal: penalti untuk kesalahan ejaan, poin tambahan, atau syarat khusus di paragraf tertentu).` }
+        ];
+      }
+
+      renderAiChatBubbles();
+    }
+
+    function renderAiChatBubbles() {
+      const chatBox = document.getElementById('aiChatHistoryBox');
+      if (!chatBox) return;
+
+      let html = "";
+      currentMateriAiChat.forEach(msg => {
+        if (msg.sender === 'guru') {
+          html += `<div style="align-self:flex-end; background:#2563eb; color:#fff; padding:10px 14px; border-radius:12px 12px 0 12px; max-width:80%; font-size:0.85rem; line-height:1.4; white-space:pre-wrap;">${msg.text}</div>`;
+        } else {
+          html += `<div style="align-self:flex-start; background:#fff; border:1px solid #cbd5e1; color:#0f172a; padding:10px 14px; border-radius:12px 12px 12px 0; max-width:85%; font-size:0.85rem; line-height:1.4; white-space:pre-wrap;">${msg.text}</div>`;
+        }
+      });
+      chatBox.innerHTML = html;
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    async function kirimPesanDiskusiAI() {
+      const inputEl = document.getElementById('aiChatInputText');
+      const text = inputEl.value.trim();
+      const apiKey = document.getElementById('geminiApiKeyInput').value.trim() || localStorage.getItem('gemini_api_key') || '';
+      const selMateri = document.getElementById('modalMateriKoreksiAI').value || "Materi";
+
+      if (!text) return;
+      if (!apiKey) {
+        alert("Masukkan Google Gemini API Key Anda terlebih dahulu di menu Pengaturan.");
+        return;
+      }
+
+      currentMateriAiChat.push({ sender: 'guru', text: text });
+      inputEl.value = "";
+      renderAiChatBubbles();
+
+      currentMateriAiChat.push({ sender: 'ai', text: "Typing... (AI sedang memproses kriteria Anda)" });
+      renderAiChatBubbles();
+
+      let currentPrompt = document.getElementById('instruksiTugasAI').value;
+
+      let systemDiscussionPrompt = `Anda adalah asisten AI interaktif untuk Guru LMS yang bertugas menyelaraskan kriteria penilaian tugas untuk materi "${selMateri}".
+
+KRITERIA SAAT INI:
+${currentPrompt}
+
+PESAN / INSTRUKSI BARU DARI GURU:
+"${text}"
+
+TUGAS ANDA:
+1. Jawab pesan Guru secara ramah, profesional, dan edukatif dalam bahasa Indonesia.
+2. Jelaskan bagaimana instruksi baru Guru tersebut memperbarui kriteria penilaian.
+3. Sertakan draf KRITERIA AKHIR yang sudah diperbarui di bagian bawah jawaban Anda dengan format persis:
+===KRITERIA_AKHIR===
+[Tuliskan daftar kriteria akhir di sini]
+===AKHIR===`;
+
+      try {
+        let aiResponseText = await callGeminiAPI(apiKey, systemDiscussionPrompt);
+        
+        currentMateriAiChat.pop();
+
+        let cleanReply = aiResponseText;
+        if (aiResponseText.includes("===KRITERIA_AKHIR===")) {
+          let parts = aiResponseText.split("===KRITERIA_AKHIR===");
+          cleanReply = parts[0].trim();
+          let newCriteria = parts[1].split("===AKHIR===")[0].trim();
+          if (newCriteria) {
+            document.getElementById('instruksiTugasAI').value = newCriteria;
+          }
+        }
+
+        currentMateriAiChat.push({ sender: 'ai', text: cleanReply });
+        renderAiChatBubbles();
+
+        simpanKriteriaMateriSekarang(false);
+      } catch(e) {
+        currentMateriAiChat.pop();
+        currentMateriAiChat.push({ sender: 'ai', text: `❌ Gagal menghubungi AI: ${e.message}` });
+        renderAiChatBubbles();
+      }
+    }
+
+    async function simpanKriteriaMateriSekarang(showAlert = true) {
+      const selMateri = document.getElementById('modalMateriKoreksiAI').value || "default";
+      const normM = selMateri.toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+      const storageKey = `AI_MATERI_DATA_${normM}`;
+
+      const promptText = document.getElementById('instruksiTugasAI').value;
+      const dataToSave = {
+        promptText: promptText,
+        chatHistory: currentMateriAiChat,
+        updatedAt: new Date().toLocaleString('id-ID')
+      };
+
+      localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+
+      let rowNum = "";
+      if (Array.isArray(dataSettings)) {
+        let existing = dataSettings.find(s => getVal(s, ['key', 'pengaturan']) === storageKey);
+        if (existing && existing.rowNumber) rowNum = existing.rowNumber;
+      }
+
+      await postData({
+        action: "saveData",
+        sheet: "settings",
+        rowNumber: rowNum,
+        data: JSON.stringify({
+          key: storageKey,
+          value: JSON.stringify(dataToSave)
+        })
+      });
+
+      if (showAlert) alert(`✅ Kriteria AI & Riwayat Diskusi untuk materi "${selMateri}" berhasil disimpan ke database LMS!`);
+    }
+
     function openModalKoreksiAI() {
       const modal = document.getElementById('modalKoreksiAI');
       if (!modal) return;
 
-      const savedKey = localStorage.getItem('gemini_api_key') || '';
+      let savedKey = localStorage.getItem('gemini_api_key') || '';
+      if (!savedKey && Array.isArray(dataSettings)) {
+        let sObj = dataSettings.find(s => getVal(s, ['key', 'pengaturan']) === "GEMINI_API_KEY");
+        if (sObj) savedKey = getVal(sObj, ['value', 'nilai', 'val']) || '';
+      }
       document.getElementById('geminiApiKeyInput').value = savedKey;
-
-      const savedInstruksi = localStorage.getItem('gemini_instruksi_tugas') || `1. Judul dokumen wajib dicetak tebal (Bold).
-2. Istilah asing / bahasa Inggris wajib dicetak miring (Italic).
-3. Perhatikan ejaan, tanda baca, dan kerapian pengetikan secara menyeluruh.`;
-      document.getElementById('instruksiTugasAI').value = savedInstruksi;
 
       let selKls = document.getElementById('modalKelasKoreksiAI');
       let klsSet = new Set();
@@ -4483,6 +4705,9 @@
       Array.from(matSet).sort().forEach(m => {
         selMat.innerHTML += `<option value="${m}">${m}</option>`;
       });
+
+      switchAiTab('diskusi');
+      onMateriAiSelectionChanged();
 
       document.getElementById('koreksiAiStatusBox').style.display = 'none';
       document.getElementById('koreksiAiLog').innerText = '';
