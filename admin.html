@@ -4847,7 +4847,7 @@ TUGAS ANDA:
       }
     }
 
-    async function callGeminiAPI(apiKey, promptText) {
+    async function callGeminiAPI(apiKey, promptText, onWaitNotify = null) {
       const models = [
         'gemini-flash-latest',
         'gemini-2.0-flash',
@@ -4858,25 +4858,34 @@ TUGAS ANDA:
 
       let lastErrText = "";
       for (let m of models) {
-        try {
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: promptText }] }]
-            })
-          });
+        for (let retry = 0; retry < 4; retry++) {
+          try {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: promptText }] }]
+              })
+            });
 
-          if (res.ok) {
-            const data = await res.json();
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) return text;
-          } else {
-            let errText = await res.text();
-            lastErrText = `Model ${m} status ${res.status}`;
+            if (res.ok) {
+              const data = await res.json();
+              const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (text) return text;
+            } else if (res.status === 429) {
+              lastErrText = `Model ${m} status 429 (Rate Limit)`;
+              if (onWaitNotify) onWaitNotify(`⏳ Batas kuota AI tercapai (429), menunggu 4 detik...`);
+              await new Promise(r => setTimeout(r, 4000));
+              continue;
+            } else {
+              let errText = await res.text();
+              lastErrText = `Model ${m} status ${res.status}`;
+              break;
+            }
+          } catch(e) {
+            lastErrText = e.message;
+            break;
           }
-        } catch(e) {
-          lastErrText = e.message;
         }
       }
       throw new Error(`Gemini API Error: ${lastErrText || '404'}`);
@@ -5071,7 +5080,10 @@ Jawab HANYA dengan format JSON murni berikut tanpa pembungkus markdown lain:
   "catatan": "Tuliskan catatan umpan balik di sini."
 }`;
 
-          let rawResp = await callGeminiAPI(apiKey, promptText);
+          let rawResp = await callGeminiAPI(apiKey, promptText, (msg) => {
+            logEl.innerText += `${msg}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+          });
           rawResp = rawResp.replace(/```json/gi, '').replace(/```/g, '').trim();
           
           let parsedEval = { nilai: 80, catatan: "Tugas telah dievaluasi AI." };
@@ -5124,7 +5136,7 @@ Jawab HANYA dengan format JSON murni berikut tanpa pembungkus markdown lain:
           logEl.scrollTop = logEl.scrollHeight;
         }
 
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1200));
       }
 
       if (payloads.length > 0) {
