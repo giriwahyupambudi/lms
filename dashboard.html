@@ -1575,14 +1575,13 @@
         }
       }
 
-      // Fallback ke iframe viewer resmi
+      // Fallback ke iframe Google Drive Viewer resmi (100% stabil & tanpa error file tidak ditemukan)
       iframe.style.display = 'block';
       let iframeUrl = url;
 
       if (match) {
           let fileId = match[1];
-          let dlUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-          iframeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(dlUrl)}`;
+          iframeUrl = `https://drive.google.com/file/d/${fileId}/preview`;
       } else if (url.includes('docs.google.com/presentation')) {
           let embedUrl = url;
           if (url.includes("/pub")) {
