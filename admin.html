@@ -5211,6 +5211,24 @@ TUGAS ANDA:
             }
           }
 
+          if (docxDetails && docxDetails.fullText) {
+            t._parsedText = docxDetails.fullText;
+          }
+
+          let existingPeerTexts = [];
+          allMatchingTugas.forEach(peerTask => {
+            let peerUser = getVal(peerTask, ['username', 'nisn']);
+            let peerName = getVal(peerTask, ['nama', 'namalengkap']) || peerUser;
+            if (norm(peerUser) !== norm(usernameSiswa) && peerTask._parsedText) {
+              existingPeerTexts.push(`- Siswa: ${peerName} -> Teks: "${peerTask._parsedText.substring(0, 400)}"`);
+            }
+          });
+
+          let peerComparisonText = existingPeerTexts.length > 0 ? `
+DAFTAR HASIL PENGERJAAN SISWA LAIN PADA MATERI INI (UNTUK PEMANDINGAN PLAGIARISME / KEMIRIPAN):
+${existingPeerTexts.slice(0, 10).join("\n")}
+` : "";
+
           let formatInfoText = docxDetails ? `
 - Frasa CETAK TEBAL (Bold): ${docxDetails.boldPhrases.length ? docxDetails.boldPhrases.join(", ") : "(Tidak ada)"}
 - Frasa CETAK MIRING (Italic): ${docxDetails.italicPhrases.length ? docxDetails.italicPhrases.join(", ") : "(Tidak ada)"}
@@ -5240,11 +5258,14 @@ ${masterInfoText}
 KONTEN & METADATA TERDETEKSI PADA DOKUMEN SISWA (${namaSiswa}):
 ${formatInfoText}
 
-PETUNJUK EVALUASI:
+${peerComparisonText}
+
+PETUNJUK EVALUASI & PLAGIARISME:
 1. Evaluasi secara kritis dan edukatif sesuai kriteria yang diminta oleh Guru pada prompt di atas (baik itu tentang konten, ejaan, tata bahasa, maupun format).
 2. Jika ada Dokumen Master Guru, hitung presisi kemiripan dengan Kunci Jawaban / File Master Guru.
-3. Berikan nilai angka akhir (0 - 100).
-4. Tuliskan catatan umpan balik (feedback) yang jelas dan spesifik dalam 1-2 kalimat.
+3. DETEKSI PLAGIARISME / KEMIRIPAN: Bandingkan Dokumen Siswa ini (${namaSiswa}) dengan DAFTAR HASIL PENGERJAAN SISWA LAIN di atas. Jika terdapat kemiripan tinggi (di atas 70%) atau indikasi jiplak kata-demi-kata dengan siswa tertentu, SEBUTKAN NAMA SISWA tersebut pada catatan umpan balik (contoh: "Kemiripan 90% dengan [Nama Siswa]").
+4. Berikan nilai angka akhir (0 - 100).
+5. Tuliskan catatan umpan balik (feedback) yang jelas dan spesifik dalam 1-2 kalimat.
 
 Jawab HANYA dengan format JSON murni berikut tanpa pembungkus markdown lain:
 {
