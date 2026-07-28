@@ -2534,7 +2534,7 @@
         }
 
         let urutanUploadNo = uploadOrderMap.get(username);
-        let urutanBadge = urutanUploadNo ? `<span class="badge" style="background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; font-weight:700; font-size:0.82rem; padding:4px 10px; border-radius:8px;" title="Waktu Submit: ${waktuSubmit}">#${urutanUploadNo}</span>` : '<span style="color:var(--text-muted); font-size:0.8rem;">-</span>';
+        let urutanBadge = urutanUploadNo ? `<span class="badge" style="background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; font-weight:700; font-size:0.85rem; padding:4px 12px; border-radius:8px;" title="Waktu Submit: ${waktuSubmit}">${urutanUploadNo}</span>` : '<span style="color:var(--text-muted); font-size:0.8rem;">-</span>';
 
         // Tentukan style & warning jika belum upload tapi sudah dinilai/sedang dinilai
         let inputStyle = "";
