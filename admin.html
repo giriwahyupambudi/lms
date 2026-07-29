@@ -3188,10 +3188,10 @@
 
                 let isMateriMatch = false;
 
-                // 1. Direct exact match
-                if (nMatNorm !== "" && (nMatNorm === mIdNorm || nMatNorm === idxStr || (mJudulNorm !== "" && nMatNorm === mJudulNorm))) {
+                // 1. Direct exact match (HANYA jika ID atau Judul cocok persis)
+                if (nMatNorm !== "" && (nMatNorm === mIdNorm || (mJudulNorm !== "" && nMatNorm === mJudulNorm))) {
                     isMateriMatch = true;
-                } else if (nJudulNorm !== "" && ((mJudulNorm !== "" && nJudulNorm === mJudulNorm) || (mIdNorm !== "" && nJudulNorm === mIdNorm) || nJudulNorm === idxStr)) {
+                } else if (nJudulNorm !== "" && ((mJudulNorm !== "" && nJudulNorm === mJudulNorm) || (mIdNorm !== "" && nJudulNorm === mIdNorm))) {
                     isMateriMatch = true;
                 }
 
