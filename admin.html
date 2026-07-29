@@ -2104,6 +2104,8 @@
         const selKelasEl = document.getElementById('filterKelasRanking');
         const selTingkat = selTingkatEl ? selTingkatEl.value : "";
         const selKelas = selKelasEl ? selKelasEl.value : "";
+        const selTingkatNorm = norm(selTingkat);
+        const selKelasNorm = norm(selKelas);
         
         const materiArr = Array.isArray(dataMateri) ? dataMateri : [];
         const userArr = Array.isArray(dataUser) ? dataUser : [];
@@ -2115,8 +2117,11 @@
         // Filter user (hanya siswa, bukan admin)
         userArr.forEach(u => {
           if (!u) return;
-          let k = getVal(u, ['kelas', 'rombel']) || "Tanpa Kelas";
-          let t = getVal(u, ['tingkat']) || "";
+          let role = (getVal(u, ['role', 'peran']) || "").toString().toLowerCase();
+          if (role === "admin" || role === "superadmin") return;
+
+          let k = (getVal(u, ['kelas', 'rombel', 'tingkat']) || "Tanpa Kelas").toString().trim();
+          let t = (getVal(u, ['tingkat']) || "").toString().trim();
           
           if (!t || t.trim() === "") {
              let kUpper = k.toUpperCase();
@@ -2125,8 +2130,8 @@
              else if (kUpper.startsWith("X")) t = "X";
           }
           
-          if (selTingkat && selTingkat !== "" && t !== selTingkat) return; // filter tingkat
-          if (selKelas && selKelas !== "" && k !== selKelas) return; // filter kelas
+          if (selTingkatNorm !== "" && norm(t) !== selTingkatNorm) return; // filter tingkat
+          if (selKelasNorm !== "" && norm(k) !== selKelasNorm) return; // filter kelas
           
           const uname = (getVal(u, ['username', 'nisn']) || "").toString().trim();
           if (uname) {
