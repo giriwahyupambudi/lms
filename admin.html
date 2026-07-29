@@ -2091,6 +2091,34 @@
         }
       });
 
+      const resolveCanonicalMid = (rawMid, rawJudul) => {
+        let nMatNorm = norm(rawMid);
+        let nJudulNorm = norm(rawJudul);
+
+        const aliasMap = {
+          "engine12": "engine1",
+          "engine14": "engine3",
+          "5": "engine4",
+          "6": "engine5",
+          "7": "engine8",
+          "8": "engine6",
+          "9": "engine7"
+        };
+        if (aliasMap[nMatNorm]) return aliasMap[nMatNorm];
+        if (aliasMap[nJudulNorm]) return aliasMap[nJudulNorm];
+
+        let parentMat = dataMateri.find(m => {
+          let mId = norm(getVal(m, ['idmateri', 'id_materi']));
+          let mJudul = norm(getVal(m, ['judul', 'materi']));
+          return (nMatNorm !== "" && (nMatNorm === mId || nMatNorm === mJudul)) ||
+                 (nJudulNorm !== "" && (nJudulNorm === mJudul || nJudulNorm === mId));
+        });
+        if (parentMat) {
+          return norm(getVal(parentMat, ['idmateri', 'id_materi'])) || norm(getVal(parentMat, ['judul', 'materi'])) || nMatNorm;
+        }
+        return nMatNorm || nJudulNorm;
+      };
+
       // Gabungkan data nilai & tugas
       let gabunganNilai = (Array.isArray(dataNilai) ? dataNilai : []).concat(Array.isArray(dataLogTugas) ? dataLogTugas : []);
 
@@ -2101,7 +2129,9 @@
         const uname = (getVal(n, ['username', 'nisn']) || "").toString().trim();
         if (!userMap.has(uname)) return; // hanya proses siswa yang sesuai filter
 
-        const mid = (getVal(n, ['id_materi', 'idmateri', 'materi', 'modul', 'id']) || "").toString();
+        const rawMid = getVal(n, ['id_materi', 'idmateri', 'modul', 'id']);
+        const rawJudul = getVal(n, ['materi', 'judul', 'judul_materi']);
+        const mid = resolveCanonicalMid(rawMid, rawJudul);
         let pNilai = getVal(n, ['nilai', 'skor', 'point']);
         
         if (pNilai === undefined || pNilai === null || pNilai.toString().trim() === "" || pNilai.toString().includes("Terkirim")) return;
