@@ -2099,143 +2099,156 @@
     }
 
     function renderRankingAdmin() {
-      const selTingkat = document.getElementById('filterTingkatRanking') ? document.getElementById('filterTingkatRanking').value : "";
-      const selKelas = document.getElementById('filterKelasRanking') ? document.getElementById('filterKelasRanking').value : "";
-      
-      const userMap = new Map();
-      
-      // Filter user (hanya siswa, bukan admin)
-      dataUser.forEach(u => {
-        let k = getVal(u, ['kelas', 'rombel']) || "Tanpa Kelas";
-        let t = getVal(u, ['tingkat']) || "";
+      const tbody = document.getElementById('tabelRankingBody');
+      if (!tbody) return;
+
+      try {
+        const selTingkatEl = document.getElementById('filterTingkatRanking');
+        const selKelasEl = document.getElementById('filterKelasRanking');
+        const selTingkat = selTingkatEl ? selTingkatEl.value : "";
+        const selKelas = selKelasEl ? selKelasEl.value : "";
         
-        // Coba deduksi tingkat dari kelas jika kolom tingkat kosong
-        if (!t || t.trim() === "") {
-           let kUpper = k.toUpperCase();
-           if (kUpper.startsWith("XII")) t = "XII";
-           else if (kUpper.startsWith("XI")) t = "XI";
-           else if (kUpper.startsWith("X")) t = "X";
-        }
+        const materiArr = Array.isArray(dataMateri) ? dataMateri : [];
+        const userArr = Array.isArray(dataUser) ? dataUser : [];
+        const nilaiArr = Array.isArray(dataNilai) ? dataNilai : [];
+        const tugasArr = Array.isArray(dataLogTugas) ? dataLogTugas : [];
+
+        const userMap = new Map();
         
-        if (selTingkat && selTingkat !== "" && t !== selTingkat) return; // filter tingkat
-        if (selKelas && selKelas !== "" && k !== selKelas) return; // filter kelas
-        
-        const uname = (getVal(u, ['username', 'nisn']) || "").toString().trim();
-        if (uname) {
-          userMap.set(uname, {
-            username: uname,
-            nama: getVal(u, ['nama', 'namalengkap', 'namasiswa']) || uname,
-            kelas: k,
-            tingkat: t,
-            quizzes: new Map()
-          });
-        }
-      });
-
-      const resolveCanonicalMid = (rawMid, rawJudul) => {
-        let nMatNorm = norm(rawMid);
-        let nJudulNorm = norm(rawJudul);
-        if (!nMatNorm && !nJudulNorm) return "";
-
-        // Cari di dataMateri secara dinamis berdasarkan ID atau Judul
-        let parentMat = dataMateri.find(m => {
-          let mId = norm(getVal(m, ['idmateri', 'id_materi', 'materiid']));
-          let mJudul = norm(getVal(m, ['judul', 'materi']));
-          return (nMatNorm !== "" && (nMatNorm === mId || nMatNorm === mJudul)) ||
-                 (nJudulNorm !== "" && (nJudulNorm === mJudul || nJudulNorm === mId));
-        });
-
-        if (parentMat) {
-          return norm(getVal(parentMat, ['idmateri', 'id_materi', 'materiid'])) || norm(getVal(parentMat, ['judul', 'materi'])) || nMatNorm;
-        }
-
-        return nMatNorm || nJudulNorm;
-      };
-
-      // Gabungkan data nilai & tugas
-      let gabunganNilai = (Array.isArray(dataNilai) ? dataNilai : []).concat(Array.isArray(dataLogTugas) ? dataLogTugas : []);
-
-      gabunganNilai.forEach(n => {
-        let pTipe = getVal(n, ['tipe', 'tipeevaluasi', 'jenis']);
-        if (pTipe && pTipe.toString().toLowerCase() === "materi") return; 
-
-        const unameNorm = norm(getVal(n, ['username', 'nisn']));
-        const namaNorm = norm(getVal(n, ['nama', 'namalengkap', 'namasiswa']));
-
-        let userObj = null;
-        for (let [k, v] of userMap.entries()) {
-          if ((unameNorm && norm(k) === unameNorm) || (namaNorm && norm(v.nama) === namaNorm)) {
-            userObj = v;
-            break;
+        // Filter user (hanya siswa, bukan admin)
+        userArr.forEach(u => {
+          let k = getVal(u, ['kelas', 'rombel']) || "Tanpa Kelas";
+          let t = getVal(u, ['tingkat']) || "";
+          
+          if (!t || t.trim() === "") {
+             let kUpper = k.toUpperCase();
+             if (kUpper.startsWith("XII")) t = "XII";
+             else if (kUpper.startsWith("XI")) t = "XI";
+             else if (kUpper.startsWith("X")) t = "X";
           }
-        }
-        if (!userObj) return;
-
-        const rawMid = getVal(n, ['id_materi', 'idmateri', 'modul', 'id']);
-        const rawJudul = getVal(n, ['materi', 'judul', 'judul_materi']);
-        const mid = resolveCanonicalMid(rawMid, rawJudul);
-        let pNilai = getVal(n, ['nilai', 'skor', 'point']);
-        
-        let score = parseInt(pNilai) || 0;
-        if ((pTipe && (pTipe.toString().toLowerCase() === "survey" || pTipe.toString().toLowerCase() === "pretest")) || mid === "survey1") {
-          score = 100;
-        }
-        const waktuSec = parseTimeToSeconds(getVal(n, ['waktu', 'timestamp']));
-
-        const existing = userObj.quizzes.get(mid);
-        if (!existing) {
-          userObj.quizzes.set(mid, { score, totalWaktuSec: waktuSec });
-        } else {
-          let bestScore = Math.max(score, existing.score);
-          let sumTimeSec = existing.totalWaktuSec + waktuSec;
-          userObj.quizzes.set(mid, { score: bestScore, totalWaktuSec: sumTimeSec });
-        }
-      });
-
-      let aggregatedData = [];
-      userMap.forEach(userObj => {
-        let totalScore = 0;
-        let totalTimeSec = 0;
-        userObj.quizzes.forEach(q => {
-          totalScore += q.score;
-          totalTimeSec += (q.totalWaktuSec || 0);
+          
+          if (selTingkat && selTingkat !== "" && t !== selTingkat) return; // filter tingkat
+          if (selKelas && selKelas !== "" && k !== selKelas) return; // filter kelas
+          
+          const uname = (getVal(u, ['username', 'nisn']) || "").toString().trim();
+          if (uname) {
+            userMap.set(uname, {
+              username: uname,
+              nama: getVal(u, ['nama', 'namalengkap', 'namasiswa']) || uname,
+              kelas: k,
+              tingkat: t,
+              quizzes: new Map()
+            });
+          }
         });
 
-        if (totalScore > 0) { // Hanya tampilkan yang punya poin
-          aggregatedData.push({
-            nama: userObj.nama,
-            kelas: userObj.kelas,
-            nilai: totalScore,
-            waktuSec: totalTimeSec,
-            waktu: formatSecondsToTime(totalTimeSec)
+        const resolveCanonicalMid = (rawMid, rawJudul) => {
+          let nMatNorm = norm(rawMid);
+          let nJudulNorm = norm(rawJudul);
+          if (!nMatNorm && !nJudulNorm) return "";
+
+          let parentMat = materiArr.find(m => {
+            let mId = norm(getVal(m, ['idmateri', 'id_materi', 'materiid']));
+            let mJudul = norm(getVal(m, ['judul', 'materi']));
+            return (nMatNorm !== "" && (nMatNorm === mId || nMatNorm === mJudul)) ||
+                   (nJudulNorm !== "" && (nJudulNorm === mJudul || nJudulNorm === mId));
           });
-        }
-      });
 
-      // Sort: Nilai Tertinggi -> Waktu Tercepat
-      aggregatedData.sort((a, b) => {
-        if (b.nilai !== a.nilai) return b.nilai - a.nilai;
-        return a.waktuSec - b.waktuSec;
-      });
+          if (parentMat) {
+            return norm(getVal(parentMat, ['idmateri', 'id_materi', 'materiid'])) || norm(getVal(parentMat, ['judul', 'materi'])) || nMatNorm;
+          }
 
-      let html = '';
-      aggregatedData.forEach((d, i) => {
-        let rankBadge = '';
-        if (i === 0) rankBadge = '<span style="background:#fef08a; color:#854d0e; padding:2px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;"><i class="fas fa-trophy"></i> 1</span>';
-        else if (i === 1) rankBadge = '<span style="background:#e2e8f0; color:#475569; padding:2px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;"><i class="fas fa-medal"></i> 2</span>';
-        else if (i === 2) rankBadge = '<span style="background:#fed7aa; color:#9a3412; padding:2px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;"><i class="fas fa-medal"></i> 3</span>';
-        else rankBadge = `<span style="font-weight:600; color:var(--text-muted)">${i + 1}</span>`;
+          return nMatNorm || nJudulNorm;
+        };
 
-        html += `<tr>
-          <td style="text-align:center">${rankBadge}</td>
-          <td style="font-weight:600;">${d.nama}</td>
-          <td>${d.kelas}</td>
-          <td style="text-align:right; font-weight:700; color:var(--primary)">${d.nilai}</td>
-          <td style="text-align:right; font-size:0.85rem; color:var(--text-muted)">${d.waktu}</td>
-        </tr>`;
-      });
+        // Gabungkan data nilai & tugas
+        let gabunganNilai = nilaiArr.concat(tugasArr);
 
-      document.getElementById('tabelRankingBody').innerHTML = html || '<tr><td colspan="5" style="text-align:center">Belum ada data peringkat untuk kelas ini.</td></tr>';
+        gabunganNilai.forEach(n => {
+          let pTipe = getVal(n, ['tipe', 'tipeevaluasi', 'jenis']);
+          if (pTipe && pTipe.toString().toLowerCase() === "materi") return; 
+
+          const unameNorm = norm(getVal(n, ['username', 'nisn']));
+          const namaNorm = norm(getVal(n, ['nama', 'namalengkap', 'namasiswa']));
+
+          let userObj = null;
+          for (let [k, v] of userMap.entries()) {
+            if ((unameNorm && norm(k) === unameNorm) || (namaNorm && norm(v.nama) === namaNorm)) {
+              userObj = v;
+              break;
+            }
+          }
+          if (!userObj) return;
+
+          const rawMid = getVal(n, ['id_materi', 'idmateri', 'modul', 'id']);
+          const rawJudul = getVal(n, ['materi', 'judul', 'judul_materi']);
+          const mid = resolveCanonicalMid(rawMid, rawJudul);
+          let pNilai = getVal(n, ['nilai', 'skor', 'point']);
+          
+          let score = parseInt(pNilai) || 0;
+          if ((pTipe && (pTipe.toString().toLowerCase() === "survey" || pTipe.toString().toLowerCase() === "pretest")) || mid === "survey1") {
+            score = 100;
+          }
+          const waktuSec = parseTimeToSeconds(getVal(n, ['waktu', 'timestamp']));
+
+          const existing = userObj.quizzes.get(mid);
+          if (!existing) {
+            userObj.quizzes.set(mid, { score, totalWaktuSec: waktuSec });
+          } else {
+            let bestScore = Math.max(score, existing.score);
+            let sumTimeSec = existing.totalWaktuSec + waktuSec;
+            userObj.quizzes.set(mid, { score: bestScore, totalWaktuSec: sumTimeSec });
+          }
+        });
+
+        let aggregatedData = [];
+        userMap.forEach(userObj => {
+          let totalScore = 0;
+          let totalTimeSec = 0;
+          userObj.quizzes.forEach(q => {
+            totalScore += q.score;
+            totalTimeSec += (q.totalWaktuSec || 0);
+          });
+
+          if (totalScore > 0) { // Hanya tampilkan yang punya poin
+            aggregatedData.push({
+              nama: userObj.nama,
+              kelas: userObj.kelas,
+              nilai: totalScore,
+              waktuSec: totalTimeSec,
+              waktu: formatSecondsToTime(totalTimeSec)
+            });
+          }
+        });
+
+        // Sort: Nilai Tertinggi -> Waktu Tercepat
+        aggregatedData.sort((a, b) => {
+          if (b.nilai !== a.nilai) return b.nilai - a.nilai;
+          return a.waktuSec - b.waktuSec;
+        });
+
+        let html = '';
+        aggregatedData.forEach((d, i) => {
+          let rankBadge = '';
+          if (i === 0) rankBadge = '<span style="background:#fef08a; color:#854d0e; padding:2px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;"><i class="fas fa-trophy"></i> 1</span>';
+          else if (i === 1) rankBadge = '<span style="background:#e2e8f0; color:#475569; padding:2px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;"><i class="fas fa-medal"></i> 2</span>';
+          else if (i === 2) rankBadge = '<span style="background:#fed7aa; color:#9a3412; padding:2px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;"><i class="fas fa-medal"></i> 3</span>';
+          else rankBadge = `<span style="font-weight:600; color:var(--text-muted)">${i + 1}</span>`;
+
+          html += `<tr>
+            <td style="text-align:center">${rankBadge}</td>
+            <td style="font-weight:600;">${d.nama}</td>
+            <td>${d.kelas}</td>
+            <td style="text-align:right; font-weight:700; color:var(--primary)">${d.nilai}</td>
+            <td style="text-align:right; font-size:0.85rem; color:var(--text-muted)">${d.waktu}</td>
+          </tr>`;
+        });
+
+        tbody.innerHTML = html || '<tr><td colspan="5" style="text-align:center">Belum ada data peringkat untuk kelas ini.</td></tr>';
+      } catch (errRank) {
+        console.error("Gagal renderRankingAdmin:", errRank);
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#ef4444;">Gagal memuat data peringkat. Silakan refresh halaman.</td></tr>';
+      }
     }
 
     // ============================================
