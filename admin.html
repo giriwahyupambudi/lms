@@ -2053,30 +2053,27 @@
     // ============================================
     // RENDER RANKING ADMIN
     // ============================================
-    // Helper untuk mengubah "MM:SS" jadi detik
     function parseTimeToSeconds(timeStr) {
       if (!timeStr) return 0;
       let s = timeStr.toString().replace(/^'/, '').trim();
-      
-      // Jika formatnya mirip timestamp tanggal (mengandung spasi, T, Z, atau -), ini adalah waktu submit tugas, BUKAN durasi pengerjaan.
       if (s.includes("1899-12-29") || s.includes("Z") || s.includes("-") || s.includes("T") || s.includes(" ")) return 0;
       
       const parts = s.split(":");
-      if (parts.length === 2) return parseInt(parts[0]) * 60 + parseInt(parts[1]);
-      if (parts.length === 3) return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
-      
-      // Jika input hanya berupa angka urutan maju (misal "1", "2"), konversikan menjadi menit (dikali 60 detik)
-      if (!isNaN(s) && s !== "") return parseInt(s) * 60;
-      return 0;
-    }
-
-    // Helper untuk mengubah detik jadi "MM:SS" atau "HH:MM:SS"
-    function formatSecondsToTime(sec) {
-      if (sec === 0 || isNaN(sec)) return "00:00";
-      const h = Math.floor(sec / 3600);
-      const m = Math.floor((sec % 3600) / 60).toString().padStart(2, '0');
-      const s = (sec % 60).toString().padStart(2, '0');
-      return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
+      let res = 0;
+      if (parts.length === 2) {
+        let p0 = parseInt(parts[0], 10);
+        let p1 = parseInt(parts[1], 10);
+        res = (isNaN(p0) ? 0 : p0) * 60 + (isNaN(p1) ? 0 : p1);
+      } else if (parts.length === 3) {
+        let p0 = parseInt(parts[0], 10);
+        let p1 = parseInt(parts[1], 10);
+        let p2 = parseInt(parts[2], 10);
+        res = (isNaN(p0) ? 0 : p0) * 3600 + (isNaN(p1) ? 0 : p1) * 60 + (isNaN(p2) ? 0 : p2);
+      } else if (!isNaN(s) && s !== "") {
+        let p = parseInt(s, 10);
+        res = (isNaN(p) ? 0 : p) * 60;
+      }
+      return isNaN(res) ? 0 : res;
     }
 
     function populateFilterRanking() {
@@ -2085,7 +2082,7 @@
       let oldKelas = selKelas.value;
       
       let kls = new Set();
-      dataUser.forEach(u => {
+      (Array.isArray(dataUser) ? dataUser : []).forEach(u => {
          let k = getVal(u, ['kelas', 'tingkat']);
          if(k && getVal(u, ['role', 'peran']) !== "admin") kls.add(k.toString().trim());
       });
@@ -2117,6 +2114,7 @@
         
         // Filter user (hanya siswa, bukan admin)
         userArr.forEach(u => {
+          if (!u) return;
           let k = getVal(u, ['kelas', 'rombel']) || "Tanpa Kelas";
           let t = getVal(u, ['tingkat']) || "";
           
@@ -2148,6 +2146,7 @@
           if (!nMatNorm && !nJudulNorm) return "";
 
           let parentMat = materiArr.find(m => {
+            if (!m) return false;
             let mId = norm(getVal(m, ['idmateri', 'id_materi', 'materiid']));
             let mJudul = norm(getVal(m, ['judul', 'materi']));
             return (nMatNorm !== "" && (nMatNorm === mId || nMatNorm === mJudul)) ||
@@ -2165,6 +2164,7 @@
         let gabunganNilai = nilaiArr.concat(tugasArr);
 
         gabunganNilai.forEach(n => {
+          if (!n) return;
           let pTipe = getVal(n, ['tipe', 'tipeevaluasi', 'jenis']);
           if (pTipe && pTipe.toString().toLowerCase() === "materi") return; 
 
@@ -2173,7 +2173,9 @@
 
           let userObj = null;
           for (let [k, v] of userMap.entries()) {
-            if ((unameNorm && norm(k) === unameNorm) || (namaNorm && norm(v.nama) === namaNorm)) {
+            let uK = norm(k);
+            let uN = norm(v.nama);
+            if ((unameNorm !== "" && uK === unameNorm) || (namaNorm !== "" && uN === namaNorm)) {
               userObj = v;
               break;
             }
@@ -2183,20 +2185,25 @@
           const rawMid = getVal(n, ['id_materi', 'idmateri', 'modul', 'id']);
           const rawJudul = getVal(n, ['materi', 'judul', 'judul_materi']);
           const mid = resolveCanonicalMid(rawMid, rawJudul);
+          if (!mid) return;
+
           let pNilai = getVal(n, ['nilai', 'skor', 'point']);
+          let score = parseInt(pNilai, 10);
+          if (isNaN(score)) score = 0;
           
-          let score = parseInt(pNilai) || 0;
           if ((pTipe && (pTipe.toString().toLowerCase() === "survey" || pTipe.toString().toLowerCase() === "pretest")) || mid === "survey1") {
             score = 100;
           }
           const waktuSec = parseTimeToSeconds(getVal(n, ['waktu', 'timestamp']));
+          const wSec = isNaN(waktuSec) ? 0 : waktuSec;
 
+          if (!userObj.quizzes) userObj.quizzes = new Map();
           const existing = userObj.quizzes.get(mid);
           if (!existing) {
-            userObj.quizzes.set(mid, { score, totalWaktuSec: waktuSec });
+            userObj.quizzes.set(mid, { score, totalWaktuSec: wSec });
           } else {
-            let bestScore = Math.max(score, existing.score);
-            let sumTimeSec = existing.totalWaktuSec + waktuSec;
+            let bestScore = Math.max(score, (existing.score || 0));
+            let sumTimeSec = (existing.totalWaktuSec || 0) + wSec;
             userObj.quizzes.set(mid, { score: bestScore, totalWaktuSec: sumTimeSec });
           }
         });
