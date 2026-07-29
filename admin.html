@@ -2094,28 +2094,20 @@
       const resolveCanonicalMid = (rawMid, rawJudul) => {
         let nMatNorm = norm(rawMid);
         let nJudulNorm = norm(rawJudul);
+        if (!nMatNorm && !nJudulNorm) return "";
 
-        const aliasMap = {
-          "engine12": "engine1",
-          "engine14": "engine3",
-          "5": "engine4",
-          "6": "engine5",
-          "7": "engine8",
-          "8": "engine6",
-          "9": "engine7"
-        };
-        if (aliasMap[nMatNorm]) return aliasMap[nMatNorm];
-        if (aliasMap[nJudulNorm]) return aliasMap[nJudulNorm];
-
+        // Cari di dataMateri secara dinamis berdasarkan ID atau Judul
         let parentMat = dataMateri.find(m => {
-          let mId = norm(getVal(m, ['idmateri', 'id_materi']));
+          let mId = norm(getVal(m, ['idmateri', 'id_materi', 'materiid']));
           let mJudul = norm(getVal(m, ['judul', 'materi']));
           return (nMatNorm !== "" && (nMatNorm === mId || nMatNorm === mJudul)) ||
                  (nJudulNorm !== "" && (nJudulNorm === mJudul || nJudulNorm === mId));
         });
+
         if (parentMat) {
-          return norm(getVal(parentMat, ['idmateri', 'id_materi'])) || norm(getVal(parentMat, ['judul', 'materi'])) || nMatNorm;
+          return norm(getVal(parentMat, ['idmateri', 'id_materi', 'materiid'])) || norm(getVal(parentMat, ['judul', 'materi'])) || nMatNorm;
         }
+
         return nMatNorm || nJudulNorm;
       };
 
@@ -3163,20 +3155,20 @@
                     isMateriMatch = true;
                 }
 
-                // 2. Known spreadsheet variant aliases
+                // 2. Pencocokan Dinamis berdasarkan Judul/ID di Bank Materi (Tanpa Hardcode Alias)
                 if (!isMateriMatch) {
-                    const aliasMap = {
-                        "engine12": ["engine1", "survey1"],
-                        "engine14": ["engine3"],
-                        "5": ["engine4"],
-                        "6": ["engine5"],
-                        "7": ["engine8"],
-                        "8": ["engine6"],
-                        "9": ["engine7"]
-                    };
-                    const nId = nMatNorm || nJudulNorm;
-                    if (aliasMap[nId] && aliasMap[nId].includes(mIdNorm)) {
-                        isMateriMatch = true;
+                    let parentMat = dataMateri.find(pm => {
+                        let pmId = norm(getVal(pm, ['idmateri', 'id_materi']));
+                        let pmJudul = norm(getVal(pm, ['judul', 'materi']));
+                        return (nMatNorm !== "" && (nMatNorm === pmId || nMatNorm === pmJudul)) ||
+                               (nJudulNorm !== "" && (nJudulNorm === pmJudul || nJudulNorm === pmId));
+                    });
+                    if (parentMat) {
+                        let pMId = norm(getVal(parentMat, ['idmateri', 'id_materi']));
+                        let pMJudul = norm(getVal(parentMat, ['judul', 'materi']));
+                        if (pMId === mIdNorm || (pMJudul !== "" && pMJudul === mJudulNorm)) {
+                            isMateriMatch = true;
+                        }
                     }
                 }
 

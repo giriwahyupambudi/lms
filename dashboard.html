@@ -1451,28 +1451,19 @@
         const resolveCanonicalMid = (rawMid, rawJudul) => {
           let nMatNorm = norm(rawMid);
           let nJudulNorm = norm(rawJudul);
-
-          const aliasMap = {
-            "engine12": "engine1",
-            "engine14": "engine3",
-            "5": "engine4",
-            "6": "engine5",
-            "7": "engine8",
-            "8": "engine6",
-            "9": "engine7"
-          };
-          if (aliasMap[nMatNorm]) return aliasMap[nMatNorm];
-          if (aliasMap[nJudulNorm]) return aliasMap[nJudulNorm];
+          if (!nMatNorm && !nJudulNorm) return "";
 
           let parentMat = (allMateriMentah || []).find(m => {
-            let mId = norm(getVal(m, ['idmateri', 'id_materi']));
+            let mId = norm(getVal(m, ['idmateri', 'id_materi', 'materiid']));
             let mJudul = norm(getVal(m, ['judul', 'materi']));
             return (nMatNorm !== "" && (nMatNorm === mId || nMatNorm === mJudul)) ||
                    (nJudulNorm !== "" && (nJudulNorm === mJudul || nJudulNorm === mId));
           });
+
           if (parentMat) {
-            return norm(getVal(parentMat, ['idmateri', 'id_materi'])) || norm(getVal(parentMat, ['judul', 'materi'])) || nMatNorm;
+            return norm(getVal(parentMat, ['idmateri', 'id_materi', 'materiid'])) || norm(getVal(parentMat, ['judul', 'materi'])) || nMatNorm;
           }
+
           return nMatNorm || nJudulNorm;
         };
 
