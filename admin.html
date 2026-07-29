@@ -3211,18 +3211,6 @@
                     }
                 }
 
-                // 3. Meaningful substring match (minimum 5 chars)
-                if (!isMateriMatch) {
-                    let nCombined = nMatNorm || nJudulNorm;
-                    let mCombined = mJudulNorm || mIdNorm;
-
-                    if (nCombined.length >= 5 && mCombined.length >= 5) {
-                        if (nCombined.includes(mCombined) || mCombined.includes(nCombined)) {
-                            isMateriMatch = true;
-                        }
-                    }
-                }
-
                 return isUserMatch && isMateriMatch;
             });
 
