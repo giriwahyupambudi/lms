@@ -1294,25 +1294,26 @@
           }
         }
 
-        renderDashboard();
-        renderTableMateri();
-        renderTableUser();
-        populateFilterNilai();
-        populateFilterTugas();
-        renderTableTugas();
-        populateFilterRanking();
-        renderRankingAdmin();
-        populateFilterRekap();
-        populateFilterAbsen();
-        populateFilterRekapAbsen();
-        renderTableAbsen();
-        if (IS_SUPER_ADMIN) renderTableGuru();
+        try { renderDashboard(); } catch(e) { console.error("renderDashboard error:", e); }
+        try { renderTableMateri(); } catch(e) { console.error("renderTableMateri error:", e); }
+        try { renderTableUser(); } catch(e) { console.error("renderTableUser error:", e); }
+        try { populateFilterNilai(); } catch(e) { console.error("populateFilterNilai error:", e); }
+        try { populateFilterTugas(); } catch(e) { console.error("populateFilterTugas error:", e); }
+        try { renderTableTugas(); } catch(e) { console.error("renderTableTugas error:", e); }
+        try { populateFilterRanking(); } catch(e) { console.error("populateFilterRanking error:", e); }
+        try { renderRankingAdmin(); } catch(e) { console.error("renderRankingAdmin error:", e); }
+        try { populateFilterRekap(); } catch(e) { console.error("populateFilterRekap error:", e); }
+        try { populateFilterAbsen(); } catch(e) { console.error("populateFilterAbsen error:", e); }
+        try { populateFilterRekapAbsen(); } catch(e) { console.error("populateFilterRekapAbsen error:", e); }
+        try { renderTableAbsen(); } catch(e) { console.error("renderTableAbsen error:", e); }
+        if (IS_SUPER_ADMIN) {
+          try { renderTableGuru(); } catch(e) { console.error("renderTableGuru error:", e); }
+        }
         
         hideOverlay();
       } catch (e) {
-        console.error(e);
-        showOverlay("Gagal mengambil data. Coba lagi.");
-        setTimeout(hideOverlay, 3000);
+        console.error("loadAllData global error:", e);
+        hideOverlay();
       }
     }
 
