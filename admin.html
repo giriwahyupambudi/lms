@@ -1724,7 +1724,31 @@
       
       closeModal('materiModal');
 
-      if (rowNum && (newId !== oldId)) {
+      if (rowNum && (oldId && newId && newId !== oldId)) {
+        // Update lokal pada dataNilai & dataLogTugas agar UI langsung sinkron tanpa refresh
+        (Array.isArray(dataNilai) ? dataNilai : []).forEach(n => {
+           let nid = getVal(n, ['id_materi', 'idmateri']);
+           if (nid === oldId || norm(nid) === norm(oldId)) {
+               n.id_materi = newId;
+               n.idmateri = newId;
+               n['ID Materi'] = newId;
+           }
+        });
+        (Array.isArray(dataLogTugas) ? dataLogTugas : []).forEach(t => {
+           let tid = getVal(t, ['id_materi', 'idmateri']);
+           if (tid === oldId || norm(tid) === norm(oldId)) {
+               t.id_materi = newId;
+               t.idmateri = newId;
+               t['ID Materi'] = newId;
+           }
+        });
+
+        if (typeof renderRekapAdmin === 'function') renderRekapAdmin();
+        if (typeof renderTableNilai === 'function') renderTableNilai();
+        if (typeof renderTableTugas === 'function') renderTableTugas();
+        if (typeof renderRankingAdmin === 'function') renderRankingAdmin();
+
+        // Kirim instruksi updateMateriId ke Apps Script untuk memperbarui teks ID Materi fisik di Spreadsheet (materi, soal, listNilai, logTugas)
         await postData({ 
           action: "updateMateriId", 
           rowNumber: rowNum, 
