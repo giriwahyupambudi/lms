@@ -2175,13 +2175,11 @@
         const userObj = userMap.get(uname);
         const existing = userObj.quizzes.get(mid);
         if (!existing) {
-          userObj.quizzes.set(mid, { score, waktuSec });
+          userObj.quizzes.set(mid, { score, totalWaktuSec: waktuSec });
         } else {
-          if (score > existing.score) {
-            userObj.quizzes.set(mid, { score, waktuSec });
-          } else if (score === existing.score && waktuSec < existing.waktuSec) {
-            userObj.quizzes.set(mid, { score, waktuSec });
-          }
+          let bestScore = Math.max(score, existing.score);
+          let sumTimeSec = existing.totalWaktuSec + waktuSec;
+          userObj.quizzes.set(mid, { score: bestScore, totalWaktuSec: sumTimeSec });
         }
       });
 
@@ -2191,7 +2189,7 @@
         let totalTimeSec = 0;
         userObj.quizzes.forEach(q => {
           totalScore += q.score;
-          totalTimeSec += q.waktuSec;
+          totalTimeSec += (q.totalWaktuSec || 0);
         });
 
         if (totalScore > 0) { // Hanya tampilkan yang punya poin
