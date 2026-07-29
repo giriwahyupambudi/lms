@@ -2164,7 +2164,7 @@
         let gabunganNilai = nilaiArr.concat(tugasArr);
 
         gabunganNilai.forEach(n => {
-          if (!n) return;
+          if (!n || typeof n !== 'object') return;
           let pTipe = getVal(n, ['tipe', 'tipeevaluasi', 'jenis']);
           if (pTipe && pTipe.toString().toLowerCase() === "materi") return; 
 
@@ -2172,14 +2172,14 @@
           const namaNorm = norm(getVal(n, ['nama', 'namalengkap', 'namasiswa']));
 
           let userObj = null;
-          for (let [k, v] of userMap.entries()) {
+          userMap.forEach((v, k) => {
+            if (userObj) return;
             let uK = norm(k);
-            let uN = norm(v.nama);
+            let uN = norm(v ? v.nama : "");
             if ((unameNorm !== "" && uK === unameNorm) || (namaNorm !== "" && uN === namaNorm)) {
               userObj = v;
-              break;
             }
-          }
+          });
           if (!userObj) return;
 
           const rawMid = getVal(n, ['id_materi', 'idmateri', 'modul', 'id']);
@@ -2210,17 +2210,19 @@
 
         let aggregatedData = [];
         userMap.forEach(userObj => {
+          if (!userObj || !userObj.quizzes) return;
           let totalScore = 0;
           let totalTimeSec = 0;
           userObj.quizzes.forEach(q => {
-            totalScore += q.score;
+            if (!q) return;
+            totalScore += (q.score || 0);
             totalTimeSec += (q.totalWaktuSec || 0);
           });
 
           if (totalScore > 0) { // Hanya tampilkan yang punya poin
             aggregatedData.push({
-              nama: userObj.nama,
-              kelas: userObj.kelas,
+              nama: userObj.nama || "Siswa",
+              kelas: userObj.kelas || "Tanpa Kelas",
               nilai: totalScore,
               waktuSec: totalTimeSec,
               waktu: formatSecondsToTime(totalTimeSec)
@@ -2254,7 +2256,7 @@
         tbody.innerHTML = html || '<tr><td colspan="5" style="text-align:center">Belum ada data peringkat untuk kelas ini.</td></tr>';
       } catch (errRank) {
         console.error("Gagal renderRankingAdmin:", errRank);
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#ef4444;">Gagal memuat data peringkat. Silakan refresh halaman.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted)">Belum ada data peringkat untuk kelas ini.</td></tr>';
       }
     }
 
