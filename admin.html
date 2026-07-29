@@ -1162,25 +1162,41 @@
       showOverlay("Mengambil data dari Spreadsheet...");
       try {
         const t = new Date().getTime(); // Cache buster
+        const fetchWithTimeout = (url, ms = 8000) => {
+          return Promise.race([
+            fetch(url),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms))
+          ]).catch(() => ({ json: async () => [] }));
+        };
+
         const [resM, resN, resU, resL, resS, resT, resA, resJ] = await Promise.all([
-          fetch(`${API_URL}?sheet=materi&_t=${t}`),
-          fetch(`${API_URL}?sheet=listNilai&_t=${t}`),
-          fetch(`${API_URL}?sheet=user&_t=${t}`),
-          fetch(`${API_URL}?sheet=logLogin&_t=${t}`),
-          fetch(`${API_URL}?sheet=settings&_t=${t}`),
-          fetch(`${API_URL}?sheet=logTugas&_t=${t}`).catch(() => ({ json: async () => [] })),
-          fetch(`${API_URL}?sheet=absen&_t=${t}`).catch(() => ({ json: async () => [] })),
-          fetch(`${API_URL}?sheet=jurnal&_t=${t}`).catch(() => ({ json: async () => [] }))
+          fetchWithTimeout(`${API_URL}?sheet=materi&_t=${t}`),
+          fetchWithTimeout(`${API_URL}?sheet=listNilai&_t=${t}`),
+          fetchWithTimeout(`${API_URL}?sheet=user&_t=${t}`),
+          fetchWithTimeout(`${API_URL}?sheet=logLogin&_t=${t}`),
+          fetchWithTimeout(`${API_URL}?sheet=settings&_t=${t}`),
+          fetchWithTimeout(`${API_URL}?sheet=logTugas&_t=${t}`),
+          fetchWithTimeout(`${API_URL}?sheet=absen&_t=${t}`),
+          fetchWithTimeout(`${API_URL}?sheet=jurnal&_t=${t}`)
         ]);
 
-        dataMateri = await resM.json();
-        dataNilai = await resN.json();
-        dataUser = await resU.json();
-        dataLogLogin = await resL.json();
-        dataSettings = await resS.json();
-        dataLogTugas = await resT.json();
-        dataAbsen = await resA.json();
-        dataJurnal = await resJ.json();
+        let rawM = await resM.json();
+        let rawN = await resN.json();
+        let rawU = await resU.json();
+        let rawL = await resL.json();
+        let rawS = await resS.json();
+        let rawT = await resT.json();
+        let rawA = await resA.json();
+        let rawJ = await resJ.json();
+
+        dataMateri = Array.isArray(rawM) ? rawM : [];
+        dataNilai = Array.isArray(rawN) ? rawN : [];
+        dataUser = Array.isArray(rawU) ? rawU : [];
+        dataLogLogin = Array.isArray(rawL) ? rawL : [];
+        dataSettings = Array.isArray(rawS) ? rawS : [];
+        dataLogTugas = Array.isArray(rawT) ? rawT : [];
+        dataAbsen = Array.isArray(rawA) ? rawA : [];
+        dataJurnal = Array.isArray(rawJ) ? rawJ : [];
 
         // Penyaringan Data Global untuk Guru Biasa
         if (!IS_SUPER_ADMIN) {
