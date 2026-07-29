@@ -2130,8 +2130,8 @@
              else if (kUpper.startsWith("X")) t = "X";
           }
           
-          if (selTingkatNorm !== "" && norm(t) !== selTingkatNorm) return; // filter tingkat
-          if (selKelasNorm !== "" && norm(k) !== selKelasNorm) return; // filter kelas
+          if (selTingkatNorm !== "" && !norm(t).startsWith(selTingkatNorm) && !norm(k).startsWith(selTingkatNorm)) return; // filter tingkat
+          if (selKelasNorm !== "" && norm(k) !== selKelasNorm && !norm(k).includes(selKelasNorm)) return; // filter kelas
           
           const uname = (getVal(u, ['username', 'nisn']) || "").toString().trim();
           if (uname) {
