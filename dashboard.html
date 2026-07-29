@@ -866,7 +866,7 @@
 
           renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah, allGuruMentah);
           if (cListNilai && cUser) {
-            renderRanking(JSON.parse(cListNilai), JSON.parse(cUser));
+            renderRanking(JSON.parse(cListNilai), JSON.parse(cUser), allLogTugasMentah);
           }
           if (cLast) {
             const syncStatus = document.getElementById("syncStatus");
@@ -934,7 +934,7 @@
 
         // Re-render with fresh data silently
         renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah, allGuruMentah);
-        renderRanking(allProgresMentah, dataUser && dataUser.length > 0 ? dataUser : (localStorage.getItem("cache_user") ? JSON.parse(localStorage.getItem("cache_user")) : []));
+        renderRanking(allProgresMentah, dataUser && dataUser.length > 0 ? dataUser : (localStorage.getItem("cache_user") ? JSON.parse(localStorage.getItem("cache_user")) : []), allLogTugasMentah);
 
         // Update indicator
         if (syncStatus) {
@@ -1393,53 +1393,88 @@
       return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
     }
 
-    function renderRanking(rawNilai, dataUser) {
+    function renderRanking(rawNilai = [], dataUser = [], rawLogTugas = []) {
       const fullList = document.getElementById("rankingList");
       const homeList = document.getElementById("homeRankingList");
 
       try {
+        const getVal = (obj, possibleKeys) => {
+          if (!obj) return "";
+          for (const k of possibleKeys) {
+            if (obj[k] !== undefined && obj[k] !== null) {
+              let str = obj[k].toString().trim();
+              if (str !== "") return obj[k];
+            }
+          }
+          for (const key in obj) {
+            if (key === 'rowNumber') continue;
+            const cleanKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+            for (const pk of possibleKeys) {
+              if (cleanKey === pk.toLowerCase().replace(/[^a-z0-9]/g, '')) {
+                if (obj[key] !== undefined && obj[key] !== null) {
+                  let str = obj[key].toString().trim();
+                  if (str !== "") return obj[key];
+                }
+              }
+            }
+          }
+          return "";
+        };
 
-        // 1. Kelompokkan berdasarkan username
-        const userMap = new Map();
         const myTingkat = getTingkat(user);
+        const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+
+        // 1. Kelompokkan berdasarkan username / nama
+        const userMap = new Map();
 
         // Inisialisasi semua siswa agar tetap tampil dengan nilai 0
-        // HANYA inisialisasi siswa yang setingkat dengan user yang sedang login!
         dataUser.forEach(u => {
+          const r = (getVal(u, ['role', 'peran']) || "").toString().toLowerCase().trim();
+          if (r === "admin" || r === "guru") return;
+
           const uTingkat = getTingkat(u);
           if (uTingkat === myTingkat) {
-            const uname = u.username.toString().trim();
-            userMap.set(uname, {
-              username: uname,
-              nama: u.nama,
-              quizzes: new Map()
-            });
+            const uname = (getVal(u, ['username', 'nisn']) || "").toString().trim();
+            const uNama = getVal(u, ['nama', 'namalengkap', 'namasiswa']) || uname;
+            const uKelas = (getVal(u, ['kelas', 'tingkat']) || "").toString().trim();
+            if (uname) {
+              userMap.set(uname, {
+                username: uname,
+                nama: uNama,
+                kelas: uKelas,
+                quizzes: new Map()
+              });
+            }
           }
         });
 
-        rawNilai.forEach(n => {
-          if (!n.tipe || n.tipe.toLowerCase() === "materi") return; // Hanya proses Kuis dan Tugas
-          const uname = n.username.toString().trim();
+        // 2. Gabungkan data listNilai dan logTugas (persis seperti admin.html)
+        let gabunganNilai = (Array.isArray(rawNilai) ? rawNilai : []).concat(Array.isArray(rawLogTugas) ? rawLogTugas : []);
 
-          // Pastikan user tersebut se-tingkat dengan kita (karena kita mengabaikan tingkat lain)
-          if (!userMap.has(uname)) return;
-          const mid = (n.id_materi || n.idmateri || "").toString();
-          let score = parseInt(n.nilai) || 0;
-          if (n.tipe && n.tipe.toLowerCase() === "survey") {
-              score = 100;
+        gabunganNilai.forEach(n => {
+          let pTipe = getVal(n, ['tipe', 'tipeevaluasi', 'jenis']);
+          if (pTipe && pTipe.toString().toLowerCase() === "materi") return; 
+
+          const unameNorm = norm(getVal(n, ['username', 'nisn']));
+          const namaNorm = norm(getVal(n, ['nama', 'namalengkap', 'namasiswa']));
+
+          let userObj = null;
+          for (let [k, v] of userMap.entries()) {
+            if ((unameNorm && norm(k) === unameNorm) || (namaNorm && norm(v.nama) === namaNorm)) {
+              userObj = v;
+              break;
+            }
           }
-          const waktuSec = parseTimeToSeconds(n.waktu);
+          if (!userObj) return;
 
-          if (!userMap.has(uname)) {
-            userMap.set(uname, {
-              username: uname,
-              nama: n.nama,
-              quizzes: new Map() // mid -> { score, waktuSec }
-            });
-          }
+          const mid = (getVal(n, ['id_materi', 'idmateri', 'materi', 'modul', 'id']) || "").toString();
+          let pNilai = getVal(n, ['nilai', 'skor', 'point']);
 
-          const userObj = userMap.get(uname);
-          // Ambil nilai tertinggi, jika nilai sama ambil waktu tercepat
+          if (pNilai === undefined || pNilai === null || pNilai.toString().trim() === "" || pNilai.toString().includes("Terkirim")) return;
+
+          const score = parseInt(pNilai) || 0;
+          const waktuSec = parseTimeToSeconds(getVal(n, ['waktu', 'timestamp']));
+
           const existing = userObj.quizzes.get(mid);
           if (!existing) {
             userObj.quizzes.set(mid, { score, waktuSec });
@@ -1463,14 +1498,7 @@
             totalTimeSec += q.waktuSec;
           });
 
-          // Cocokkan kelas dari dataUser
-          const matchUser = dataUser.find(u =>
-            u.username.toString().trim() === userObj.username ||
-            u.nama.toString().trim().toLowerCase() === userObj.nama.toString().trim().toLowerCase()
-          );
-
-          let kelas = (matchUser && matchUser.kelas) ? matchUser.kelas : "Tanpa Kelas";
-          if (kelas !== "Tanpa Kelas") kelasSet.add(kelas);
+          if (userObj.kelas && userObj.kelas !== "Tanpa Kelas") kelasSet.add(userObj.kelas);
 
           aggregatedData.push({
             username: userObj.username,
@@ -1478,11 +1506,11 @@
             nilai: totalScore,
             waktuSec: totalTimeSec,
             waktu: formatSecondsToTime(totalTimeSec),
-            kelas: kelas
+            kelas: userObj.kelas || "Tanpa Kelas"
           });
         });
 
-        // 2. Sort: Nilai Tertinggi -> Waktu Tercepat (Terkecil)
+        // 3. Sort: Nilai Tertinggi -> Waktu Tercepat
         aggregatedData.sort((a, b) => {
           if (b.nilai !== a.nilai) return b.nilai - a.nilai;
           return a.waktuSec - b.waktuSec;
@@ -1492,8 +1520,7 @@
 
         // Cari posisi user saat ini
         const myRankIndex = aggregatedData.findIndex(u =>
-          u.username.toString().trim() === user.username.toString().trim() ||
-          u.username.toString().trim().toLowerCase() === user.nama.toString().trim().toLowerCase()
+          norm(u.username) === norm(user.username) || norm(u.nama) === norm(user.nama)
         );
 
         if (myRankIndex !== -1) {
@@ -1501,20 +1528,22 @@
           if (rankElement) rankElement.innerText = `#${myRankIndex + 1}`;
         }
 
-        homeList.innerHTML = globalRankingData.slice(0, 3).map(renderRankItemHTML).join('');
+        if (homeList) homeList.innerHTML = globalRankingData.slice(0, 3).map(renderRankItemHTML).join('');
 
         const filterDropdown = document.getElementById("filterKelasDropdown");
-        const kelasArray = Array.from(kelasSet).sort();
-        filterDropdown.innerHTML = '<option value="Semua">Semua Kelas</option>';
-        kelasArray.forEach(k => {
-          filterDropdown.innerHTML += `<option value="${k}">${k}</option>`;
-        });
+        if (filterDropdown) {
+          const kelasArray = Array.from(kelasSet).sort();
+          filterDropdown.innerHTML = '<option value="Semua">Semua Kelas</option>';
+          kelasArray.forEach(k => {
+            filterDropdown.innerHTML += `<option value="${k}">${k}</option>`;
+          });
+        }
 
         filterRanking();
 
       } catch (e) {
-        homeList.innerHTML = "<p style='padding:16px;'>Gagal memuat peringkat.</p>";
-        fullList.innerHTML = "<p style='padding:16px;'>Gagal memuat peringkat.</p>";
+        if (homeList) homeList.innerHTML = "<p style='padding:16px;'>Gagal memuat peringkat.</p>";
+        if (fullList) fullList.innerHTML = "<p style='padding:16px;'>Gagal memuat peringkat.</p>";
         console.error(e);
       }
     }
