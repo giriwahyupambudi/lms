@@ -2320,10 +2320,10 @@
           </tr>`;
         });
 
-        tbody.innerHTML = html || `<tr><td colspan="5" style="text-align:center">Belum ada data peringkat untuk kelas ini.<br><small style="color:#aaa;">Debug: users=${userMap.size}, gabungan=${gabunganNilai.length}, filterKls=${selKelasNorm}, filterTkt=${selTingkatPure}</small></td></tr>`;
+        tbody.innerHTML = html || '<tr><td colspan="5" style="text-align:center">Belum ada data peringkat untuk kelas ini.</td></tr>';
       } catch (errRank) {
         console.error("Gagal renderRankingAdmin:", errRank);
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted)">Belum ada data peringkat untuk kelas ini.<br><small style="color:#aaa;">Error: ${errRank.message}</small></td></tr>`;
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted)">Belum ada data peringkat untuk kelas ini.</td></tr>';
       }
     }
 

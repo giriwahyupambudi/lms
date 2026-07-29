@@ -1578,7 +1578,7 @@
       }
 
       if (filteredData.length === 0) {
-        fullList.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">Belum ada data peringkat untuk kelas ini.<br><small style="color:#aaa;">Debug: globalData=${globalRankingData ? globalRankingData.length : '?'}, filterKls=${filterKelas}</small></div>`;
+        fullList.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">Belum ada data peringkat untuk kelas ini.</div>`;
       } else {
         fullList.innerHTML = filteredData.map(renderRankItemHTML).join('');
       }
