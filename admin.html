@@ -736,7 +736,7 @@
           <div class="filter-bar" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
             <div class="form-group" style="flex:1; min-width:150px; margin-bottom: 0;">
               <label>Filter Tingkat</label>
-              <select class="form-control" id="filterTingkatRanking" onchange="renderRankingAdmin()">
+              <select class="form-control" id="filterTingkatRanking" onchange="populateFilterRanking(); renderRankingAdmin();">
                 <option value="">Semua Tingkat</option>
                 <option value="X">Tingkat X</option>
                 <option value="XI">Tingkat XI</option>
@@ -1110,6 +1110,15 @@
       return "";
     };
 
+    const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+    
+    function formatSecondsToTime(totalSeconds) {
+      if (!totalSeconds || isNaN(totalSeconds) || totalSeconds <= 0) return "00:00";
+      let mins = Math.floor(totalSeconds / 60);
+      let secs = Math.floor(totalSeconds % 60);
+      return String(mins).padStart(2, '0') + ":" + String(secs).padStart(2, '0');
+    }
+
     function showTab(tabName) {
       ['dashboardSection', 'materiSection', 'nilaiSection', 'usersSection', 'settingsSection', 'tugasSection', 'rankingSection', 'rekapSection', 'analisisSection', 'guruSection', 'absenSection', 'rekapAbsenSection'].forEach(s => {
         let el = document.getElementById(s);
@@ -1130,28 +1139,35 @@
       if (tabName === 'analisis') {
         populateFilterAnalisis();
       }
-    }
-
-    // Fungsi getTingkat yang identik dengan dashboard.html
-    const getTingkatSync = (obj) => {
-      let t = (obj.tingkat || obj.Tingkat || "").toString().trim().toUpperCase();
-      let k = (obj.kelas || obj.Kelas || "").toString().trim().toUpperCase();
-      if (!t || (t === "X" && (k.startsWith("XI") || k.startsWith("XII")))) {
-        if (k.startsWith("XII")) return "XII";
-        if (k.startsWith("XI")) return "XI";
-        if (k.startsWith("X")) return "X";
+      if (tabName === 'ranking') {
+        populateFilterRanking();
+        renderRankingAdmin();
       }
-      return t || "X";
-    };
+    }
 
     function getPureTingkat(str) {
       if (!str) return "";
       let s = str.toString().trim().toUpperCase();
-      if (s.includes("XII")) return "XII";
-      if (s.includes("XI")) return "XI";
-      if (s.includes("X")) return "X";
+      if (s.includes("XII") || s.includes("12")) return "XII";
+      if (s.includes("XI") || s.includes("11")) return "XI";
+      if (s.includes("X") || s.includes("10")) return "X";
       return s;
     }
+
+    const getTingkatSync = (obj) => {
+      if (!obj) return "X";
+      let t = (getVal(obj, ['tingkat']) || "").toString().trim().toUpperCase();
+      let k = (getVal(obj, ['kelas', 'rombel']) || "").toString().trim().toUpperCase();
+      if (t) {
+        let pT = getPureTingkat(t);
+        if (pT) return pT;
+      }
+      if (k) {
+        let pK = getPureTingkat(k);
+        if (pK) return pK;
+      }
+      return "X";
+    };
 
     // ============================================
     // FETCH DATA
@@ -1162,7 +1178,7 @@
       showOverlay("Mengambil data dari Spreadsheet...");
       try {
         const t = new Date().getTime(); // Cache buster
-        const fetchWithTimeout = (url, ms = 8000) => {
+        const fetchWithTimeout = (url, ms = 15000) => {
           return Promise.race([
             fetch(url),
             new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms))
@@ -1189,21 +1205,21 @@
         let rawA = await resA.json();
         let rawJ = await resJ.json();
 
-        dataMateri = Array.isArray(rawM) ? rawM : [];
-        dataNilai = Array.isArray(rawN) ? rawN : [];
-        dataUser = Array.isArray(rawU) ? rawU : [];
+        dataMateri = Array.isArray(rawM) && rawM.length > 0 ? rawM : (dataMateri.length > 0 ? dataMateri : []);
+        dataNilai = Array.isArray(rawN) && rawN.length > 0 ? rawN : (dataNilai.length > 0 ? dataNilai : []);
+        dataUser = Array.isArray(rawU) && rawU.length > 0 ? rawU : (dataUser.length > 0 ? dataUser : []);
         dataLogLogin = Array.isArray(rawL) ? rawL : [];
         dataSettings = Array.isArray(rawS) ? rawS : [];
-        dataLogTugas = Array.isArray(rawT) ? rawT : [];
+        dataLogTugas = Array.isArray(rawT) && rawT.length > 0 ? rawT : (dataLogTugas.length > 0 ? dataLogTugas : []);
         dataAbsen = Array.isArray(rawA) ? rawA : [];
         dataJurnal = Array.isArray(rawJ) ? rawJ : [];
 
         // Penyaringan Data Global untuk Guru Biasa
-        if (!IS_SUPER_ADMIN) {
+        if (!IS_SUPER_ADMIN && MY_KELAS.length > 0) {
           // 1. Filter Siswa berdasarkan kelas yang diajar oleh guru
           dataUser = dataUser.filter(u => {
-             let k = (getVal(u, ['kelas', 'tingkat']) || "").toString().trim().toUpperCase();
-             return MY_KELAS.includes(k);
+             let k = (getVal(u, ['kelas', 'tingkat', 'rombel']) || "").toString().trim();
+             return MY_KELAS.some(mk => norm(mk) === norm(k) || norm(k).includes(norm(mk)) || norm(mk).includes(norm(k)));
           });
 
           // 2. Filter Materi berdasarkan mapel guru saja
@@ -1241,27 +1257,27 @@
           dataNilai = dataNilai.filter(n => {
              let user = (getVal(n, ['username', 'nisn']) || "").toString().trim().toLowerCase();
              let nama = (getVal(n, ['nama', 'namasiswa']) || "").toString().trim().toLowerCase();
-             return validUsernames.has(user) || validNames.has(nama);
+             return validUsernames.size === 0 || validUsernames.has(user) || validNames.has(nama);
           });
 
           dataLogTugas = dataLogTugas.filter(t => {
              let user = (getVal(t, ['username']) || "").toString().trim().toLowerCase();
-             return validUsernames.has(user);
+             return validUsernames.size === 0 || validUsernames.has(user);
           });
 
           dataLogLogin = dataLogLogin.filter(l => {
              let user = (getVal(l, ['username', 'nisn']) || "").toString().trim().toLowerCase();
-             return validUsernames.has(user);
+             return validUsernames.size === 0 || validUsernames.has(user);
           });
           
           dataAbsen = dataAbsen.filter(a => {
-             let kelas = (getVal(a, ['kelas', 'tingkat']) || "").toString().trim().toUpperCase();
-             return MY_KELAS.includes(kelas);
+             let kelas = (getVal(a, ['kelas', 'tingkat', 'rombel']) || "").toString().trim();
+             return MY_KELAS.some(mk => norm(mk) === norm(kelas) || norm(kelas).includes(norm(mk)));
           });
           
           dataJurnal = dataJurnal.filter(j => {
-             let kelas = (getVal(j, ['kelas', 'tingkat']) || "").toString().trim().toUpperCase();
-             return MY_KELAS.includes(kelas);
+             let kelas = (getVal(j, ['kelas', 'tingkat', 'rombel']) || "").toString().trim();
+             return MY_KELAS.some(mk => norm(mk) === norm(kelas) || norm(kelas).includes(norm(mk)));
           });
         }
 
@@ -2078,13 +2094,34 @@
 
     function populateFilterRanking() {
       let selKelas = document.getElementById('filterKelasRanking');
+      let selTingkatEl = document.getElementById('filterTingkatRanking');
       if (!selKelas) return;
       let oldKelas = selKelas.value;
+      let selectedTingkatPure = selTingkatEl ? getPureTingkat(selTingkatEl.value) : "";
       
       let kls = new Set();
       (Array.isArray(dataUser) ? dataUser : []).forEach(u => {
-         let k = getVal(u, ['kelas', 'tingkat']);
-         if(k && getVal(u, ['role', 'peran']) !== "admin") kls.add(k.toString().trim());
+         let role = (getVal(u, ['role', 'peran']) || "").toString().toLowerCase();
+         if (role === "admin" || role === "superadmin" || role === "guru") return;
+
+         let k = (getVal(u, ['kelas', 'rombel', 'tingkat']) || "").toString().trim();
+         if (!k) return;
+         
+         let uTingkat = getTingkatSync(u);
+         if (!selectedTingkatPure || getPureTingkat(uTingkat) === selectedTingkatPure) {
+            kls.add(k);
+         }
+      });
+
+      // Fallback ekstra: Ambil kelas juga dari dataNilai & dataLogTugas
+      let gabungan = (Array.isArray(dataNilai) ? dataNilai : []).concat(Array.isArray(dataLogTugas) ? dataLogTugas : []);
+      gabungan.forEach(n => {
+         let k = (getVal(n, ['kelas', 'rombel', 'tingkat']) || "").toString().trim();
+         if (!k) return;
+         let nTingkat = getTingkatSync(n);
+         if (!selectedTingkatPure || getPureTingkat(nTingkat) === selectedTingkatPure) {
+            kls.add(k);
+         }
       });
       
       selKelas.innerHTML = '<option value="">Semua Kelas</option>';
@@ -2092,7 +2129,11 @@
          selKelas.innerHTML += `<option value="${k}">${k}</option>`;
       });
       
-      if (oldKelas) selKelas.value = oldKelas;
+      if (oldKelas && Array.from(kls).includes(oldKelas)) {
+         selKelas.value = oldKelas;
+      } else {
+         selKelas.value = "";
+      }
     }
 
     function renderRankingAdmin() {
@@ -2104,7 +2145,7 @@
         const selKelasEl = document.getElementById('filterKelasRanking');
         const selTingkat = selTingkatEl ? selTingkatEl.value : "";
         const selKelas = selKelasEl ? selKelasEl.value : "";
-        const selTingkatNorm = norm(selTingkat);
+        const selTingkatPure = getPureTingkat(selTingkat);
         const selKelasNorm = norm(selKelas);
         
         const materiArr = Array.isArray(dataMateri) ? dataMateri : [];
@@ -2114,30 +2155,24 @@
 
         const userMap = new Map();
         
-        // Filter user (hanya siswa, bukan admin)
+        // 1. Filter user (hanya siswa, bukan admin/guru) dari dataUser
         userArr.forEach(u => {
           if (!u) return;
           let role = (getVal(u, ['role', 'peran']) || "").toString().toLowerCase();
-          if (role === "admin" || role === "superadmin") return;
+          if (role === "admin" || role === "superadmin" || role === "guru") return;
 
           let k = (getVal(u, ['kelas', 'rombel', 'tingkat']) || "Tanpa Kelas").toString().trim();
-          let t = (getVal(u, ['tingkat']) || "").toString().trim();
+          let t = getTingkatSync(u);
           
-          if (!t || t.trim() === "") {
-             let kUpper = k.toUpperCase();
-             if (kUpper.startsWith("XII")) t = "XII";
-             else if (kUpper.startsWith("XI")) t = "XI";
-             else if (kUpper.startsWith("X")) t = "X";
-          }
-          
-          if (selTingkatNorm !== "" && !norm(t).startsWith(selTingkatNorm) && !norm(k).startsWith(selTingkatNorm)) return; // filter tingkat
+          if (selTingkatPure !== "" && getPureTingkat(t) !== selTingkatPure) return; // filter tingkat persis
           if (selKelasNorm !== "" && norm(k) !== selKelasNorm && !norm(k).includes(selKelasNorm)) return; // filter kelas
           
-          const uname = (getVal(u, ['username', 'nisn']) || "").toString().trim();
-          if (uname) {
-            userMap.set(uname, {
-              username: uname,
-              nama: getVal(u, ['nama', 'namalengkap', 'namasiswa']) || uname,
+          const unameKey = (getVal(u, ['username', 'nisn']) || getVal(u, ['nama', 'namalengkap']) || "").toString().trim();
+          if (unameKey) {
+            userMap.set(norm(unameKey), {
+              username: (getVal(u, ['username']) || "").toString().trim(),
+              nisn: (getVal(u, ['nisn']) || "").toString().trim(),
+              nama: getVal(u, ['nama', 'namalengkap', 'namasiswa']) || unameKey,
               kelas: k,
               tingkat: t,
               quizzes: new Map()
@@ -2165,7 +2200,7 @@
           return nMatNorm || nJudulNorm;
         };
 
-        // Gabungkan data nilai & tugas
+        // 2. Gabungkan data nilai & tugas
         let gabunganNilai = nilaiArr.concat(tugasArr);
 
         gabunganNilai.forEach(n => {
@@ -2177,14 +2212,41 @@
           const namaNorm = norm(getVal(n, ['nama', 'namalengkap', 'namasiswa']));
 
           let userObj = null;
-          userMap.forEach((v, k) => {
-            if (userObj) return;
-            let uK = norm(k);
-            let uN = norm(v ? v.nama : "");
-            if ((unameNorm !== "" && uK === unameNorm) || (namaNorm !== "" && uN === namaNorm)) {
+          for (let [kKey, v] of userMap.entries()) {
+            let uK = norm(v.username);
+            let uNisn = norm(v.nisn);
+            let uN = norm(v.nama);
+            if (
+              (unameNorm !== "" && (uK === unameNorm || uNisn === unameNorm || kKey === unameNorm)) ||
+              (namaNorm !== "" && uN === namaNorm)
+            ) {
               userObj = v;
+              break;
             }
-          });
+          }
+
+          // Fallback auto-create user di userMap jika siswa ada di dataNilai tetapi tidak terdaftar di dataUser
+          if (!userObj && (unameNorm !== "" || namaNorm !== "")) {
+            let nKelas = (getVal(n, ['kelas', 'rombel', 'tingkat']) || "Tanpa Kelas").toString().trim();
+            let nTingkat = getTingkatSync(n);
+
+            if (selTingkatPure !== "" && getPureTingkat(nTingkat) !== selTingkatPure) return;
+            if (selKelasNorm !== "" && norm(nKelas) !== selKelasNorm && !norm(nKelas).includes(selKelasNorm)) return;
+
+            let displayName = getVal(n, ['nama', 'namalengkap', 'namasiswa']) || getVal(n, ['username', 'nisn']) || "Siswa";
+            let displayUname = getVal(n, ['username', 'nisn']) || displayName;
+
+            userObj = {
+              username: (getVal(n, ['username']) || "").toString().trim(),
+              nisn: (getVal(n, ['nisn']) || "").toString().trim(),
+              nama: displayName,
+              kelas: nKelas,
+              tingkat: nTingkat,
+              quizzes: new Map()
+            };
+            userMap.set(norm(displayUname) || norm(displayName), userObj);
+          }
+
           if (!userObj) return;
 
           const rawMid = getVal(n, ['id_materi', 'idmateri', 'modul', 'id']);
@@ -2215,24 +2277,24 @@
 
         let aggregatedData = [];
         userMap.forEach(userObj => {
-          if (!userObj || !userObj.quizzes) return;
+          if (!userObj) return;
           let totalScore = 0;
           let totalTimeSec = 0;
-          userObj.quizzes.forEach(q => {
-            if (!q) return;
-            totalScore += (q.score || 0);
-            totalTimeSec += (q.totalWaktuSec || 0);
-          });
-
-          if (totalScore > 0) { // Hanya tampilkan yang punya poin
-            aggregatedData.push({
-              nama: userObj.nama || "Siswa",
-              kelas: userObj.kelas || "Tanpa Kelas",
-              nilai: totalScore,
-              waktuSec: totalTimeSec,
-              waktu: formatSecondsToTime(totalTimeSec)
+          if (userObj.quizzes) {
+            userObj.quizzes.forEach(q => {
+              if (!q) return;
+              totalScore += (q.score || 0);
+              totalTimeSec += (q.totalWaktuSec || 0);
             });
           }
+
+          aggregatedData.push({
+            nama: userObj.nama || "Siswa",
+            kelas: userObj.kelas || "Tanpa Kelas",
+            nilai: totalScore,
+            waktuSec: totalTimeSec,
+            waktu: formatSecondsToTime(totalTimeSec)
+          });
         });
 
         // Sort: Nilai Tertinggi -> Waktu Tercepat
@@ -2258,10 +2320,10 @@
           </tr>`;
         });
 
-        tbody.innerHTML = html || '<tr><td colspan="5" style="text-align:center">Belum ada data peringkat untuk kelas ini.</td></tr>';
+        tbody.innerHTML = html || `<tr><td colspan="5" style="text-align:center">Belum ada data peringkat untuk kelas ini.<br><small style="color:#aaa;">Debug: users=${userMap.size}, gabungan=${gabunganNilai.length}, filterKls=${selKelasNorm}, filterTkt=${selTingkatPure}</small></td></tr>`;
       } catch (errRank) {
         console.error("Gagal renderRankingAdmin:", errRank);
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted)">Belum ada data peringkat untuk kelas ini.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted)">Belum ada data peringkat untuk kelas ini.<br><small style="color:#aaa;">Error: ${errRank.message}</small></td></tr>`;
       }
     }
 
