@@ -2167,9 +2167,10 @@
         const mid = resolveCanonicalMid(rawMid, rawJudul);
         let pNilai = getVal(n, ['nilai', 'skor', 'point']);
         
-        if (pNilai === undefined || pNilai === null || pNilai.toString().trim() === "" || pNilai.toString().includes("Terkirim")) return;
-
-        const score = parseInt(pNilai) || 0;
+        let score = parseInt(pNilai) || 0;
+        if ((pTipe && (pTipe.toString().toLowerCase() === "survey" || pTipe.toString().toLowerCase() === "pretest")) || mid === "survey1") {
+          score = 100;
+        }
         const waktuSec = parseTimeToSeconds(getVal(n, ['waktu', 'timestamp']));
 
         const userObj = userMap.get(uname);
