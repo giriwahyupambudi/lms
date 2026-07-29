@@ -2159,8 +2159,17 @@
         let pTipe = getVal(n, ['tipe', 'tipeevaluasi', 'jenis']);
         if (pTipe && pTipe.toString().toLowerCase() === "materi") return; 
 
-        const uname = (getVal(n, ['username', 'nisn']) || "").toString().trim();
-        if (!userMap.has(uname)) return; // hanya proses siswa yang sesuai filter
+        const unameNorm = norm(getVal(n, ['username', 'nisn']));
+        const namaNorm = norm(getVal(n, ['nama', 'namalengkap', 'namasiswa']));
+
+        let userObj = null;
+        for (let [k, v] of userMap.entries()) {
+          if ((unameNorm && norm(k) === unameNorm) || (namaNorm && norm(v.nama) === namaNorm)) {
+            userObj = v;
+            break;
+          }
+        }
+        if (!userObj) return;
 
         const rawMid = getVal(n, ['id_materi', 'idmateri', 'modul', 'id']);
         const rawJudul = getVal(n, ['materi', 'judul', 'judul_materi']);
@@ -2173,7 +2182,6 @@
         }
         const waktuSec = parseTimeToSeconds(getVal(n, ['waktu', 'timestamp']));
 
-        const userObj = userMap.get(uname);
         const existing = userObj.quizzes.get(mid);
         if (!existing) {
           userObj.quizzes.set(mid, { score, totalWaktuSec: waktuSec });
