@@ -1461,6 +1461,8 @@
           });
 
           if (parentMat) {
+            let st = (getVal(parentMat, ['status']) || "Aktif").toString().trim().toLowerCase();
+            if (st === "draft" || st === "hidden" || st === "sembunyi") return null;
             return norm(getVal(parentMat, ['idmateri', 'id_materi', 'materiid'])) || norm(getVal(parentMat, ['judul', 'materi'])) || nMatNorm;
           }
 
