@@ -686,6 +686,46 @@
           </div>
         </div>
 
+        <!-- REKAP KEHADIRAN SISWA -->
+        <div class="stat-card" style="padding: 16px; margin-bottom: 24px; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border: 1px solid var(--border-color); border-radius: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div class="stat-icon" style="background: #e0f2fe; color: #0284c7; width: 34px; height: 34px; font-size: 1rem; border-radius: 8px;">
+                <i data-lucide="calendar-check"></i>
+              </div>
+              <h3 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #1e293b;">Rekap Kehadiran Saya</h3>
+            </div>
+            <span id="absenTotalHari" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; background: #e2e8f0; padding: 2px 8px; border-radius: 10px;">0 Hari Dicatat</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(75px, 1fr)); gap: 8px; text-align: center;">
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px 4px; border-radius: 10px;">
+              <span style="font-size: 0.7rem; color: #15803d; font-weight: 600; display: block;">Hadir</span>
+              <strong id="countHadir" style="font-size: 1.1rem; color: #166534;">0</strong>
+            </div>
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 8px 4px; border-radius: 10px;">
+              <span style="font-size: 0.7rem; color: #1d4ed8; font-weight: 600; display: block;">Izin</span>
+              <strong id="countIzin" style="font-size: 1.1rem; color: #1e40af;">0</strong>
+            </div>
+            <div style="background: #fefce8; border: 1px solid #fef08a; padding: 8px 4px; border-radius: 10px;">
+              <span style="font-size: 0.7rem; color: #a16207; font-weight: 600; display: block;">Telat</span>
+              <strong id="countTelat" style="font-size: 1.1rem; color: #854d0e;">0</strong>
+            </div>
+            <div style="background: #fdf2f8; border: 1px solid #fbcfe8; padding: 8px 4px; border-radius: 10px;">
+              <span style="font-size: 0.7rem; color: #be185d; font-weight: 600; display: block;">Sakit</span>
+              <strong id="countSakit" style="font-size: 1.1rem; color: #9d174d;">0</strong>
+            </div>
+            <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 8px 4px; border-radius: 10px;">
+              <span style="font-size: 0.7rem; color: #c2410c; font-weight: 600; display: block;">Bolos</span>
+              <strong id="countBolos" style="font-size: 1.1rem; color: #9a3412;">0</strong>
+            </div>
+            <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 8px 4px; border-radius: 10px;">
+              <span style="font-size: 0.7rem; color: #b91c1c; font-weight: 600; display: block;">Alpa</span>
+              <strong id="countAlpa" style="font-size: 1.1rem; color: #991b1b;">0</strong>
+            </div>
+          </div>
+        </div>
+
         <div class="stat-card" style="padding: 0; overflow: hidden; margin-bottom: 24px;">
           <div style="padding: 16px 16px 8px 16px; display: flex; justify-content: space-between; align-items: center;">
             <h3 style="margin: 0; font-size: 1rem; font-weight: 700;">Peringkat Teratas</h3>
@@ -812,6 +852,7 @@
     let allProgresMentah = [];
     let allLogTugasMentah = [];
     let allGuruMentah = [];
+    let allAbsenMentah = [];
 
     function getTingkat(obj) {
       let t = (obj.tingkat || obj.Tingkat || "").toString().trim().toUpperCase();
@@ -840,6 +881,60 @@
     document.getElementById("user-fullname").innerText = user.nama;
     document.getElementById("user-kelas-info").innerText = "Tingkat " + getTingkat(user) + " • " + (user.kelas || "Tanpa Kelas");
 
+    function renderAbsenSiswa(dataAbsen, currentUser) {
+      if (!Array.isArray(dataAbsen) || !currentUser) return;
+
+      const normStr = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      const userNisnNorm = normStr(currentUser.username || currentUser.nisn || "");
+      const userNamaNorm = normStr(currentUser.nama || currentUser.namalengkap || "");
+
+      let countHadir = 0;
+      let countIzin = 0;
+      let countTelat = 0;
+      let countSakit = 0;
+      let countBolos = 0;
+      let countAlpa = 0;
+      let totalRecord = 0;
+
+      dataAbsen.forEach(a => {
+        if (!a || typeof a !== 'object') return;
+        const aNisnNorm = normStr(getVal(a, ['nisn', 'username']));
+        const aNamaNorm = normStr(getVal(a, ['nama', 'namalengkap', 'namasiswa']));
+
+        const isMatch = (userNisnNorm !== "" && aNisnNorm === userNisnNorm) ||
+                        (userNamaNorm !== "" && aNamaNorm === userNamaNorm);
+
+        if (isMatch) {
+          totalRecord++;
+          const status = (getVal(a, ['status']) || "Hadir").toString().trim().toLowerCase();
+
+          if (status === "hadir" || status === "masuk") {
+            countHadir++;
+          } else if (status === "izin" || status === "ijin") {
+            countIzin++;
+          } else if (status === "telat" || status === "terlambat") {
+            countTelat++;
+          } else if (status === "sakit") {
+            countSakit++;
+          } else if (status === "bolos") {
+            countBolos++;
+          } else if (status === "alpa" || status === "tanpa keterangan") {
+            countAlpa++;
+          }
+        }
+      });
+
+      const elTotal = document.getElementById("absenTotalHari");
+      if (elTotal) elTotal.innerText = `${totalRecord} Hari Dicatat`;
+
+      if (document.getElementById("countHadir")) document.getElementById("countHadir").innerText = countHadir;
+      if (document.getElementById("countIzin")) document.getElementById("countIzin").innerText = countIzin;
+      if (document.getElementById("countTelat")) document.getElementById("countTelat").innerText = countTelat;
+      if (document.getElementById("countSakit")) document.getElementById("countSakit").innerText = countSakit;
+      if (document.getElementById("countBolos")) document.getElementById("countBolos").innerText = countBolos;
+      if (document.getElementById("countAlpa")) document.getElementById("countAlpa").innerText = countAlpa;
+    }
+
     // Jalankan pemuatan data cache & sync secara instan tanpa menunggu CDN / window.onload
     loadCachedData();
     document.addEventListener("DOMContentLoaded", () => {
@@ -856,6 +951,7 @@
         const cUser = localStorage.getItem("cache_user");
         const cLogTugas = localStorage.getItem("cache_logTugas");
         const cGuru = localStorage.getItem("cache_guru");
+        const cAbsen = localStorage.getItem("cache_absen");
         const cLast = localStorage.getItem("cache_lastUpdated");
 
         if (cMateri) {
@@ -863,8 +959,10 @@
           allProgresMentah = cListNilai ? JSON.parse(cListNilai) : [];
           allLogTugasMentah = cLogTugas ? JSON.parse(cLogTugas) : [];
           allGuruMentah = cGuru ? JSON.parse(cGuru) : [];
+          allAbsenMentah = cAbsen ? JSON.parse(cAbsen) : [];
 
           renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah, allGuruMentah);
+          renderAbsenSiswa(allAbsenMentah, user);
           if (cListNilai && cUser) {
             renderRanking(JSON.parse(cListNilai), JSON.parse(cUser), allLogTugasMentah);
           }
@@ -893,12 +991,13 @@
           ]).catch(() => ({ json: async () => [] }));
         };
 
-        const [resMateri, resListNilai, resUser, resLogTugas, resGuru] = await Promise.all([
+        const [resMateri, resListNilai, resUser, resLogTugas, resGuru, resAbsen] = await Promise.all([
           fetchWithTimeout(`${API_URL}?sheet=materi&_t=${t}`),
           fetchWithTimeout(`${API_URL}?sheet=listNilai&_t=${t}`),
           fetchWithTimeout(`${API_URL}?sheet=user&_t=${t}`),
           fetchWithTimeout(`${API_URL}?sheet=logTugas&_t=${t}`),
-          fetchWithTimeout(`${API_URL}?sheet=public_guru&_t=${t}`)
+          fetchWithTimeout(`${API_URL}?sheet=public_guru&_t=${t}`),
+          fetchWithTimeout(`${API_URL}?sheet=absen&_t=${t}`)
         ]);
 
         const dataMateri = await resMateri.json();
@@ -906,6 +1005,7 @@
         const dataUser = await resUser.json();
         const dataLogTugas = await resLogTugas.json();
         const dataGuru = await resGuru.json();
+        const dataAbsen = await resAbsen.json();
 
         // Save to cache JIKA data valid
         if (Array.isArray(dataMateri) && dataMateri.length > 0) {
@@ -927,6 +1027,10 @@
           localStorage.setItem("cache_guru", JSON.stringify(dataGuru));
           allGuruMentah = dataGuru;
         }
+        if (Array.isArray(dataAbsen)) {
+          localStorage.setItem("cache_absen", JSON.stringify(dataAbsen));
+          allAbsenMentah = dataAbsen;
+        }
 
         const now = new Date();
         const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
@@ -934,6 +1038,7 @@
 
         // Re-render with fresh data silently
         renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah, allGuruMentah);
+        renderAbsenSiswa(allAbsenMentah, user);
         renderRanking(allProgresMentah, dataUser && dataUser.length > 0 ? dataUser : (localStorage.getItem("cache_user") ? JSON.parse(localStorage.getItem("cache_user")) : []), allLogTugasMentah);
 
         // Update indicator
