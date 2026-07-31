@@ -1469,32 +1469,13 @@
           </div>
         `;
 
-          if (!hasScore && !isMateriLocked && !upNextFound) {
-            upNextHTML = cardHTML;
-            upNextFound = true;
-          }
-
           return cardHTML;
         }).join('');
 
-        const upNextContainer = document.getElementById("upNextContainer");
-        const upNextCard = document.getElementById("upNextCard");
-        if (upNextFound && upNextContainer && upNextCard) {
-          upNextContainer.style.display = "block";
-          upNextCard.innerHTML = upNextHTML;
-        } else if (upNextContainer && upNextCard && dataMateri.length > 0) {
-          upNextContainer.style.display = "block";
-          upNextCard.innerHTML = `<div class="course-card" style="text-align: center; padding: 24px; color: var(--primary); font-weight: 600;"><i data-lucide="check-circle" style="width: 32px; height: 32px; margin: 0 auto 8px auto; opacity: 0.8;"></i>Luar biasa! Anda telah menyelesaikan semua materi.</div>`;
-        } else if (upNextContainer) {
-          upNextContainer.style.display = "none";
-        }
-
-        lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
       } catch (e) {
         console.error("Error in renderMateri:", e);
-        list.innerHTML = "<p>Gagal memuat materi.</p>";
-        const upNextContainer = document.getElementById("upNextContainer");
-        if (upNextContainer) upNextContainer.style.display = "none";
+        list.innerHTML = "<p style='padding:16px; text-align:center; color:var(--text-muted);'>Gagal memuat materi.</p>";
       }
     }
 
