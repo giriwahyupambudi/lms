@@ -668,6 +668,22 @@
           </div>
         </div>
 
+        <!-- BANNER PENGINGAT TUGAS/KUIS BELUM DIKERJAKAN -->
+        <div id="pendingTasksBanner" class="stat-card" style="display:none; padding: 16px; margin-bottom: 24px; background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border: 1px solid #fed7aa; border-radius: 16px; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; box-shadow: 0 4px 12px rgba(234,88,12,0.08);">
+          <div style="display: flex; align-items: center; gap: 12px; flex: 1 1 240px;">
+            <div style="width: 42px; height: 42px; background: #ea580c; color: #fff; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; box-shadow: 0 4px 8px rgba(234,88,12,0.3);">
+              <i data-lucide="bell-ring"></i>
+            </div>
+            <div>
+              <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #9a3412;">Ada Tugas/Kuis Belum Dikerjakan!</h4>
+              <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: #c2410c; line-height: 1.4;">Kamu memiliki <strong id="pendingTaskCountText" style="color:#9a3412; font-size:0.95rem;">0</strong> tugas/kuis yang belum ada nilainya.</p>
+            </div>
+          </div>
+          <button onclick="showTab('materi')" style="background: #ea580c; color: #fff; border: none; padding: 9px 18px; border-radius: 10px; font-weight: 600; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(234,88,12,0.25);">
+            Kerjakan Sekarang <i data-lucide="arrow-right" style="width:14px; height:14px;"></i>
+          </button>
+        </div>
+
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-icon"><i data-lucide="book"></i></div>
@@ -1226,6 +1242,46 @@
         quizScores.forEach(score => totalScore += score);
         document.getElementById("myScore").innerText = totalScore;
 
+        // Hitung Tugas/Kuis yang BELUM ADA NILAINYA ATAU UNGGAHANNYA
+        // (Abaikan materi bertipe 'materi' / 'materi saja' / 'bacaan' / 'pengumuman')
+        let pendingTasksCount = 0;
+        dataMateriFiltered.forEach((m, i) => {
+          const tipe = (getVal(m, ['tipeevaluasi', 'tipe', 'evaluasi', 'jenis']) || "").toString().trim().toLowerCase();
+          
+          // ABAIKAN jika "hanya materi" / "materi" / "materi saja" / "bacaan"
+          if (!tipe || tipe === "materi" || tipe === "materi saja" || tipe === "bacaan" || tipe === "pengumuman") return;
+
+          const rawMid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (i + 1)).toString();
+          const rawJudul = getVal(m, ['judul', 'materi']);
+          const canonicalMid = resolveCanonicalMid(rawMid, rawJudul);
+
+          const hasScore = quizScores.has(rawMid) || (canonicalMid && quizScores.has(canonicalMid));
+          const hasUpload = taskUrls.has(rawMid) || (canonicalMid && taskUrls.has(canonicalMid));
+
+          if (!hasScore && !hasUpload) {
+            pendingTasksCount++;
+          }
+        });
+
+        // Update Tampilan Banner Pengingat & Notifikasi Toast
+        const bannerEl = document.getElementById("pendingTasksBanner");
+        const countTxt = document.getElementById("pendingTaskCountText");
+        if (bannerEl && countTxt) {
+          if (pendingTasksCount > 0) {
+            countTxt.innerText = pendingTasksCount;
+            bannerEl.style.display = "flex";
+          } else {
+            bannerEl.style.display = "none";
+          }
+        }
+
+        if (pendingTasksCount > 0 && !window.hasNotifiedPendingTasks) {
+          window.hasNotifiedPendingTasks = true;
+          setTimeout(() => {
+            showPendingToastNotification(pendingTasksCount);
+          }, 600);
+        }
+
 
 
          // Materi yang sudah dibuka cukup diambil dari perangkat (localStorage) agar tidak mengotori database
@@ -1450,8 +1506,20 @@
       toast.className = "toast";
       toast.innerHTML = `<i data-lucide="lock" style="width:18px; color:#facc15;"></i> <span>${message}</span>`;
       container.appendChild(toast);
-      lucide.createIcons();
+      if (window.lucide) lucide.createIcons();
       setTimeout(() => toast.remove(), 3500);
+    }
+
+    function showPendingToastNotification(count) {
+      const container = document.getElementById("toastContainer");
+      if (!container) return;
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.style.cssText = "background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; font-weight:600; box-shadow: 0 10px 25px -5px rgba(234,88,12,0.25);";
+      toast.innerHTML = `<i data-lucide="bell-ring" style="width:18px; height:18px; color:#ea580c; flex-shrink:0;"></i> <span>Kamu memiliki <strong>${count}</strong> tugas/kuis yang belum dikerjakan!</span>`;
+      container.appendChild(toast);
+      if (window.lucide) lucide.createIcons();
+      setTimeout(() => toast.remove(), 4500);
     }
 
     function alertLocked(tipe) {
