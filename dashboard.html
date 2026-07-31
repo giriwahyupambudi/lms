@@ -1245,41 +1245,44 @@
         // Hitung Tugas/Kuis yang BELUM ADA NILAINYA ATAU UNGGAHANNYA
         // (Abaikan materi bertipe 'materi' / 'materi saja' / 'bacaan' / 'pengumuman')
         let pendingTasksCount = 0;
-        dataMateriFiltered.forEach((m, i) => {
-          const tipe = (getVal(m, ['tipeevaluasi', 'tipe', 'evaluasi', 'jenis']) || "").toString().trim().toLowerCase();
-          
-          // ABAIKAN jika "hanya materi" / "materi" / "materi saja" / "bacaan"
-          if (!tipe || tipe === "materi" || tipe === "materi saja" || tipe === "bacaan" || tipe === "pengumuman") return;
+        try {
+          dataMateriFiltered.forEach((m, i) => {
+            const tipe = (getVal(m, ['tipeevaluasi', 'tipe', 'evaluasi', 'jenis']) || "").toString().trim().toLowerCase();
+            
+            // ABAIKAN jika "hanya materi" / "materi" / "materi saja" / "bacaan"
+            if (!tipe || tipe === "materi" || tipe === "materi saja" || tipe === "bacaan" || tipe === "pengumuman") return;
 
-          const rawMid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (i + 1)).toString();
-          const rawJudul = getVal(m, ['judul', 'materi']);
-          const canonicalMid = resolveCanonicalMid(rawMid, rawJudul);
+            const rawMid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (i + 1)).toString();
+            const rawJudul = (getVal(m, ['judul', 'materi']) || "").toString().trim();
 
-          const hasScore = quizScores.has(rawMid) || (canonicalMid && quizScores.has(canonicalMid));
-          const hasUpload = taskUrls.has(rawMid) || (canonicalMid && taskUrls.has(canonicalMid));
+            const hasScore = quizScores.has(rawMid) || (rawJudul !== "" && quizScores.has(rawJudul));
+            const hasUpload = taskUrls.has(rawMid) || (rawJudul !== "" && taskUrls.has(rawJudul));
 
-          if (!hasScore && !hasUpload) {
-            pendingTasksCount++;
+            if (!hasScore && !hasUpload) {
+              pendingTasksCount++;
+            }
+          });
+
+          // Update Tampilan Banner Pengingat & Notifikasi Toast
+          const bannerEl = document.getElementById("pendingTasksBanner");
+          const countTxt = document.getElementById("pendingTaskCountText");
+          if (bannerEl && countTxt) {
+            if (pendingTasksCount > 0) {
+              countTxt.innerText = pendingTasksCount;
+              bannerEl.style.display = "flex";
+            } else {
+              bannerEl.style.display = "none";
+            }
           }
-        });
 
-        // Update Tampilan Banner Pengingat & Notifikasi Toast
-        const bannerEl = document.getElementById("pendingTasksBanner");
-        const countTxt = document.getElementById("pendingTaskCountText");
-        if (bannerEl && countTxt) {
-          if (pendingTasksCount > 0) {
-            countTxt.innerText = pendingTasksCount;
-            bannerEl.style.display = "flex";
-          } else {
-            bannerEl.style.display = "none";
+          if (pendingTasksCount > 0 && !window.hasNotifiedPendingTasks) {
+            window.hasNotifiedPendingTasks = true;
+            setTimeout(() => {
+              showPendingToastNotification(pendingTasksCount);
+            }, 600);
           }
-        }
-
-        if (pendingTasksCount > 0 && !window.hasNotifiedPendingTasks) {
-          window.hasNotifiedPendingTasks = true;
-          setTimeout(() => {
-            showPendingToastNotification(pendingTasksCount);
-          }, 600);
+        } catch (errTask) {
+          console.warn("Gagal menghitung pending tasks:", errTask);
         }
 
 
