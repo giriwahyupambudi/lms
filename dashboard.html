@@ -679,7 +679,7 @@
               <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: #c2410c; line-height: 1.4;">Kamu memiliki <strong id="pendingTaskCountText" style="color:#9a3412; font-size:0.95rem;">0</strong> tugas/kuis yang belum ada nilainya.</p>
             </div>
           </div>
-          <button onclick="showTab('materi')" style="background: #ea580c; color: #fff; border: none; padding: 9px 18px; border-radius: 10px; font-weight: 600; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(234,88,12,0.25);">
+          <button onclick="scrollToPendingTasks()" style="background: #ea580c; color: #fff; border: none; padding: 9px 18px; border-radius: 10px; font-weight: 600; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(234,88,12,0.25);">
             Kerjakan Sekarang <i data-lucide="arrow-right" style="width:14px; height:14px;"></i>
           </button>
         </div>
@@ -1066,6 +1066,16 @@
       window.scrollTo(0, 0);
     }
 
+    function scrollToPendingTasks() {
+      showTab('materi');
+      setTimeout(() => {
+        const firstPendingCard = document.querySelector('.course-card[style*="#fb923c"]') || document.querySelector('.course-card[style*="fff7ed"]');
+        if (firstPendingCard) {
+          firstPendingCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 250);
+    }
+
     function renderMateri(dataMateriMentah, dataProgres, dataLogTugas = [], dataGuruMentah = []) {
       const list = document.getElementById("materiList");
       try {
@@ -1417,21 +1427,33 @@
               </div>`;
             }
           }
+          let isPendingTask = (!hasScore && !hasUpload && !isMateriSaja);
+          
+          let pendingHighlightStyle = "";
+          let pendingBadge = "";
+
+          if (isPendingTask) {
+            pendingHighlightStyle = `border: 2px solid #fb923c; background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%); box-shadow: 0 4px 16px rgba(234,88,12,0.12);`;
+            pendingBadge = `<span class="badge" style="background:#ffedd5; color:#c2410c; border:1px solid #fed7aa; font-weight:700; display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; padding:2px 8px; border-radius:12px;"><i data-lucide="alert-circle" style="width:12px; height:12px;"></i> Belum Ada Nilai</span>`;
+          }
 
           let cardHTML = `
-          <div class="course-card">
+          <div class="course-card" id="materiCard_${mid}" style="${pendingHighlightStyle}">
             <div class="course-header">
               <div class="course-content">
-                <div style="font-size:0.75rem; color:var(--primary); font-weight:700; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">
-                   ${mapelName}
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px;">
+                  <div style="font-size:0.75rem; color:var(--primary); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+                     ${mapelName}
+                  </div>
+                  ${pendingBadge}
                 </div>
                 <h3 style="margin:0 0 4px 0; font-size:0.95rem; font-weight:600; line-height:1.4; color:#334155;">${m.judul || m.Judul || ("Materi " + (i + 1))}</h3>
                 <div style="font-size:0.75rem; color:var(--text-muted); font-weight:500; margin-bottom:10px; display:flex; align-items:center; gap:4px;">
                    <i data-lucide="user" style="width:12px; height:12px;"></i> ${namaGuru}
                 </div>
                 <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
-                  ${timeBadge}
-                  ${scoreBadge}
+                   ${timeBadge}
+                   ${scoreBadge}
                 </div>
               </div>
               <div style="color:var(--primary); opacity:0.15; flex-shrink:0;">
