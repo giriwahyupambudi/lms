@@ -702,43 +702,25 @@
           </div>
         </div>
 
-        <!-- REKAP KEHADIRAN SISWA -->
-        <div class="stat-card" style="padding: 16px; margin-bottom: 24px; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border: 1px solid var(--border-color); border-radius: 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div class="stat-icon" style="background: #e0f2fe; color: #0284c7; width: 34px; height: 34px; font-size: 1rem; border-radius: 8px;">
-                <i data-lucide="calendar-check"></i>
-              </div>
-              <h3 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #1e293b;">Rekap Kehadiran Saya</h3>
-            </div>
-            <span id="absenTotalHari" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; background: #e2e8f0; padding: 2px 8px; border-radius: 10px;">0 Hari Dicatat</span>
+        <!-- REKAP KEHADIRAN SISWA MINIMALIS -->
+        <div class="stat-card" style="padding: 10px 14px; margin-bottom: 20px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; color: #334155;">
+            <i data-lucide="calendar-check" style="width: 16px; height: 16px; color: var(--primary);"></i>
+            <span>Kehadiran Saya (<span id="absenTotalHari" style="font-weight:600; color:var(--text-muted);">0 Hari</span>):</span>
           </div>
 
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(75px, 1fr)); gap: 8px; text-align: center;">
-            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px 4px; border-radius: 10px;">
-              <span style="font-size: 0.7rem; color: #15803d; font-weight: 600; display: block;">Hadir</span>
-              <strong id="countHadir" style="font-size: 1.1rem; color: #166534;">0</strong>
-            </div>
-            <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 8px 4px; border-radius: 10px;">
-              <span style="font-size: 0.7rem; color: #1d4ed8; font-weight: 600; display: block;">Izin</span>
-              <strong id="countIzin" style="font-size: 1.1rem; color: #1e40af;">0</strong>
-            </div>
-            <div style="background: #fefce8; border: 1px solid #fef08a; padding: 8px 4px; border-radius: 10px;">
-              <span style="font-size: 0.7rem; color: #a16207; font-weight: 600; display: block;">Telat</span>
-              <strong id="countTelat" style="font-size: 1.1rem; color: #854d0e;">0</strong>
-            </div>
-            <div style="background: #fdf2f8; border: 1px solid #fbcfe8; padding: 8px 4px; border-radius: 10px;">
-              <span style="font-size: 0.7rem; color: #be185d; font-weight: 600; display: block;">Sakit</span>
-              <strong id="countSakit" style="font-size: 1.1rem; color: #9d174d;">0</strong>
-            </div>
-            <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 8px 4px; border-radius: 10px;">
-              <span style="font-size: 0.7rem; color: #c2410c; font-weight: 600; display: block;">Bolos</span>
-              <strong id="countBolos" style="font-size: 1.1rem; color: #9a3412;">0</strong>
-            </div>
-            <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 8px 4px; border-radius: 10px;">
-              <span style="font-size: 0.7rem; color: #b91c1c; font-weight: 600; display: block;">Alpa</span>
-              <strong id="countAlpa" style="font-size: 1.1rem; color: #991b1b;">0</strong>
-            </div>
+          <div style="display: flex; align-items: center; gap: 10px; font-size: 0.78rem; flex-wrap: wrap;">
+            <span style="color: #15803d; font-weight: 600;">Hadir: <strong id="countHadir">0</strong></span>
+            <span style="color: #cbd5e1;">•</span>
+            <span style="color: #1d4ed8; font-weight: 600;">Izin: <strong id="countIzin">0</strong></span>
+            <span style="color: #cbd5e1;">•</span>
+            <span style="color: #a16207; font-weight: 600;">Telat: <strong id="countTelat">0</strong></span>
+            <span style="color: #cbd5e1;">•</span>
+            <span style="color: #be185d; font-weight: 600;">Sakit: <strong id="countSakit">0</strong></span>
+            <span style="color: #cbd5e1;">•</span>
+            <span style="color: #c2410c; font-weight: 600;">Bolos: <strong id="countBolos">0</strong></span>
+            <span style="color: #cbd5e1;">•</span>
+            <span style="color: #b91c1c; font-weight: 600;">Alpa: <strong id="countAlpa">0</strong></span>
           </div>
         </div>
 
@@ -751,26 +733,6 @@
           <div id="homeRankingList" class="rank-container" style="padding-bottom: 8px;">
             <div style="padding:16px">
               <div class="skeleton" style="height:40px; width:100%"></div>
-            </div>
-          </div>
-        </div>
-
-        <div id="upNextContainer">
-          <h3 style="margin: 0 0 12px 0; font-size: 1rem; font-weight: 700;">Lanjutkan Belajar</h3>
-          <div id="upNextCard">
-            <!-- Skeleton Loading -->
-            <div class="course-card">
-              <div class="course-header">
-                <div class="course-content">
-                  <div class="skeleton" style="height: 18px; width: 70%; margin-bottom: 12px;"></div>
-                  <div class="skeleton" style="height: 14px; width: 40px; border-radius: 4px;"></div>
-                </div>
-                <div class="skeleton" style="width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0;"></div>
-              </div>
-              <div class="course-actions">
-                <div class="skeleton" style="height: 36px; width: 100%; border-radius: 8px;"></div>
-                <div class="skeleton" style="height: 36px; width: 100%; border-radius: 8px;"></div>
-              </div>
             </div>
           </div>
         </div>
