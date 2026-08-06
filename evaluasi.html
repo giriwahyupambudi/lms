@@ -360,7 +360,15 @@
             box.innerHTML = `
                 <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm mb-4">
                     <div class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">Pertanyaan ${currentIndex + 1} dari ${allQuestions.length}</div>
-                    ${q.gambar ? `<img src="${q.gambar}" alt="Gambar Soal" class="w-full max-h-60 object-contain rounded-lg mb-4 bg-slate-50 p-2">` : ''}
+                    ${(() => {
+                        if (!q.gambar) return '';
+                        let imgSrc = q.gambar.toString().trim();
+                        if (imgSrc.includes("drive.google.com") || imgSrc.includes("docs.google.com")) {
+                            let fMatch = imgSrc.match(/[-\w]{25,}/);
+                            if (fMatch) imgSrc = `https://lh3.googleusercontent.com/d/${fMatch[0]}`;
+                        }
+                        return `<img src="${imgSrc}" alt="Gambar Soal" class="w-full max-h-60 object-contain rounded-lg mb-4 bg-slate-50 p-2">`;
+                    })()}
                     <h2 class="text-base font-bold text-slate-800 leading-relaxed">${q.pertanyaan}</h2>
                 </div>
                 <div class="space-y-2">

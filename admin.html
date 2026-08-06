@@ -3134,7 +3134,11 @@
             const optD = getVal(q, ['d', 'pilihand', 'opsid', 'jawaban_d']) || "-";
             const optE = getVal(q, ['e', 'pilihane', 'opsie', 'jawaban_e']) || "-";
             const kunci = (getVal(q, ['kunci', 'jawaban', 'kuncijawaban', 'kunci_jawaban']) || "").toString().toUpperCase().trim();
-            const img = getVal(q, ['gambar', 'image', 'url_gambar', 'urlgambar', 'linkgambar']);
+            let img = getVal(q, ['gambar', 'image', 'url_gambar', 'urlgambar', 'linkgambar']);
+            if (img && typeof img === 'string' && (img.includes("drive.google.com") || img.includes("docs.google.com"))) {
+              let fMatch = img.match(/[-\w]{25,}/);
+              if (fMatch) img = `https://lh3.googleusercontent.com/d/${fMatch[0]}`;
+            }
             
             soalHtml += `
               <div style="margin-bottom:25px; border:1px solid #f1f5f9; padding:15px; border-radius:12px; background:white; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
