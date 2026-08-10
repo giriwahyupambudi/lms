@@ -1154,35 +1154,88 @@ function jalankanEkstraksiTugasLama() {
 function extractMetadataFromDocxFileId(fileId) {
   try {
     var file = DriveApp.getFileById(fileId);
-    var blob = file.getBlob();
-    var unzipped = Utilities.unzip(blob);
-    var created = "";
-    var creator = "";
-    
-    for (var i = 0; i < unzipped.length; i++) {
-      if (unzipped[i].getName() === "docProps/core.xml") {
-        var xmlStr = unzipped[i].getDataAsString();
-        var createdMatch = xmlStr.match(/<dcterms:created[^>]*>(.*?)<\/dcterms:created>/);
-        var creatorMatch = xmlStr.match(/<dc:creator[^>]*>(.*?)<\/dc:creator>/);
-        
-        if (createdMatch && createdMatch[1]) {
-          try {
-            var d = new Date(createdMatch[1]);
-            if (!isNaN(d.getTime())) {
-              created = Utilities.formatDate(d, Session.getScriptTimeZone(), "dd MMM yyyy, HH:mm");
-            } else {
-              created = createdMatch[1];
-            }
-          } catch(e) { created = createdMatch[1]; }
+    var mime = file.getMimeType();
+    var blob = null;
+
+    // 1. Ambil Blob DOCX (jika file berupa Google Docs native, export dulu sebagai DOCX via OAuth Apps Script)
+    if (mime === MimeType.GOOGLE_DOCS || mime === "application/vnd.google-apps.document") {
+      try {
+        var exportUrl = "https://docs.google.com/documents/d/" + fileId + "/export?format=docx";
+        var res = UrlFetchApp.fetch(exportUrl, {
+          headers: { Authorization: "Bearer " + ScriptApp.getOAuthToken() },
+          muteHttpExceptions: true
+        });
+        if (res.getResponseCode() === 200) {
+          blob = res.getBlob();
         }
-        if (creatorMatch && creatorMatch[1]) {
-          creator = creatorMatch[1];
-        }
-        break;
+      } catch(exportErr) {
+        Logger.log("Export Docs err: " + exportErr.toString());
       }
     }
-    return { pertama_dibuat: created || "-", pembuat_asli: creator || "-" };
+
+    if (!blob) {
+      blob = file.getBlob();
+    }
+
+    var created = "";
+    var creator = "";
+
+    // 2. Ekstrak docProps/core.xml dari file DOCX
+    if (blob) {
+      try {
+        var unzipped = Utilities.unzip(blob);
+        for (var i = 0; i < unzipped.length; i++) {
+          if (unzipped[i].getName() === "docProps/core.xml") {
+            var xmlStr = unzipped[i].getDataAsString();
+            var createdMatch = xmlStr.match(/<dcterms:created[^>]*>(.*?)<\/dcterms:created>/);
+            var creatorMatch = xmlStr.match(/<dc:creator[^>]*>(.*?)<\/dc:creator>/);
+
+            if (createdMatch && createdMatch[1]) {
+              try {
+                var d = new Date(createdMatch[1]);
+                if (!isNaN(d.getTime())) {
+                  created = Utilities.formatDate(d, Session.getScriptTimeZone(), "dd MMM yyyy, HH:mm");
+                } else {
+                  created = createdMatch[1];
+                }
+              } catch(e) { created = createdMatch[1]; }
+            }
+            if (creatorMatch && creatorMatch[1]) {
+              creator = creatorMatch[1];
+            }
+            break;
+          }
+        }
+      } catch(unzipErr) {
+        Logger.log("Unzip note file " + fileId + ": " + unzipErr.toString());
+      }
+    }
+
+    // 3. Fallback cerdas: Jika docProps/core.xml tidak ada/kosong, gunakan metadata Drive
+    if (!created || created === "-") {
+      try {
+        var driveCreated = file.getDateCreated();
+        if (driveCreated) {
+          created = Utilities.formatDate(driveCreated, Session.getScriptTimeZone(), "dd MMM yyyy, HH:mm");
+        }
+      } catch(e) {}
+    }
+
+    if (!creator || creator === "-") {
+      try {
+        var owner = file.getOwner();
+        if (owner) {
+          creator = owner.getName() || owner.getEmail() || "-";
+        }
+      } catch(e) {}
+    }
+
+    return { 
+      pertama_dibuat: created || "-", 
+      pembuat_asli: creator || "-" 
+    };
   } catch(e) {
+    Logger.log("Err extract file " + fileId + ": " + e.toString());
     return { pertama_dibuat: "-", pembuat_asli: "-" };
   }
 }
