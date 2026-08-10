@@ -1075,21 +1075,18 @@ function doPost(e) {
 // ========================================================
 // FUNGSI UTAMA: JALANKAN EKSTRAKSI METADATA DARI EDITOR (▶ RUN)
 // ========================================================
-// ========================================================
-// FUNGSI UTAMA: JALANKAN EKSTRAKSI METADATA DARI EDITOR (▶ RUN)
-// ========================================================
 function jalankanEkstraksiTugasLama() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheetTugas = ss.getSheetByName("logTugas");
   if (!sheetTugas) {
-    Logger.log("Sheet logTugas tidak ditemukan!");
+    Logger.log("❌ Sheet logTugas tidak ditemukan!");
     return 0;
   }
 
   var lastRow = sheetTugas.getLastRow();
   var lastCol = Math.max(14, sheetTugas.getLastColumn());
   if (lastRow <= 1) {
-    Logger.log("Data logTugas masih kosong.");
+    Logger.log("❌ Data logTugas masih kosong.");
     return 0;
   }
 
@@ -1112,11 +1109,14 @@ function jalankanEkstraksiTugasLama() {
 
   // Tulis kembali Header Baris 1 yang sudah diperbarui & diperlengkap
   sheetTugas.getRange(1, 1, 1, headerRow.length).setValues([headerRow]);
+  SpreadsheetApp.flush();
 
   var idxMeta = headersClean.indexOf("metadata");
   var idxCreated = headersClean.indexOf("pertamadibuat");
   var idxAuthor = headersClean.indexOf("pembuatasli");
   var idxNamaAsli = headersClean.indexOf("namaasli");
+
+  Logger.log("📌 Posisi Kolom -> metadata: Kolom " + (idxMeta + 1) + ", pertama_dibuat: Kolom " + (idxCreated + 1) + ", pembuat_asli: Kolom " + (idxAuthor + 1));
 
   var updatedCount = 0;
 
@@ -1137,7 +1137,7 @@ function jalankanEkstraksiTugasLama() {
     }
 
     if (fileId) {
-      Logger.log("Memproses Baris " + (i + 1) + " | File ID: " + fileId);
+      Logger.log("⚡ Memproses Baris " + (i + 1) + " | File ID: " + fileId);
       var docxMeta = extractMetadataFromDocxFileId(fileId);
 
       var materiJudul = row[4] || row[3] || "Tugas";
@@ -1154,13 +1154,15 @@ function jalankanEkstraksiTugasLama() {
       if (idxMeta !== -1) sheetTugas.getRange(i + 1, idxMeta + 1).setValue(JSON.stringify(metaObj));
       if (idxCreated !== -1) sheetTugas.getRange(i + 1, idxCreated + 1).setValue(docxMeta.pertama_dibuat);
       if (idxAuthor !== -1) sheetTugas.getRange(i + 1, idxAuthor + 1).setValue(docxMeta.pembuat_asli);
+      
+      Logger.log("   ✅ Baris " + (i + 1) + " BERHASIL DITULIS -> Tgl: [" + docxMeta.pertama_dibuat + "] | Author: [" + docxMeta.pembuat_asli + "]");
       updatedCount++;
     }
   }
 
   SpreadsheetApp.flush();
   Logger.log("=== EKSTRAKSI SELESAI ===");
-  Logger.log("Berhasil memperbarui metadata dari " + updatedCount + " berkas tugas ke sheet logTugas.");
+  Logger.log("🎉 Berhasil memperbarui metadata dari " + updatedCount + " berkas tugas ke sheet logTugas.");
   return updatedCount;
 }
 
