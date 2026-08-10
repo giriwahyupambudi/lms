@@ -699,6 +699,17 @@
               <label>Cari Nama atau Materi</label>
               <input type="text" id="searchTugas" class="form-control" placeholder="Ketik nama atau tugas..." onkeyup="renderTableTugas()">
             </div>
+            <div class="form-group" style="flex:1; min-width:180px; margin-bottom: 0;">
+              <label>Urutkan Berdasarkan</label>
+              <select class="form-control" id="sortTugasOption" onchange="handleSort('tugas', this.value)">
+                <option value="waktu">⏱️ Waktu Pengumpulan (Terbaru)</option>
+                <option value="createdDate">🕒 Tanggal Dibuat (.docx)</option>
+                <option value="author">👤 Pembuat Asli / Author</option>
+                <option value="nama">🔤 Nama Siswa (A-Z)</option>
+                <option value="kelas">🏫 Kelas</option>
+                <option value="materi">📚 Materi / Tugas</option>
+              </select>
+            </div>
             <div style="margin-bottom: 0;">
               <button class="btn btn-primary" onclick="openModalKoreksiAI()" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border:none; display:flex; align-items:center; gap:6px;"><i data-lucide="sparkles"></i> Koreksi AI Tugas Word (.docx)</button>
             </div>
@@ -1962,10 +1973,30 @@
         return matchSearch && matchKelas;
       });
 
+      let authorCountsTugas = {};
+      let createdCountsTugas = {};
+
       filtered.forEach(t => {
          let w = getVal(t, ['waktu', 'timestamp', 'tanggal']);
          let d = w ? new Date(w).getTime() : 0;
          t.rawDate = isNaN(d) ? 0 : d;
+
+         let metaStr = getVal(t, ['metadata', 'file_metadata']);
+         let parsedMeta = {};
+         if (metaStr) {
+           try { parsedMeta = typeof metaStr === 'string' ? JSON.parse(metaStr) : metaStr; } catch(e) {}
+         }
+         t.createdDate = parsedMeta.pertama_dibuat || getVal(t, ['pertama_dibuat', 'created_date']) || "";
+         t.authorName = parsedMeta.pembuat_asli || getVal(t, ['pembuat_asli', 'author']) || "";
+
+         if (t.authorName && t.authorName !== "-") {
+           let aKey = t.authorName.toLowerCase().trim();
+           authorCountsTugas[aKey] = (authorCountsTugas[aKey] || 0) + 1;
+         }
+         if (t.createdDate) {
+           let cKey = t.createdDate.toLowerCase().trim();
+           createdCountsTugas[cKey] = (createdCountsTugas[cKey] || 0) + 1;
+         }
       });
 
       if (sortState.tugas.col) {
@@ -1983,6 +2014,12 @@
                   valB = (getVal(b, ['materi', 'judul']) || "").toLowerCase();
               } else if (sortState.tugas.col === 'waktu') {
                   return asc ? a.rawDate - b.rawDate : b.rawDate - a.rawDate;
+              } else if (sortState.tugas.col === 'createdDate') {
+                  valA = (a.createdDate || "").toLowerCase();
+                  valB = (b.createdDate || "").toLowerCase();
+              } else if (sortState.tugas.col === 'author') {
+                  valA = (a.authorName || "").toLowerCase();
+                  valB = (b.authorName || "").toLowerCase();
               }
               if (valA < valB) return asc ? -1 : 1;
               if (valA > valB) return asc ? 1 : -1;
@@ -2012,20 +2049,23 @@
         let btnIcon = isRead ? 'check-circle-2' : 'circle';
         let btnColor = isRead ? '#22c55e' : 'var(--text-muted)';
         
-        let metaStr = getVal(t, ['metadata', 'file_metadata']);
-        let parsedMeta = {};
-        if (metaStr) {
-          try { parsedMeta = typeof metaStr === 'string' ? JSON.parse(metaStr) : metaStr; } catch(e) {}
+        let createdDate = t.createdDate || "";
+        let author = t.authorName || "";
+
+        let isDuplicateAuthor = author && author !== "-" && authorCountsTugas[author.toLowerCase().trim()] > 1;
+        let isDuplicateCreated = createdDate && createdCountsTugas[createdDate.toLowerCase().trim()] > 1;
+        let copyWarningBadge = "";
+
+        if (isDuplicateAuthor || isDuplicateCreated) {
+          copyWarningBadge = `<br><div style="font-size:0.65rem; color:#dc2626; background:#fef2f2; border:1px solid #fca5a5; padding:2px 6px; border-radius:4px; margin-top:3px; font-weight:700; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="alert-triangle" style="width:10px; height:10px;"></i> ${isDuplicateAuthor ? 'Author Sama ('+authorCountsTugas[author.toLowerCase().trim()]+' Siswa)' : 'Tgl Buat Sama ('+createdCountsTugas[createdDate.toLowerCase().trim()]+' Siswa)'}</div>`;
         }
-        let createdDate = parsedMeta.pertama_dibuat || getVal(t, ['pertama_dibuat', 'created_date']) || "";
-        let author = parsedMeta.pembuat_asli || getVal(t, ['pembuat_asli', 'author']) || "";
 
         let metaDetails = "";
         if (createdDate || (author && author !== "-")) {
           metaDetails = `<div style="font-size:0.65rem; color:#64748b; margin-top:3px; background:#f8fafc; padding:3px 6px; border-radius:6px; border:1px solid #edf2f7; display:inline-block;">
              ${createdDate ? `<div><i data-lucide="clock" style="width:10px; height:10px; display:inline;"></i> Dibuat: <b>${createdDate}</b></div>` : ''}
              ${author && author !== "-" ? `<div><i data-lucide="user-check" style="width:10px; height:10px; display:inline;"></i> Author: <b>${author}</b></div>` : ''}
-          </div>`;
+          </div>${copyWarningBadge}`;
         }
 
         html += `<tr style="${rowStyle}">
