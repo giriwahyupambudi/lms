@@ -699,7 +699,8 @@
               <label>Cari Nama atau Materi</label>
               <input type="text" id="searchTugas" class="form-control" placeholder="Ketik nama atau tugas..." onkeyup="renderTableTugas()">
             </div>
-            <div style="margin-bottom: 0;">
+            <div style="margin-bottom: 0; display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn btn-outline" onclick="ekstrakMetadataBerkasLama()" style="border-color:#6366f1; color:#4f46e5; display:inline-flex; align-items:center; gap:6px;" title="Pindai & Ekstrak Tanggal Dibuat + Author dari Berkas Tugas Lama"><i data-lucide="zap"></i> Ekstrak Metadata Berkas Lama</button>
               <button class="btn btn-primary" onclick="openModalKoreksiAI()" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border:none; display:flex; align-items:center; gap:6px;"><i data-lucide="sparkles"></i> Koreksi AI Tugas Word (.docx)</button>
             </div>
           </div>
@@ -2077,6 +2078,111 @@
             toggleTugasChecked(rowNumber, 'Sudah');
         }
     };
+
+    async function ekstrakMetadataBerkasLama() {
+      if (!Array.isArray(dataLogTugas) || dataLogTugas.length === 0) {
+        return alert("Data pengumpulan tugas kosong!");
+      }
+
+      let pendingList = dataLogTugas.filter(t => {
+         let metaStr = getVal(t, ['metadata', 'file_metadata']);
+         let parsedMeta = {};
+         if (metaStr) {
+           try { parsedMeta = typeof metaStr === 'string' ? JSON.parse(metaStr) : metaStr; } catch(e) {}
+         }
+         let created = parsedMeta.pertama_dibuat || getVal(t, ['pertama_dibuat', 'created_date']);
+         let fileUrl = (getVal(t, ['link_tugas', 'linktugas', 'file', 'url']) || "").toString().trim();
+         
+         return fileUrl.startsWith("http") && (!created || created === "-");
+      });
+
+      if (pendingList.length === 0) {
+        return alert("Seluruh berkas tugas di tabel sudah memiliki metadata lengkap!");
+      }
+
+      if (!confirm(`Ditemukan ${pendingList.length} berkas tugas lama yang belum memiliki metadata. Jalankan proses pemindaian & ekstraksi metadata sekarang?`)) return;
+
+      showOverlay(`Memulai ekstraksi metadata untuk ${pendingList.length} berkas...`);
+      let successCount = 0;
+
+      for (let idx = 0; idx < pendingList.length; idx++) {
+         let item = pendingList[idx];
+         let fileUrl = (getVal(item, ['link_tugas', 'linktugas', 'file', 'url']) || "").toString().trim();
+         let fileName = getVal(item, ['nama_asli', 'filename', 'file_name']) || "Tugas";
+         
+         showOverlay(`[${idx + 1}/${pendingList.length}] Membaca metadata berkas: ${fileName}...`);
+
+         let directUrl = fileUrl;
+         if (fileUrl.includes("drive.google.com") || fileUrl.includes("docs.google.com")) {
+           let fMatch = fileUrl.match(/[-\w]{25,}/);
+           if (fMatch) {
+             directUrl = `https://lh3.googleusercontent.com/d/${fMatch[0]}`;
+           }
+         }
+
+         try {
+           let res = await fetch(directUrl);
+           if (res.ok) {
+             let arrayBuf = await res.arrayBuffer();
+             let zip = await JSZip.loadAsync(arrayBuf);
+             let coreXmlFile = zip.file("docProps/core.xml");
+             if (coreXmlFile) {
+               let xmlText = await coreXmlFile.async("string");
+               let parser = new DOMParser();
+               let xmlDoc = parser.parseFromString(xmlText, "text/xml");
+               let getTag = (tn) => {
+                 let el = xmlDoc.getElementsByTagName(tn)[0] || xmlDoc.getElementsByTagNameNS("*", tn)[0];
+                 return el ? el.textContent.trim() : "";
+               };
+               let created = getTag("created");
+               let creator = getTag("creator");
+               let lastMod = getTag("lastModifiedBy");
+
+               let createdFmt = created;
+               if (created) {
+                 try {
+                   let d = new Date(created);
+                   if (!isNaN(d.getTime())) createdFmt = d.toLocaleString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+                 } catch(e) {}
+               }
+
+               let fileMetaObj = {
+                 nama_asli: fileName,
+                 pertama_dibuat: createdFmt,
+                 pembuat_asli: creator || "Tidak Terdeteksi",
+                 terakhir_diubah_oleh: lastMod || "-"
+               };
+
+               item.metadata = JSON.stringify(fileMetaObj);
+               item.pertama_dibuat = createdFmt;
+               item.pembuat_asli = creator || "Tidak Terdeteksi";
+
+               // Save update to server in background
+               if (item.rowNumber) {
+                 fetch(API_URL, {
+                   method: 'POST',
+                   headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                   body: JSON.stringify({
+                     action: "saveData",
+                     sheet: "logTugas",
+                     rowNumber: item.rowNumber,
+                     data: JSON.stringify(item)
+                   })
+                 }).catch(e => console.log("Bg save metadata err:", e));
+               }
+
+               successCount++;
+             }
+           }
+         } catch(err) {
+           console.warn("Gagal ekstrak berkas:", fileName, err);
+         }
+      }
+
+      hideOverlay();
+      renderTableTugas();
+      alert(`Selesai! Berhasil meng-ekstrak metadata dari ${successCount} berkas tugas lama.`);
+    }
 
     window.toggleTugasChecked = async function(rowNumber, newStatus) {
       if (!rowNumber) return;
