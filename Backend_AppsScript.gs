@@ -1193,6 +1193,11 @@ function extractMetadataFromDocxFileId(fileId) {
       blob = file.getBlob();
     }
 
+    // KRUSIAL: Set Content-Type ke application/zip agar Utilities.unzip() Apps Script tidak melempar Exception Error
+    if (blob) {
+      try { blob.setContentType("application/zip"); } catch(e) {}
+    }
+
     var created = "";
     var creator = "";
     var lastModDate = "";
@@ -1240,27 +1245,8 @@ function extractMetadataFromDocxFileId(fileId) {
           }
         }
       } catch(unzipErr) {
-        Logger.log("Unzip note file " + fileId + ": " + unzipErr.toString());
+        Logger.log("Unzip err for file " + fileId + ": " + unzipErr.toString());
       }
-    }
-
-    // 3. Fallback cerdas: Jika docProps/core.xml tidak ada/kosong, gunakan metadata Drive
-    if (!created || created === "-") {
-      try {
-        var driveCreated = file.getDateCreated();
-        if (driveCreated) {
-          created = Utilities.formatDate(driveCreated, Session.getScriptTimeZone(), "dd MMM yyyy, HH:mm");
-        }
-      } catch(e) {}
-    }
-
-    if (!creator || creator === "-") {
-      try {
-        var owner = file.getOwner();
-        if (owner) {
-          creator = owner.getName() || owner.getEmail() || "-";
-        }
-      } catch(e) {}
     }
 
     return { 
