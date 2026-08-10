@@ -351,12 +351,21 @@ function doPost(e) {
          }
          
          var fileUrl = file.getUrl();
+         var docxMeta = extractMetadataFromDocxFileId(file.getId());
          
+         var fileMetaObj = {
+           nama_asli: pData.nama_asli || pData.filename,
+           ukuran_formatted: pData.ukuran_file || (file.getSize() / 1024).toFixed(2) + " KB",
+           tipe_file: pData.tipe_file || "DOCX",
+           pertama_dibuat: docxMeta.pertama_dibuat,
+           pembuat_asli: docxMeta.pembuat_asli
+         };
+
          // Simpan record ke logTugas
          var sheetTugas = ss.getSheetByName("logTugas");
          if (!sheetTugas) {
             sheetTugas = ss.insertSheet("logTugas");
-            sheetTugas.appendRow(["username", "nama", "kelas", "id_materi", "materi", "tipe", "link_tugas", "waktu"]);
+            sheetTugas.appendRow(["username", "nama", "kelas", "id_materi", "materi", "tipe", "link_tugas", "waktu", "nama_asli", "ukuran_file", "tipe_file", "metadata", "pertama_dibuat", "pembuat_asli"]);
          }
          
          var now = new Date();
@@ -370,7 +379,13 @@ function doPost(e) {
             pData.judul || "Tugas",
             pData.tipe || "Tugas",
             fileUrl,
-            timeStr
+            timeStr,
+            fileMetaObj.nama_asli,
+            fileMetaObj.ukuran_formatted,
+            fileMetaObj.tipe_file,
+            JSON.stringify(fileMetaObj),
+            docxMeta.pertama_dibuat,
+            docxMeta.pembuat_asli
          ]);
          
          return ContentService.createTextOutput(JSON.stringify({status: "success", url: fileUrl}))
@@ -378,6 +393,49 @@ function doPost(e) {
       } catch (err) {
          throw new Error("Gagal mengupload file: " + err.message);
       }
+    }
+
+    // ===============================================
+    // ACTION: BATCH EXTRACT METADATA BERKAS LAMA
+    // ===============================================
+    if (action === "batchExtractPastMetadata") {
+      var sheetTugas = ss.getSheetByName("logTugas");
+      if (!sheetTugas) throw new Error("Sheet logTugas tidak ditemukan");
+
+      var rawData = sheetTugas.getDataRange().getValues();
+      var updatedCount = 0;
+
+      for (var i = 1; i < rawData.length; i++) {
+        var fileUrl = rawData[i][6] ? rawData[i][6].toString() : "";
+        if (!fileUrl && rawData[i][5]) fileUrl = rawData[i][5].toString();
+
+        if (fileUrl.includes("drive.google.com") || fileUrl.includes("docs.google.com")) {
+          var match = fileUrl.match(/[-\w]{25,}/);
+          if (match) {
+            var fileId = match[0];
+            var docxMeta = extractMetadataFromDocxFileId(fileId);
+
+            var metaObj = {
+              nama_asli: rawData[i][8] || rawData[i][4] || "Tugas",
+              ukuran_formatted: rawData[i][9] || "",
+              tipe_file: rawData[i][10] || "DOCX",
+              pertama_dibuat: docxMeta.pertama_dibuat,
+              pembuat_asli: docxMeta.pembuat_asli
+            };
+
+            sheetTugas.getRange(i + 1, 12).setValue(JSON.stringify(metaObj));
+            sheetTugas.getRange(i + 1, 13).setValue(docxMeta.pertama_dibuat);
+            sheetTugas.getRange(i + 1, 14).setValue(docxMeta.pembuat_asli);
+            updatedCount++;
+          }
+        }
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({ 
+        status: "success", 
+        updatedCount: updatedCount,
+        message: "Berhasil mengekstrak metadata dari " + updatedCount + " berkas tugas lama."
+      })).setMimeType(ContentService.MimeType.JSON);
     }
 
     // ===============================================
@@ -1042,6 +1100,45 @@ function doPost(e) {
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({status: "error", message: error.message || error.toString()}))
                          .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// ============================================
+// FUNGSI EKSTRAKSI METADATA WORD (.DOCX) SAKTI
+// ============================================
+function extractMetadataFromDocxFileId(fileId) {
+  try {
+    var file = DriveApp.getFileById(fileId);
+    var blob = file.getBlob();
+    var unzipped = Utilities.unzip(blob);
+    var created = "";
+    var creator = "";
+    
+    for (var i = 0; i < unzipped.length; i++) {
+      if (unzipped[i].getName() === "docProps/core.xml") {
+        var xmlStr = unzipped[i].getDataAsString();
+        var createdMatch = xmlStr.match(/<dcterms:created[^>]*>(.*?)<\/dcterms:created>/);
+        var creatorMatch = xmlStr.match(/<dc:creator[^>]*>(.*?)<\/dc:creator>/);
+        
+        if (createdMatch && createdMatch[1]) {
+          try {
+            var d = new Date(createdMatch[1]);
+            if (!isNaN(d.getTime())) {
+              created = Utilities.formatDate(d, Session.getScriptTimeZone(), "dd MMM yyyy, HH:mm");
+            } else {
+              created = createdMatch[1];
+            }
+          } catch(e) { created = createdMatch[1]; }
+        }
+        if (creatorMatch && creatorMatch[1]) {
+          creator = creatorMatch[1];
+        }
+        break;
+      }
+    }
+    return { pertama_dibuat: created || "-", pembuat_asli: creator || "-" };
+  } catch(e) {
+    return { pertama_dibuat: "-", pembuat_asli: "-" };
   }
 }
 
