@@ -1195,6 +1195,8 @@ function extractMetadataFromDocxFileId(fileId) {
 
     var created = "";
     var creator = "";
+    var lastModDate = "";
+    var lastModBy = "";
 
     // 2. Ekstrak docProps/core.xml dari file DOCX
     if (blob) {
@@ -1205,6 +1207,8 @@ function extractMetadataFromDocxFileId(fileId) {
             var xmlStr = unzipped[i].getDataAsString();
             var createdMatch = xmlStr.match(/<dcterms:created[^>]*>(.*?)<\/dcterms:created>/);
             var creatorMatch = xmlStr.match(/<dc:creator[^>]*>(.*?)<\/dc:creator>/);
+            var modifiedMatch = xmlStr.match(/<dcterms:modified[^>]*>(.*?)<\/dcterms:modified>/);
+            var lastModByMatch = xmlStr.match(/<cp:lastModifiedBy[^>]*>(.*?)<\/cp:lastModifiedBy>/);
 
             if (createdMatch && createdMatch[1]) {
               try {
@@ -1218,6 +1222,19 @@ function extractMetadataFromDocxFileId(fileId) {
             }
             if (creatorMatch && creatorMatch[1]) {
               creator = creatorMatch[1];
+            }
+            if (modifiedMatch && modifiedMatch[1]) {
+              try {
+                var dm = new Date(modifiedMatch[1]);
+                if (!isNaN(dm.getTime())) {
+                  lastModDate = Utilities.formatDate(dm, Session.getScriptTimeZone(), "dd MMM yyyy, HH:mm");
+                } else {
+                  lastModDate = modifiedMatch[1];
+                }
+              } catch(e) { lastModDate = modifiedMatch[1]; }
+            }
+            if (lastModByMatch && lastModByMatch[1]) {
+              lastModBy = lastModByMatch[1];
             }
             break;
           }
@@ -1248,11 +1265,13 @@ function extractMetadataFromDocxFileId(fileId) {
 
     return { 
       pertama_dibuat: created || "-", 
-      pembuat_asli: creator || "-" 
+      pembuat_asli: creator || "-",
+      terakhir_diubah: lastModDate || created || "-",
+      editor_terakhir: lastModBy || creator || "-"
     };
   } catch(e) {
     Logger.log("Err extract file " + fileId + ": " + e.toString());
-    return { pertama_dibuat: "-", pembuat_asli: "-" };
+    return { pertama_dibuat: "-", pembuat_asli: "-", terakhir_diubah: "-", editor_terakhir: "-" };
   }
 }
 
