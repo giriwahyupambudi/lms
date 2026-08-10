@@ -2022,11 +2022,27 @@
         let btnIcon = isRead ? 'check-circle-2' : 'circle';
         let btnColor = isRead ? '#22c55e' : 'var(--text-muted)';
         
+        let metaStr = getVal(t, ['metadata', 'file_metadata']);
+        let parsedMeta = {};
+        if (metaStr) {
+          try { parsedMeta = typeof metaStr === 'string' ? JSON.parse(metaStr) : metaStr; } catch(e) {}
+        }
+        let createdDate = parsedMeta.pertama_dibuat || getVal(t, ['pertama_dibuat', 'created_date']) || "";
+        let author = parsedMeta.pembuat_asli || getVal(t, ['pembuat_asli', 'author']) || "";
+
+        let metaDetails = "";
+        if (createdDate || (author && author !== "-")) {
+          metaDetails = `<div style="font-size:0.65rem; color:#64748b; margin-top:3px; background:#f8fafc; padding:3px 6px; border-radius:6px; border:1px solid #edf2f7; display:inline-block;">
+             ${createdDate ? `<div><i data-lucide="clock" style="width:10px; height:10px; display:inline;"></i> Dibuat: <b>${createdDate}</b></div>` : ''}
+             ${author && author !== "-" ? `<div><i data-lucide="user-check" style="width:10px; height:10px; display:inline;"></i> Author: <b>${author}</b></div>` : ''}
+          </div>`;
+        }
+
         html += `<tr style="${rowStyle}">
           <td>${i+1}</td>
           <td style="font-weight:500;">${userNama} ${isRead ? '<i data-lucide="check-circle-2" style="color:#22c55e; width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i>' : ''}</td>
           <td>${kelas}</td>
-          <td>${materi}</td>
+          <td>${materi} ${metaDetails}</td>
           <td style="font-size:0.85rem; color:var(--text-muted)">${waktu}</td>
           <td style="text-align:center; white-space:nowrap;">
             <a href="${fileUrl}" target="_blank" onclick="markAsReadAutomatically(${t.rowNumber})" class="btn btn-outline" style="padding:6px 10px; font-size:0.75rem;"><i data-lucide="external-link" style="width:14px; height:14px;"></i> Buka</a>
