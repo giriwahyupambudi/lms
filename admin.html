@@ -2044,11 +2044,12 @@
         let createdDate = t.createdDate || "";
         let author = t.authorName || "";
 
-        let isDuplicateAuthor = author && author !== "-" && authorCountsTugas[author.toLowerCase().trim()] > 1;
-        let isDuplicateCreated = createdDate && createdCountsTugas[createdDate.toLowerCase().trim()] > 1;
+        let cKey = createdDate ? createdDate.toLowerCase().trim() : "";
+        let isDuplicateCreated = cKey && createdCountsTugas[cKey] > 1;
         let copyWarningBadge = "";
-        if (isDuplicateAuthor || isDuplicateCreated) {
-          copyWarningBadge = `<br><span style="font-size:0.65rem; color:#dc2626; background:#fef2f2; border:1px solid #fca5a5; padding:2px 6px; border-radius:4px; margin-top:3px; font-weight:700; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="alert-triangle" style="width:10px; height:10px;"></i> ${isDuplicateAuthor ? 'Author Sama ('+authorCountsTugas[author.toLowerCase().trim()]+' Siswa)' : 'Tgl Buat Sama ('+createdCountsTugas[createdDate.toLowerCase().trim()]+' Siswa)'}</span>`;
+
+        if (isDuplicateCreated) {
+          copyWarningBadge = `<br><span style="font-size:0.65rem; color:#dc2626; background:#fef2f2; border:1px solid #fca5a5; padding:2px 6px; border-radius:4px; margin-top:3px; font-weight:700; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="alert-triangle" style="width:10px; height:10px;"></i> Waktu Buat Sama (${createdCountsTugas[cKey]} Siswa)</span>`;
         }
 
         html += `<tr style="${rowStyle}">
@@ -2056,8 +2057,8 @@
           <td style="font-weight:500;">${userNama} ${isRead ? '<i data-lucide="check-circle-2" style="color:#22c55e; width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i>' : ''}</td>
           <td>${kelas}</td>
           <td style="font-weight:500;">${materi}</td>
-          <td style="font-size:0.85rem;">${createdDate || '<span style="color:var(--text-muted)">-</span>'}</td>
-          <td style="font-size:0.85rem;">${author && author !== "-" ? `<b>${author}</b>` : '<span style="color:var(--text-muted)">-</span>'} ${copyWarningBadge}</td>
+          <td style="font-size:0.85rem;">${createdDate || '<span style="color:var(--text-muted)">-</span>'} ${copyWarningBadge}</td>
+          <td style="font-size:0.85rem;">${author && author !== "-" ? `<b>${author}</b>` : '<span style="color:var(--text-muted)">-</span>'}</td>
           <td style="font-size:0.85rem; color:var(--text-muted)">${waktu}</td>
           <td style="text-align:center; white-space:nowrap;">
             <a href="${fileUrl}" target="_blank" onclick="markAsReadAutomatically(${t.rowNumber})" class="btn btn-outline" style="padding:6px 10px; font-size:0.75rem;"><i data-lucide="external-link" style="width:14px; height:14px;"></i> Buka</a>
