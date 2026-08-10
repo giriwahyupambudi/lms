@@ -399,42 +399,11 @@ function doPost(e) {
     // ACTION: BATCH EXTRACT METADATA BERKAS LAMA
     // ===============================================
     if (action === "batchExtractPastMetadata") {
-      var sheetTugas = ss.getSheetByName("logTugas");
-      if (!sheetTugas) throw new Error("Sheet logTugas tidak ditemukan");
-
-      var rawData = sheetTugas.getDataRange().getValues();
-      var updatedCount = 0;
-
-      for (var i = 1; i < rawData.length; i++) {
-        var fileUrl = rawData[i][6] ? rawData[i][6].toString() : "";
-        if (!fileUrl && rawData[i][5]) fileUrl = rawData[i][5].toString();
-
-        if (fileUrl.includes("drive.google.com") || fileUrl.includes("docs.google.com")) {
-          var match = fileUrl.match(/[-\w]{25,}/);
-          if (match) {
-            var fileId = match[0];
-            var docxMeta = extractMetadataFromDocxFileId(fileId);
-
-            var metaObj = {
-              nama_asli: rawData[i][8] || rawData[i][4] || "Tugas",
-              ukuran_formatted: rawData[i][9] || "",
-              tipe_file: rawData[i][10] || "DOCX",
-              pertama_dibuat: docxMeta.pertama_dibuat,
-              pembuat_asli: docxMeta.pembuat_asli
-            };
-
-            sheetTugas.getRange(i + 1, 12).setValue(JSON.stringify(metaObj));
-            sheetTugas.getRange(i + 1, 13).setValue(docxMeta.pertama_dibuat);
-            sheetTugas.getRange(i + 1, 14).setValue(docxMeta.pembuat_asli);
-            updatedCount++;
-          }
-        }
-      }
-
+      var updatedCount = jalankanEkstraksiTugasLama();
       return ContentService.createTextOutput(JSON.stringify({ 
         status: "success", 
-        updatedCount: updatedCount,
-        message: "Berhasil mengekstrak metadata dari " + updatedCount + " berkas tugas lama."
+        updatedCount: updatedCount || 0,
+        message: "Berhasil mengekstrak metadata dari " + (updatedCount || 0) + " berkas tugas lama."
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -1101,6 +1070,82 @@ function doPost(e) {
     return ContentService.createTextOutput(JSON.stringify({status: "error", message: error.message || error.toString()}))
                          .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+// ========================================================
+// FUNGSI UTAMA: JALANKAN EKSTRAKSI METADATA DARI EDITOR (▶ RUN)
+// ========================================================
+function jalankanEkstraksiTugasLama() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetTugas = ss.getSheetByName("logTugas");
+  if (!sheetTugas) {
+    Logger.log("Sheet logTugas tidak ditemukan!");
+    return 0;
+  }
+
+  var rawData = sheetTugas.getDataRange().getValues();
+  if (rawData.length <= 1) {
+    Logger.log("Data logTugas masih kosong.");
+    return 0;
+  }
+
+  // 1. Ambil & samakan seluruh nama header di Baris 1
+  var headersRow = sheetTugas.getRange(1, 1, 1, Math.max(8, sheetTugas.getLastColumn())).getValues()[0];
+  var headersClean = headersRow.map(function(h) { return h.toString().toLowerCase().replace(/[^a-z0-9]/g, ''); });
+
+  var requiredCols = ["username", "nama", "kelas", "id_materi", "materi", "tipe", "link_tugas", "waktu", "nama_asli", "ukuran_file", "tipe_file", "metadata", "pertama_dibuat", "pembuat_asli"];
+  
+  for (var k = 0; k < requiredCols.length; k++) {
+    var cName = requiredCols[k];
+    var cClean = cName.replace(/[^a-z0-9]/g, '');
+    if (headersClean.indexOf(cClean) === -1) {
+      var newColIdx = headersRow.length + 1;
+      sheetTugas.getRange(1, newColIdx).setValue(cName);
+      headersRow.push(cName);
+      headersClean.push(cClean);
+    }
+  }
+
+  // Cari posisi indeks kolom secara dinamis
+  var idxLink = headersClean.indexOf("linktugas");
+  if (idxLink === -1) idxLink = headersClean.indexOf("file");
+  if (idxLink === -1) idxLink = 6; // Kolom G
+
+  var idxMeta = headersClean.indexOf("metadata");
+  var idxCreated = headersClean.indexOf("pertamadibuat");
+  var idxAuthor = headersClean.indexOf("pembuatasli");
+
+  var updatedCount = 0;
+  for (var i = 1; i < rawData.length; i++) {
+    var fileUrl = rawData[i][idxLink] ? rawData[i][idxLink].toString().trim() : "";
+    if (!fileUrl && rawData[i][5]) fileUrl = rawData[i][5].toString().trim();
+
+    if (fileUrl.includes("drive.google.com") || fileUrl.includes("docs.google.com")) {
+      var match = fileUrl.match(/[-\w]{25,}/);
+      if (match) {
+        var fileId = match[0];
+        Logger.log("Memproses Baris " + (i + 1) + " | File ID: " + fileId);
+        var docxMeta = extractMetadataFromDocxFileId(fileId);
+
+        var metaObj = {
+          nama_asli: rawData[i][4] || "Tugas",
+          ukuran_formatted: "",
+          tipe_file: "DOCX",
+          pertama_dibuat: docxMeta.pertama_dibuat,
+          pembuat_asli: docxMeta.pembuat_asli
+        };
+
+        if (idxMeta !== -1) sheetTugas.getRange(i + 1, idxMeta + 1).setValue(JSON.stringify(metaObj));
+        if (idxCreated !== -1) sheetTugas.getRange(i + 1, idxCreated + 1).setValue(docxMeta.pertama_dibuat);
+        if (idxAuthor !== -1) sheetTugas.getRange(i + 1, idxAuthor + 1).setValue(docxMeta.pembuat_asli);
+        updatedCount++;
+      }
+    }
+  }
+
+  Logger.log("=== EKSTRAKSI SELESAI ===");
+  Logger.log("Berhasil memperbarui metadata dari " + updatedCount + " berkas tugas ke sheet logTugas.");
+  return updatedCount;
 }
 
 // ============================================
