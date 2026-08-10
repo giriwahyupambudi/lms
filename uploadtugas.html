@@ -266,6 +266,20 @@
             btnText.innerText = "Mengunggah...";
             btnLoader.classList.remove('hidden');
 
+            // Ekstraksi Metadata Berkas Lengkap
+            const ext = selectedFile.name.includes('.') ? selectedFile.name.substring(selectedFile.name.lastIndexOf('.') + 1).toUpperCase() : "FILE";
+            const formattedSize = formatBytes(selectedFile.size);
+            const lastModDate = selectedFile.lastModified ? new Date(selectedFile.lastModified).toLocaleString('id-ID') : new Date().toLocaleString('id-ID');
+            
+            const fileMetaObj = {
+                nama_asli: selectedFile.name,
+                ukuran_formatted: formattedSize,
+                ukuran_bytes: selectedFile.size,
+                tipe_mime: selectedFile.type || "application/octet-stream",
+                ekstensi: ext,
+                terakhir_diubah: lastModDate
+            };
+
             const payload = {
                 action: 'uploadTugas',
                 data: {
@@ -275,8 +289,12 @@
                     id_materi: idMateri,
                     judul: decodeURIComponent(titleParam),
                     tipe: urlParams.get('tipe') || "Tugas",
-                    filename: userData.nama.split(" ")[0] + "_" + idMateri + "_" + selectedFile.name,
-                    base64: base64File
+                    filename: (userData.nama || "Siswa").split(" ")[0] + "_" + idMateri + "_" + selectedFile.name,
+                    base64: base64File,
+                    nama_asli: selectedFile.name,
+                    ukuran_file: formattedSize,
+                    tipe_file: ext,
+                    metadata: JSON.stringify(fileMetaObj)
                 }
             };
 
