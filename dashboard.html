@@ -1516,34 +1516,41 @@
 
           if (isCompleted) {
             cardHTML = `
-            <div style="margin-bottom: 6px;">
-              <div class="course-card-compact" id="materiCard_${mid}">
-                <div class="compact-left">
-                  <div class="compact-icon">
-                    <i data-lucide="check-circle-2" style="width:18px; height:18px;"></i>
+            <div class="compact-wrapper" id="compactWrapper_${safeMid}" style="margin-bottom: 8px; border: 1px solid #e2e8f0; border-left: 4px solid #10b981; border-radius: 12px; background: #ffffff; transition: all 0.25s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+              <div class="course-card-compact" id="materiCard_${mid}" style="padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; border: none; background: transparent; border-radius: 12px;" onclick="toggleCompactDetail('${safeMid}')">
+                <div class="compact-left" style="display:flex; align-items:center; gap:12px; flex:1; min-width:0;">
+                  <div class="compact-icon" style="width:34px; height:34px; border-radius:10px; background:#d1fae5; color:#059669; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <i data-lucide="check-circle-2" style="width:20px; height:20px;"></i>
                   </div>
-                  <div class="compact-info">
-                    <h4 class="compact-title">${m.judul || m.Judul || ("Materi " + (i + 1))}</h4>
-                    <div class="compact-sub">
-                      <span><i data-lucide="book-open" style="width:10px; height:10px; display:inline-block; vertical-align:middle;"></i> ${mapelName}</span>
-                      <span>•</span>
-                      <span style="color:#059669; font-weight:700;">Point: ${sVal}</span>
+                  <div class="compact-info" style="display:flex; flex-direction:column; min-width:0;">
+                    <div style="font-size:0.7rem; color:#059669; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px; display:flex; align-items:center; gap:6px;">
+                      <span>${mapelName}</span>
+                      <span style="background:#d1fae5; color:#047857; padding:1px 6px; border-radius:4px; font-size:0.65rem;">Selesai</span>
                     </div>
+                    <h4 class="compact-title" style="font-size:0.9rem; font-weight:600; color:#1e293b; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.judul || m.Judul || ("Materi " + (i + 1))}</h4>
                   </div>
                 </div>
-                <div class="compact-right">
-                  <button onclick="toggleCompactDetail('${safeMid}')" class="btn-action" style="padding:6px 12px; font-size:0.75rem; background:#ffffff; color:#475569; border:1px solid #cbd5e1; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-                     <i data-lucide="chevron-down" id="compactIcon_${safeMid}" style="width:14px; height:14px; transition: transform 0.2s;"></i> Detail
+                <div class="compact-right" style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+                  <span style="font-size:0.75rem; font-weight:700; color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; padding:4px 10px; border-radius:8px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;">
+                    Point: ${sVal}
+                  </span>
+                  <button class="btn-action" style="padding:6px 12px; font-size:0.75rem; background:#f8fafc; color:#475569; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-weight:600; transition:all 0.2s;" onclick="event.stopPropagation(); toggleCompactDetail('${safeMid}');">
+                     <span id="compactBtnText_${safeMid}">Detail</span>
+                     <i data-lucide="chevron-down" id="compactIcon_${safeMid}" style="width:14px; height:14px; transition: transform 0.25s ease;"></i>
                   </button>
                 </div>
               </div>
-              <div id="compactDetail_${safeMid}" style="display:none; padding:12px 14px; background:#ffffff; border:1px solid #e2e8f0; border-top:none; border-radius:0 0 10px 10px; margin-top:-2px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                <div style="font-size:0.75rem; color:var(--text-muted); font-weight:500; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
-                   <span><i data-lucide="user" style="width:12px; height:12px; display:inline-block; vertical-align:middle;"></i> Pengampu: ${namaGuru}</span>
+
+              <div id="compactDetail_${safeMid}" style="display:none; padding:14px 16px; background:#f8fafc; border-top:1px solid #f1f5f9; border-radius:0 0 12px 12px;">
+                <div style="font-size:0.8rem; color:#475569; font-weight:500; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; background:#ffffff; padding:10px 12px; border-radius:8px; border:1px solid #e2e8f0;">
+                   <span style="display:inline-flex; align-items:center; gap:6px;">
+                     <i data-lucide="user" style="width:14px; height:14px; color:var(--primary);"></i> 
+                     <strong>Guru Pengampu:</strong> ${namaGuru}
+                   </span>
                    ${timeBadge}
                 </div>
                 ${feedbackHTML}
-                <div class="course-actions" style="margin-top:10px;">
+                <div class="course-actions" style="margin-top:12px;">
                   ${btnPelajari}
                   ${btnKuis}
                   ${viewBtnHTML}
@@ -1598,13 +1605,20 @@
     window.toggleCompactDetail = function(safeMid) {
       const detailEl = document.getElementById(`compactDetail_${safeMid}`);
       const iconEl = document.getElementById(`compactIcon_${safeMid}`);
+      const btnTextEl = document.getElementById(`compactBtnText_${safeMid}`);
+      const wrapperEl = document.getElementById(`compactWrapper_${safeMid}`);
+
       if (!detailEl) return;
       if (detailEl.style.display === "none" || detailEl.style.display === "") {
         detailEl.style.display = "block";
         if (iconEl) iconEl.style.transform = "rotate(180deg)";
+        if (btnTextEl) btnTextEl.innerText = "Tutup";
+        if (wrapperEl) wrapperEl.style.boxShadow = "0 8px 20px -4px rgba(0, 0, 0, 0.08)";
       } else {
         detailEl.style.display = "none";
         if (iconEl) iconEl.style.transform = "rotate(0deg)";
+        if (btnTextEl) btnTextEl.innerText = "Detail";
+        if (wrapperEl) wrapperEl.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
       }
     };
 
