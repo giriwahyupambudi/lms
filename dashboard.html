@@ -295,39 +295,49 @@
       gap: 16px;
     }
 
-    /* COMPACT STRIP CARD UNTUK MATERI SUDAH SELESAI (OPSI 3) */
-    .course-card-compact {
-      background: #f8fafc;
+    /* COMPACT STRIP CARD UNTUK MATERI SUDAH SELESAI (OPSI 3 - FULLY RESPONSIVE) */
+    .compact-wrapper {
+      margin-bottom: 10px;
       border: 1px solid #e2e8f0;
       border-left: 4px solid #10b981;
-      border-radius: 10px;
-      padding: 10px 14px;
+      border-radius: 12px;
+      background: #ffffff;
+      transition: all 0.25s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .course-card-compact {
+      padding: 12px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      transition: all 0.2s ease;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      border-radius: 12px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .course-card-compact:hover {
-      background: #f1f5f9;
-      border-color: #cbd5e1;
-      border-left-color: #059669;
+      background: #f8fafc;
     }
 
     .compact-left {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       flex: 1;
       min-width: 0;
     }
 
     .compact-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
       background: #d1fae5;
       color: #059669;
       display: flex;
@@ -340,16 +350,17 @@
       display: flex;
       flex-direction: column;
       min-width: 0;
+      flex: 1;
     }
 
     .compact-title {
-      font-size: 0.88rem;
+      font-size: 0.9rem;
       font-weight: 600;
       color: #1e293b;
+      margin: 0;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      margin: 0;
     }
 
     .compact-sub {
@@ -364,8 +375,59 @@
     .compact-right {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       flex-shrink: 0;
+    }
+
+    .compact-detail-body {
+      padding: 14px 16px;
+      background: #f8fafc;
+      border-top: 1px solid #f1f5f9;
+      border-radius: 0 0 12px 12px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* RESPONSIVE MEDIA QUERIES FOR MOBILE & TABLET */
+    @media (max-width: 640px) {
+      .course-card-compact {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 10px !important;
+        padding: 12px !important;
+      }
+
+      .compact-left {
+        width: 100% !important;
+      }
+
+      .compact-title {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        font-size: 0.88rem !important;
+        line-height: 1.35 !important;
+      }
+
+      .compact-right {
+        width: 100% !important;
+        justify-content: space-between !important;
+        padding-top: 8px !important;
+        border-top: 1px dashed #e2e8f0 !important;
+      }
+
+      .compact-right .btn-action {
+        padding: 6px 14px !important;
+      }
+
+      .compact-detail-body {
+        padding: 12px !important;
+      }
+
+      .course-actions {
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+      }
     }
 
     .course-header {
@@ -1516,32 +1578,32 @@
 
           if (isCompleted) {
             cardHTML = `
-            <div class="compact-wrapper" id="compactWrapper_${safeMid}" style="margin-bottom: 8px; border: 1px solid #e2e8f0; border-left: 4px solid #10b981; border-radius: 12px; background: #ffffff; transition: all 0.25s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-              <div class="course-card-compact" id="materiCard_${mid}" style="padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; border: none; background: transparent; border-radius: 12px;" onclick="toggleCompactDetail('${safeMid}')">
-                <div class="compact-left" style="display:flex; align-items:center; gap:12px; flex:1; min-width:0;">
-                  <div class="compact-icon" style="width:34px; height:34px; border-radius:10px; background:#d1fae5; color:#059669; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <div class="compact-wrapper" id="compactWrapper_${safeMid}">
+              <div class="course-card-compact" id="materiCard_${mid}" onclick="toggleCompactDetail('${safeMid}')">
+                <div class="compact-left">
+                  <div class="compact-icon">
                     <i data-lucide="check-circle-2" style="width:20px; height:20px;"></i>
                   </div>
-                  <div class="compact-info" style="display:flex; flex-direction:column; min-width:0;">
+                  <div class="compact-info">
                     <div style="font-size:0.7rem; color:#059669; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px; display:flex; align-items:center; gap:6px;">
                       <span>${mapelName}</span>
                       <span style="background:#d1fae5; color:#047857; padding:1px 6px; border-radius:4px; font-size:0.65rem;">Selesai</span>
                     </div>
-                    <h4 class="compact-title" style="font-size:0.9rem; font-weight:600; color:#1e293b; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.judul || m.Judul || ("Materi " + (i + 1))}</h4>
+                    <h4 class="compact-title">${m.judul || m.Judul || ("Materi " + (i + 1))}</h4>
                   </div>
                 </div>
-                <div class="compact-right" style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+                <div class="compact-right">
                   <span style="font-size:0.75rem; font-weight:700; color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; padding:4px 10px; border-radius:8px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;">
                     Point: ${sVal}
                   </span>
-                  <button class="btn-action" style="padding:6px 12px; font-size:0.75rem; background:#f8fafc; color:#475569; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-weight:600; transition:all 0.2s;" onclick="event.stopPropagation(); toggleCompactDetail('${safeMid}');">
+                  <button class="btn-action" style="padding:6px 12px; font-size:0.75rem; background:#ffffff; color:#475569; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-weight:600; transition:all 0.2s;" onclick="event.stopPropagation(); toggleCompactDetail('${safeMid}');">
                      <span id="compactBtnText_${safeMid}">Detail</span>
                      <i data-lucide="chevron-down" id="compactIcon_${safeMid}" style="width:14px; height:14px; transition: transform 0.25s ease;"></i>
                   </button>
                 </div>
               </div>
 
-              <div id="compactDetail_${safeMid}" style="display:none; padding:14px 16px; background:#f8fafc; border-top:1px solid #f1f5f9; border-radius:0 0 12px 12px;">
+              <div class="compact-detail-body" id="compactDetail_${safeMid}" style="display:none;">
                 <div style="font-size:0.8rem; color:#475569; font-weight:500; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; background:#ffffff; padding:10px 12px; border-radius:8px; border:1px solid #e2e8f0;">
                    <span style="display:inline-flex; align-items:center; gap:6px;">
                      <i data-lucide="user" style="width:14px; height:14px; color:var(--primary);"></i> 
