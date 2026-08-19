@@ -295,6 +295,79 @@
       gap: 16px;
     }
 
+    /* COMPACT STRIP CARD UNTUK MATERI SUDAH SELESAI (OPSI 3) */
+    .course-card-compact {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #10b981;
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    }
+
+    .course-card-compact:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      border-left-color: #059669;
+    }
+
+    .compact-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .compact-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: #d1fae5;
+      color: #059669;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .compact-info {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .compact-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin: 0;
+    }
+
+    .compact-sub {
+      font-size: 0.7rem;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .compact-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
     .course-header {
       display: flex;
       justify-content: space-between;
@@ -1428,6 +1501,7 @@
             }
           }
           let isPendingTask = (!hasScore && !fileUrl && !isMateriSaja);
+          let isCompleted = hasScore || (isMateriSaja && openedMaterials.has(mid.toString()));
           
           let pendingHighlightStyle = "";
           let pendingBadge = "";
@@ -1437,37 +1511,79 @@
             pendingBadge = `<span class="badge" style="background:#ffedd5; color:#c2410c; border:1px solid #fed7aa; font-weight:700; display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; padding:2px 8px; border-radius:12px;"><i data-lucide="alert-circle" style="width:12px; height:12px;"></i> Belum Ada Nilai</span>`;
           }
 
-          let cardHTML = `
-          <div class="course-card" id="materiCard_${mid}" style="${pendingHighlightStyle}">
-            <div class="course-header">
-              <div class="course-content">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px;">
-                  <div style="font-size:0.75rem; color:var(--primary); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
-                     ${mapelName}
+          let safeMid = mid.toString().replace(/[^a-zA-Z0-9_-]/g, '_');
+          let cardHTML = "";
+
+          if (isCompleted) {
+            cardHTML = `
+            <div style="margin-bottom: 6px;">
+              <div class="course-card-compact" id="materiCard_${mid}">
+                <div class="compact-left">
+                  <div class="compact-icon">
+                    <i data-lucide="check-circle-2" style="width:18px; height:18px;"></i>
                   </div>
-                  ${pendingBadge}
+                  <div class="compact-info">
+                    <h4 class="compact-title">${m.judul || m.Judul || ("Materi " + (i + 1))}</h4>
+                    <div class="compact-sub">
+                      <span><i data-lucide="book-open" style="width:10px; height:10px; display:inline-block; vertical-align:middle;"></i> ${mapelName}</span>
+                      <span>•</span>
+                      <span style="color:#059669; font-weight:700;">Point: ${sVal}</span>
+                    </div>
+                  </div>
                 </div>
-                <h3 style="margin:0 0 4px 0; font-size:0.95rem; font-weight:600; line-height:1.4; color:#334155;">${m.judul || m.Judul || ("Materi " + (i + 1))}</h3>
-                <div style="font-size:0.75rem; color:var(--text-muted); font-weight:500; margin-bottom:10px; display:flex; align-items:center; gap:4px;">
-                   <i data-lucide="user" style="width:12px; height:12px;"></i> ${namaGuru}
+                <div class="compact-right">
+                  <button onclick="toggleCompactDetail('${safeMid}')" class="btn-action" style="padding:6px 12px; font-size:0.75rem; background:#ffffff; color:#475569; border:1px solid #cbd5e1; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                     <i data-lucide="chevron-down" id="compactIcon_${safeMid}" style="width:14px; height:14px; transition: transform 0.2s;"></i> Detail
+                  </button>
                 </div>
-                <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
+              </div>
+              <div id="compactDetail_${safeMid}" style="display:none; padding:12px 14px; background:#ffffff; border:1px solid #e2e8f0; border-top:none; border-radius:0 0 10px 10px; margin-top:-2px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                <div style="font-size:0.75rem; color:var(--text-muted); font-weight:500; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+                   <span><i data-lucide="user" style="width:12px; height:12px; display:inline-block; vertical-align:middle;"></i> Pengampu: ${namaGuru}</span>
                    ${timeBadge}
-                   ${scoreBadge}
+                </div>
+                ${feedbackHTML}
+                <div class="course-actions" style="margin-top:10px;">
+                  ${btnPelajari}
+                  ${btnKuis}
+                  ${viewBtnHTML}
                 </div>
               </div>
-              <div style="color:var(--primary); opacity:0.15; flex-shrink:0;">
-                <i data-lucide="${tipe === 'Praktik' || tipe === 'Ujian praktik' ? 'clipboard-check' : 'book-open'}" style="width:40px; height:40px;"></i>
+            </div>
+            `;
+          } else {
+            cardHTML = `
+            <div class="course-card" id="materiCard_${mid}" style="${pendingHighlightStyle}">
+              <div class="course-header">
+                <div class="course-content">
+                  <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px;">
+                    <div style="font-size:0.75rem; color:var(--primary); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+                       ${mapelName}
+                    </div>
+                    ${pendingBadge}
+                  </div>
+                  <h3 style="margin:0 0 4px 0; font-size:0.95rem; font-weight:600; line-height:1.4; color:#334155;">${m.judul || m.Judul || ("Materi " + (i + 1))}</h3>
+                  <div style="font-size:0.75rem; color:var(--text-muted); font-weight:500; margin-bottom:10px; display:flex; align-items:center; gap:4px;">
+                     <i data-lucide="user" style="width:12px; height:12px;"></i> ${namaGuru}
+                  </div>
+                  <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
+                     ${timeBadge}
+                     ${scoreBadge}
+                  </div>
+                </div>
+                <div style="color:var(--primary); opacity:0.15; flex-shrink:0;">
+                  <i data-lucide="${tipe === 'Praktik' || tipe === 'Ujian praktik' ? 'clipboard-check' : 'book-open'}" style="width:40px; height:40px;"></i>
+                </div>
+              </div>
+              ${feedbackHTML}
+              <div class="course-actions">
+                ${btnPelajari}
+                ${btnKuis}
+                ${viewBtnHTML}
               </div>
             </div>
-            ${feedbackHTML}
-            <div class="course-actions">
-              ${btnPelajari}
-              ${btnKuis}
-              ${viewBtnHTML}
-            </div>
-          </div>
-        `;
+          `;
+          }
 
           return cardHTML;
         }).join('');
@@ -1478,6 +1594,19 @@
         list.innerHTML = "<p style='padding:16px; text-align:center; color:var(--text-muted);'>Gagal memuat materi.</p>";
       }
     }
+
+    window.toggleCompactDetail = function(safeMid) {
+      const detailEl = document.getElementById(`compactDetail_${safeMid}`);
+      const iconEl = document.getElementById(`compactIcon_${safeMid}`);
+      if (!detailEl) return;
+      if (detailEl.style.display === "none" || detailEl.style.display === "") {
+        detailEl.style.display = "block";
+        if (iconEl) iconEl.style.transform = "rotate(180deg)";
+      } else {
+        detailEl.style.display = "none";
+        if (iconEl) iconEl.style.transform = "rotate(0deg)";
+      }
+    };
 
     function showToast(message) {
       const container = document.getElementById("toastContainer");
