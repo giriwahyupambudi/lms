@@ -231,11 +231,16 @@
       margin-top: 60px;
       margin-bottom: calc(var(--nav-height) + 20px);
       padding: 20px;
+      max-width: 100%;
+      overflow-x: hidden;
+      box-sizing: border-box;
     }
 
     .container {
       max-width: 1000px;
       margin: 0 auto;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     /* STATS & CARDS */
@@ -262,6 +267,7 @@
       border-radius: 12px;
       border: 1px solid var(--border-color);
       box-shadow: var(--shadow-sm);
+      min-width: 0;
     }
 
     .stat-icon {
@@ -281,6 +287,14 @@
       display: grid;
       grid-template-columns: 1fr;
       gap: 16px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .course-grid > * {
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
     }
 
     .course-card {
@@ -714,12 +728,18 @@
 
       .top-bar {
         left: var(--sidebar-width);
+        width: calc(100% - var(--sidebar-width));
+        box-sizing: border-box;
       }
 
       .main-content {
         margin-left: var(--sidebar-width);
+        width: calc(100% - var(--sidebar-width));
         padding: 40px;
         margin-bottom: 0;
+        box-sizing: border-box;
+        max-width: calc(100% - var(--sidebar-width));
+        overflow-x: hidden;
       }
 
       .course-grid {
