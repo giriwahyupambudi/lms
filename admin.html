@@ -5314,8 +5314,24 @@ TUGAS ANDA:
           fullText += "\n";
         }
 
+        // Deteksi Gambar/Media dalam dokumen Word (.docx)
+        let mediaImageCount = 0;
+        try {
+          const mediaFolder = zip.folder("word/media");
+          if (mediaFolder) {
+            mediaImageCount = Object.keys(mediaFolder.files).filter(fname => !fname.endsWith('/')).length;
+          }
+        } catch(eMedia) {}
+
+        const drawingCount = xmlDoc.getElementsByTagName("w:drawing").length;
+        const shapeCount = xmlDoc.getElementsByTagName("v:shape").length;
+        const imageDataCount = xmlDoc.getElementsByTagName("v:imagedata").length;
+        const objectCount = xmlDoc.getElementsByTagName("w:object").length;
+        const totalImageCount = Math.max(mediaImageCount, drawingCount + shapeCount + imageDataCount + objectCount);
+
         return {
           fullText: fullText.trim(),
+          imageCount: totalImageCount,
           boldPhrases: boldPhrases.slice(0, 35),
           italicPhrases: italicPhrases.slice(0, 35),
           underlinePhrases: underlinePhrases.slice(0, 35),
@@ -5557,6 +5573,7 @@ ${existingPeerTexts.slice(0, 10).join("\n")}
 ` : "";
 
           let formatInfoText = docxDetails ? `
+- Jumlah Gambar/Grafik Terdeteksi dalam Dokumen: ${docxDetails.imageCount > 0 ? docxDetails.imageCount + " gambar terdeteksi" : "0 gambar (TIDAK ADA GAMBAR)"}
 - Frasa CETAK TEBAL (Bold): ${docxDetails.boldPhrases.length ? docxDetails.boldPhrases.join(", ") : "(Tidak ada)"}
 - Frasa CETAK MIRING (Italic): ${docxDetails.italicPhrases.length ? docxDetails.italicPhrases.join(", ") : "(Tidak ada)"}
 - Frasa GARIS BAWAH (Underline): ${docxDetails.underlinePhrases.length ? docxDetails.underlinePhrases.join(", ") : "(Tidak ada)"}
@@ -5567,6 +5584,7 @@ ${existingPeerTexts.slice(0, 10).join("\n")}
 
           let masterInfoText = masterDocxData ? `
 DOKUMEN MASTER GURU / KUNCI JAWABAN (ACUAN):
+- Jumlah Gambar Master: ${masterDocxData.imageCount || 0} gambar terdeteksi
 - Teks Dokumen Master: ${masterDocxData.fullText.substring(0, 2000)}
 - Detail Format Master (Bold/Italic/Underline/Font):
   * Bold: ${masterDocxData.boldPhrases.length ? masterDocxData.boldPhrases.join(", ") : "(Tidak ada)"}
@@ -5590,9 +5608,10 @@ ${formatInfoText}
 ${peerComparisonText}
 
 PETUNJUK EVALUASI:
-1. "catatan" (UNTUK SISWA): Tuliskan evaluasi secara LUGAS, OBJEKTIF, dan KONSTRUKTIF yang menunjukkan bagian yang perlu diperbaiki. DILARANG menggunakan kata-kata yang menjatuhkan atau menghakimi (seperti "salah", "gagal", "tidak paham", "buruk"). DILARANG basa-basi/pujian kosong, dan DILARANG sapaan nama. Gunakan kalimat perbaikan yang netral, solutif, dan membangun (contoh: "Belum mencantumkan...", "Perlu menyempurnakan..."). DILARANG pakai karakter — (em dash) atau tanda baca khusus yang terkesan AI.
+1. PENTING (ATURAN GAMBAR): Cek "- Jumlah Gambar/Grafik Terdeteksi dalam Dokumen". Jika terdeteksi > 0 gambar (misal 1 atau 2 gambar), DILARANG HARD KLAIM BAHWA SISWA BELUM MENYERTAKAN GAMBAR!
+2. "catatan" (UNTUK SISWA): Tuliskan evaluasi secara LUGAS, OBJEKTIF, dan KONSTRUKTIF yang menunjukkan bagian yang perlu diperbaiki. DILARANG menggunakan kata-kata yang menjatuhkan atau menghakimi (seperti "salah", "gagal", "tidak paham", "buruk"). DILARANG basa-basi/pujian kosong, dan DILARANG sapaan nama. Gunakan kalimat perbaikan yang netral, solutif, dan membangun (contoh: "Belum mencantumkan...", "Perlu menyempurnakan..."). DILARANG pakai karakter — (em dash) atau tanda baca khusus yang terkesan AI.
 
-2. "catatan_guru" (KHUSUS GURU): Bandingkan dokumen ${namaSiswa} (Teks & Metadata Format) dengan daftar siswa lain di atas:
+3. "catatan_guru" (KHUSUS GURU): Bandingkan dokumen ${namaSiswa} (Teks & Metadata Format) dengan daftar siswa lain di atas:
    - Jika TEKS & METADATA FORMAT (Bold/Italic/Font) PERSIS SAMA 100%: "⚠️ FILE DUPLIKAT GANTI NAMA (Metadata Format & Teks 100% Identik): persis file milik [Nama] ([Kelas])".
    - Jika ISI TEKS >70% MIRIP: "⚠️ COPY-PASTE TEKS ([%]% Mirip): dari file milik [Nama] ([Kelas])".
    - Jika mandiri: "✅ Mandiri".
