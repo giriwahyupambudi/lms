@@ -2707,74 +2707,70 @@
       let rawTipe = mObj ? (getVal(mObj, ['tipeevaluasi', 'tipe_evaluasi', 'tipe']) || "Praktik").toLowerCase() : "praktik";
       let isUploadType = ["tugas"].includes(rawTipe);
 
+      let mIdRaw = mObj ? (getVal(mObj, ['idmateri', 'id_materi', 'materiid']) || "").toString().trim() : selMateri.toString().trim();
+      let mJudulRaw = mObj ? (getVal(mObj, ['judul', 'materi']) || "").toString().trim() : selMateriJudul;
+      let mIdNorm = norm(mIdRaw);
+      let mJudulNorm = norm(mJudulRaw);
+
+      // OPTIMASI INSTAN (O(N) Pre-Filter): Saring dataNilai khusus materi ini sekali saja di awal (mencegah komputasi berulang ribuan kali per siswa)
+      const aliasMap = {
+          "engine12": ["engine1", "survey1"],
+          "engine14": ["engine3"],
+          "5": ["engine4"],
+          "6": ["engine5"],
+          "7": ["engine8"],
+          "8": ["engine6"],
+          "9": ["engine7"]
+      };
+
+      let targetNilaiList = dataNilai.filter(n => {
+          let nMatRaw = (getVal(n, ['id_materi', 'idmateri', 'modul', 'materi', 'judul']) || "").toString();
+          let nJudulRaw = (getVal(n, ['judul', 'materi', 'judul_materi']) || "").toString();
+          let nMatNorm = norm(nMatRaw);
+          let nJudulNorm = norm(nJudulRaw);
+
+          if (nMatNorm !== "" && (nMatNorm === mIdNorm || (mJudulNorm !== "" && nMatNorm === mJudulNorm))) return true;
+          if (nJudulNorm !== "" && ((mJudulNorm !== "" && nJudulNorm === mJudulNorm) || (mIdNorm !== "" && nJudulNorm === mIdNorm))) return true;
+
+          const nId = nMatNorm || nJudulNorm;
+          if (aliasMap[nId] && aliasMap[nId].includes(mIdNorm)) return true;
+
+          let nCombined = nMatNorm || nJudulNorm;
+          let mCombined = mJudulNorm || mIdNorm;
+          if (nCombined.length >= 5 && mCombined.length >= 5) {
+              if (nCombined.includes(mCombined) || mCombined.includes(nCombined)) return true;
+          }
+          return false;
+      });
+
+      // OPTIMASI INSTAN (O(1) Map Lookup): Pre-index logTugas untuk materi ini berdasarkan username siswa
+      let targetLogTugasMap = new Map();
+      dataLogTugas.forEach(t => {
+          let tUser = norm(getVal(t, ['username']));
+          let tMid = (getVal(t, ['id_materi', 'materi']) || "").toString().trim();
+          let tJudul = norm(getVal(t, ['materi', 'judul']));
+          if (tMid === selMateri.toString().trim() || (mJudulClean !== "" && tJudul === mJudulClean)) {
+              if (tUser) targetLogTugasMap.set(tUser, t);
+          }
+      });
+
       let mappedStudents = students.map((u, originalIndex) => {
         let username = (getVal(u, ['username', 'nisn']) || "").toString().trim();
         let nama = getVal(u, ['nama', 'namalengkap', 'namasiswa']) || "-";
+        let uUserNorm = norm(username);
+        let uNamaRaw = nama.toString().trim().toLowerCase();
+        let uNamaNorm = norm(uNamaRaw);
 
-        let userNilaiData = dataNilai.filter(n => {
+        let userNilaiData = targetNilaiList.filter(n => {
            let nUserRaw = (getVal(n, ['username', 'nisn']) || "").toString().trim().toLowerCase();
            let nUserNorm = norm(nUserRaw);
            let nNamaRaw = (getVal(n, ['nama', 'namasiswa', 'namalengkap']) || "").toString().trim().toLowerCase();
            let nNamaNorm = norm(nNamaRaw);
 
-           let uUserNorm = norm(username);
-           let uNamaRaw = nama.toString().trim().toLowerCase();
-           let uNamaNorm = norm(uNamaRaw);
-
-           let isUserMatch = (nUserNorm !== "" && nUserNorm === uUserNorm) ||
-                             (nNamaNorm !== "" && (nNamaNorm === uNamaNorm || nNamaNorm === uNamaRaw || nNamaRaw === uNamaRaw)) ||
-                             (nUserRaw !== "" && (nUserRaw === uNamaRaw || nUserRaw === username.toLowerCase())) ||
-                             (nNamaRaw !== "" && nNamaRaw === uNamaRaw);
-
-           let nMatRaw = (getVal(n, ['id_materi', 'idmateri', 'modul', 'materi', 'judul']) || "").toString();
-           let nJudulRaw = (getVal(n, ['judul', 'materi', 'judul_materi']) || "").toString();
-           let nMatNorm = norm(nMatRaw);
-           let nJudulNorm = norm(nJudulRaw);
-
-           let mIdRaw = mObj ? (getVal(mObj, ['idmateri', 'id_materi', 'materiid']) || "").toString().trim() : selMateri.toString().trim();
-           let mJudulRaw = mObj ? (getVal(mObj, ['judul', 'materi']) || "").toString().trim() : selMateriJudul;
-           let mIdNorm = norm(mIdRaw);
-           let mJudulNorm = norm(mJudulRaw);
-
-           let isMateriMatch = false;
-
-           // 1. Direct exact match
-           if (nMatNorm !== "" && (nMatNorm === mIdNorm || (mJudulNorm !== "" && nMatNorm === mJudulNorm))) {
-               isMateriMatch = true;
-           } else if (nJudulNorm !== "" && ((mJudulNorm !== "" && nJudulNorm === mJudulNorm) || (mIdNorm !== "" && nJudulNorm === mIdNorm))) {
-               isMateriMatch = true;
-           }
-
-           // 2. Known spreadsheet variant aliases
-           if (!isMateriMatch) {
-               const aliasMap = {
-                   "engine12": ["engine1", "survey1"],
-                   "engine14": ["engine3"],
-                   "5": ["engine4"],
-                   "6": ["engine5"],
-                   "7": ["engine8"],
-                   "8": ["engine6"],
-                   "9": ["engine7"]
-               };
-               const nId = nMatNorm || nJudulNorm;
-               if (aliasMap[nId] && aliasMap[nId].includes(mIdNorm)) {
-                   isMateriMatch = true;
-               }
-           }
-
-           // 3. Meaningful substring match (minimum 5 chars)
-           if (!isMateriMatch) {
-               let nCombined = nMatNorm || nJudulNorm;
-               let mCombined = mJudulNorm || mIdNorm;
-
-               if (nCombined.length >= 5 && mCombined.length >= 5) {
-                   if (nCombined.includes(mCombined) || mCombined.includes(nCombined)) {
-                       isMateriMatch = true;
-                   }
-               }
-           }
-
-           return isUserMatch && isMateriMatch;
+           return (nUserNorm !== "" && nUserNorm === uUserNorm) ||
+                  (nNamaNorm !== "" && (nNamaNorm === uNamaNorm || nNamaNorm === uNamaRaw || nNamaRaw === uNamaRaw)) ||
+                  (nUserRaw !== "" && (nUserRaw === uNamaRaw || nUserRaw === username.toLowerCase())) ||
+                  (nNamaRaw !== "" && nNamaRaw === uNamaRaw);
         });
         
         let maxNilai = "";
@@ -2799,13 +2795,8 @@
            durasiKuis = getVal(bestAttempt, ['waktu', 'durasi', 'waktuaktif']) || "-";
         }
 
-        // Cek logTugas
-        let upload = dataLogTugas.find(t => {
-            let tUser = norm(getVal(t, ['username']));
-            let tMid = (getVal(t, ['id_materi', 'materi']) || "").toString().trim();
-            let tJudul = norm(getVal(t, ['materi', 'judul']));
-            return tUser === norm(username) && (tMid === selMateri.toString().trim() || (mJudulClean !== "" && tJudul === mJudulClean));
-        });
+        // Cek logTugas dengan fast O(1) Map lookup
+        let upload = targetLogTugasMap.get(uUserNorm);
 
         let createdDate = "";
         let authorName = "";
