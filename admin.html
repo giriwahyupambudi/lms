@@ -5334,10 +5334,56 @@ TUGAS ANDA:
         // Prioritaskan file media fisik (PNG/JPG). Jika media 0 tapi ada drawing/shape, gunakan 1 gambar terdeteksi (bukan penjumlahan liar).
         const totalImageCount = mediaImageCount > 0 ? mediaImageCount : (drawingCount > 0 || shapeCount > 0 || imageDataCount > 0 || objectCount > 0 ? 1 : 0);
 
+        // Ekstraksi Metadata Manipulasi Gambar (Crop, Rotate, Resize)
+        let isCropped = false;
+        let isRotated = false;
+        let imageRotationDeg = 0;
+        let imageDimensions = [];
+
+        try {
+          const blipFills = xmlDoc.getElementsByTagName("a:blipFill");
+          for (let bf of blipFills) {
+            if (bf.getElementsByTagName("a:srcRect").length > 0) isCropped = true;
+          }
+
+          const xfrms = xmlDoc.getElementsByTagName("a:xfrm");
+          for (let xf of xfrms) {
+            let rotAttr = xf.getAttribute("rot");
+            if (rotAttr) {
+              let deg = Math.round(parseInt(rotAttr, 10) / 60000);
+              if (deg !== 0) {
+                isRotated = true;
+                imageRotationDeg = deg;
+              }
+            }
+            let ext = xf.getElementsByTagName("a:ext")[0];
+            if (ext) {
+              let cx = parseInt(ext.getAttribute("cx"), 10);
+              let cy = parseInt(ext.getAttribute("cy"), 10);
+              if (!isNaN(cx) && !isNaN(cy)) {
+                let wCm = (cx / 360000).toFixed(1);
+                let hCm = (cy / 360000).toFixed(1);
+                imageDimensions.push(`${wCm}cm x ${hCm}cm`);
+              }
+            }
+          }
+
+          const imageDataTags = xmlDoc.getElementsByTagName("v:imagedata");
+          for (let idt of imageDataTags) {
+            if (idt.getAttribute("croptop") || idt.getAttribute("cropbottom") || idt.getAttribute("cropleft") || idt.getAttribute("cropright")) {
+              isCropped = true;
+            }
+          }
+        } catch(eImgMeta) {}
+
         return {
           fullText: fullText.trim(),
           imageCount: totalImageCount,
           mediaImageCount: mediaImageCount,
+          isCropped: isCropped,
+          isRotated: isRotated,
+          imageRotationDeg: imageRotationDeg,
+          imageDimensions: imageDimensions,
           boldPhrases: boldPhrases.slice(0, 35),
           italicPhrases: italicPhrases.slice(0, 35),
           underlinePhrases: underlinePhrases.slice(0, 35),
@@ -5579,7 +5625,11 @@ ${existingPeerTexts.slice(0, 10).join("\n")}
 ` : "";
 
           let formatInfoText = docxDetails ? `
-- Jumlah Gambar/Grafik Terdeteksi dalam Dokumen: ${docxDetails.imageCount > 0 ? docxDetails.imageCount + " gambar terdeteksi" : "0 gambar (TIDAK ADA GAMBAR)"}
+- Detail & Manipulasi Gambar Terdeteksi:
+  * Jumlah Gambar: ${docxDetails.imageCount > 0 ? docxDetails.imageCount + " gambar" : "0 gambar (TIDAK ADA GAMBAR)"}
+  * Status Crop (Pemotongan Gambar di Word): ${docxDetails.isCropped ? "BERHASIL (Siswa melakukan Crop gambar)" : "TIDAK / Belum di-crop"}
+  * Status Rotate (Rotasi Gambar di Word): ${docxDetails.isRotated ? `BERHASIL (Gambar diputar ${docxDetails.imageRotationDeg}°)` : "TIDAK / 0°"}
+  * Dimensi/Ukuran Gambar (Resize): ${docxDetails.imageDimensions.length ? docxDetails.imageDimensions.join(", ") : "Standar"}
 - Frasa CETAK TEBAL (Bold): ${docxDetails.boldPhrases.length ? docxDetails.boldPhrases.join(", ") : "(Tidak ada)"}
 - Frasa CETAK MIRING (Italic): ${docxDetails.italicPhrases.length ? docxDetails.italicPhrases.join(", ") : "(Tidak ada)"}
 - Frasa GARIS BAWAH (Underline): ${docxDetails.underlinePhrases.length ? docxDetails.underlinePhrases.join(", ") : "(Tidak ada)"}
@@ -5591,6 +5641,7 @@ ${existingPeerTexts.slice(0, 10).join("\n")}
           let masterInfoText = masterDocxData ? `
 DOKUMEN MASTER GURU / KUNCI JAWABAN (ACUAN):
 - Jumlah Gambar Master: ${masterDocxData.imageCount || 0} gambar terdeteksi
+- Master Gambar: Crop=${masterDocxData.isCropped ? "Ya" : "Tidak"}, Rotate=${masterDocxData.isRotated ? masterDocxData.imageRotationDeg + "°" : "0°"}, Ukuran=${masterDocxData.imageDimensions.join(", ") || "Standar"}
 - Teks Dokumen Master: ${masterDocxData.fullText.substring(0, 2000)}
 - Detail Format Master (Bold/Italic/Underline/Font):
   * Bold: ${masterDocxData.boldPhrases.length ? masterDocxData.boldPhrases.join(", ") : "(Tidak ada)"}
