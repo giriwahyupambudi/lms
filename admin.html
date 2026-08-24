@@ -4972,10 +4972,13 @@
       }
     }
 
+    let masterFileName = "";
+
     async function onMasterFileSelected(inputEl) {
       const statusEl = document.getElementById('masterFileStatusText');
       if (!inputEl.files || !inputEl.files[0]) {
         masterDocxData = null;
+        masterFileName = "";
         statusEl.innerText = "Jika diunggah, AI akan membandingkan pengetikan siswa 1-ke-1 dengan dokumen contoh (.docx / .pdf) milik Guru ini.";
         statusEl.style.color = "var(--text-muted)";
         return;
@@ -4996,8 +4999,11 @@
         }
 
         if (masterDocxData && masterDocxData.fullText) {
-          statusEl.innerText = `✅ File Master "${file.name}" berhasil dibaca.`;
+          masterFileName = file.name;
+          statusEl.innerHTML = `✅ File Master <b>"${file.name}"</b> berhasil dibaca & tersimpan otomatis di database.<br><button class="btn btn-sm btn-outline" style="margin-top:6px; font-size:0.75rem; padding:2px 8px; color:#ef4444; border-color:#fca5a5;" onclick="hapusMasterFileTersimpan()"><i data-lucide="trash-2" style="width:12px; height:12px;"></i> Hapus File Master</button>`;
           statusEl.style.color = "#10b981";
+          lucide.createIcons();
+          simpanKriteriaMateriSekarang(false);
         } else {
           statusEl.innerText = `⚠️ Tidak dapat mengekstrak detail format dari file Master.`;
           statusEl.style.color = "#ef4444";
@@ -5006,6 +5012,20 @@
         statusEl.innerText = `❌ Gagal membaca file Master: ${e.message}`;
         statusEl.style.color = "#ef4444";
       }
+    }
+
+    function hapusMasterFileTersimpan() {
+      if (!confirm("Apakah Anda yakin ingin menghapus File Master yang tersimpan untuk materi ini?")) return;
+      masterDocxData = null;
+      masterFileName = "";
+      const fileInp = document.getElementById('masterFileInput');
+      if (fileInp) fileInp.value = "";
+      const statusEl = document.getElementById('masterFileStatusText');
+      if (statusEl) {
+        statusEl.innerText = "File Master berhasil dihapus dari materi ini.";
+        statusEl.style.color = "var(--text-muted)";
+      }
+      simpanKriteriaMateriSekarang(false);
     }
 
     let currentMateriAiChat = [];
@@ -5059,6 +5079,24 @@
       }
 
       const promptTa = document.getElementById('instruksiTugasAI');
+      const statusEl = document.getElementById('masterFileStatusText');
+
+      if (savedData && savedData.masterDocxData) {
+        masterDocxData = savedData.masterDocxData;
+        masterFileName = savedData.masterFileName || "File Master Guru";
+        if (statusEl) {
+          statusEl.innerHTML = `✅ File Master <b>"${masterFileName}"</b> otomatis dimuat dari database.<br><button class="btn btn-sm btn-outline" style="margin-top:6px; font-size:0.75rem; padding:2px 8px; color:#ef4444; border-color:#fca5a5;" onclick="hapusMasterFileTersimpan()"><i data-lucide="trash-2" style="width:12px; height:12px;"></i> Hapus File Master</button>`;
+          statusEl.style.color = "#10b981";
+          lucide.createIcons();
+        }
+      } else {
+        masterDocxData = null;
+        masterFileName = "";
+        if (statusEl) {
+          statusEl.innerText = "Jika diunggah, AI akan membandingkan pengetikan siswa 1-ke-1 dengan dokumen contoh (.docx / .pdf) milik Guru ini.";
+          statusEl.style.color = "var(--text-muted)";
+        }
+      }
 
       if (savedData && savedData.promptText) {
         promptTa.value = savedData.promptText;
@@ -5175,6 +5213,8 @@ TUGAS ANDA:
       const dataToSave = {
         promptText: promptText,
         chatHistory: currentMateriAiChat,
+        masterDocxData: masterDocxData,
+        masterFileName: masterFileName,
         updatedAt: new Date().toLocaleString('id-ID')
       };
 
