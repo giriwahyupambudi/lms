@@ -3057,6 +3057,7 @@
       }
 
       // Refresh the table & rekap to show updated scores
+      try { localStorage.setItem('LMS_CACHE_listNilai', JSON.stringify(dataNilai)); } catch(e) {}
       renderTableNilai();
       if (document.getElementById('filterKelasRekap') && document.getElementById('filterKelasRekap').value) {
          renderRekapAdmin();
@@ -3148,6 +3149,7 @@
          }
       });
       // Refresh after bulk save
+      try { localStorage.setItem('LMS_CACHE_listNilai', JSON.stringify(dataNilai)); } catch(e) {}
       renderTableNilai();
       if (document.getElementById('filterKelasRekap') && document.getElementById('filterKelasRekap').value) {
          renderRekapAdmin();
@@ -4241,7 +4243,7 @@
     }
 
     async function postData(payload) {
-      showOverlay("Menyimpan...");
+      showOverlay("Menyimpan ke Database...");
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
@@ -4249,18 +4251,26 @@
           headers: { 'Content-Type': 'text/plain;charset=utf-8' }
         });
 
-        const result = await response.json();
-        if(result.status === "success") {
-           showOverlay("Berhasil!");
-           setTimeout(() => { loadAllData(); }, 1000);
+        let textResp = await response.text();
+        let result = {};
+        try { result = JSON.parse(textResp); } catch(e) {
+          if (textResp && (textResp.includes("success") || textResp.includes("Berhasil"))) result = { status: "success" };
+        }
+
+        if(result.status === "success" || response.ok) {
+           showOverlay("Berhasil Disimpan!");
+           setTimeout(() => { hideOverlay(); }, 500);
+           return { status: "success" };
         } else {
            alert("GAGAL: " + (result.message || "Terjadi kesalahan pada server"));
            hideOverlay();
+           return { status: "error", message: result.message };
         }
       } catch(e) {
         console.error(e);
         alert("ERROR: Tidak dapat terhubung ke server atau format data salah.");
         hideOverlay();
+        return { status: "error", message: e.message };
       }
     }
 
