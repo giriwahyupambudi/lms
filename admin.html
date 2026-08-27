@@ -3058,10 +3058,12 @@
 
       // Refresh the table & rekap to show updated scores
       try { localStorage.setItem('LMS_CACHE_listNilai', JSON.stringify(dataNilai)); } catch(e) {}
-      renderTableNilai();
-      if (document.getElementById('filterKelasRekap') && document.getElementById('filterKelasRekap').value) {
-         renderRekapAdmin();
-      }
+      requestAnimationFrame(() => {
+        renderTableNilai();
+        if (document.getElementById('filterKelasRekap') && document.getElementById('filterKelasRekap').value) {
+           renderRekapAdmin();
+        }
+      });
     }
 
     async function simpanSemuaNilai() {
@@ -3150,10 +3152,12 @@
       });
       // Refresh after bulk save
       try { localStorage.setItem('LMS_CACHE_listNilai', JSON.stringify(dataNilai)); } catch(e) {}
-      renderTableNilai();
-      if (document.getElementById('filterKelasRekap') && document.getElementById('filterKelasRekap').value) {
-         renderRekapAdmin();
-      }
+      requestAnimationFrame(() => {
+        renderTableNilai();
+        if (document.getElementById('filterKelasRekap') && document.getElementById('filterKelasRekap').value) {
+           renderRekapAdmin();
+        }
+      });
     }
 
     // ============================================
