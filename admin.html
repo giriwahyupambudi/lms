@@ -1198,10 +1198,30 @@
     window.onload = () => { loadAllData(); };
 
     async function loadAllData() {
-      showOverlay("Mengambil data dari Spreadsheet...");
+      // 1. CACHE-FIRST INSTAN: Muat data dari memori lokal terlebih dahulu agar tabel langsung terisi dalam 0.05 detik
+      try {
+        let cachedM = JSON.parse(localStorage.getItem('LMS_CACHE_materi') || '[]');
+        let cachedN = JSON.parse(localStorage.getItem('LMS_CACHE_listNilai') || '[]');
+        let cachedU = JSON.parse(localStorage.getItem('LMS_CACHE_user') || '[]');
+        let cachedT = JSON.parse(localStorage.getItem('LMS_CACHE_logTugas') || '[]');
+        let cachedS = JSON.parse(localStorage.getItem('LMS_CACHE_settings') || '[]');
+
+        if (Array.isArray(cachedM) && cachedM.length > 0) dataMateri = cachedM;
+        if (Array.isArray(cachedN) && cachedN.length > 0) dataNilai = cachedN;
+        if (Array.isArray(cachedU) && cachedU.length > 0) dataUser = cachedU;
+        if (Array.isArray(cachedT) && cachedT.length > 0) dataLogTugas = cachedT;
+        if (Array.isArray(cachedS) && cachedS.length > 0) dataSettings = cachedS;
+
+        if (dataUser.length > 0 || dataMateri.length > 0) {
+          renderAllTables();
+        }
+      } catch(eCache) {}
+
+      showOverlay("Mengambil data dari Spreadsheet...", 4000);
+
       try {
         const t = new Date().getTime(); // Cache buster
-        const fetchWithTimeout = (url, ms = 15000) => {
+        const fetchWithTimeout = (url, ms = 12000) => {
           return Promise.race([
             fetch(url),
             new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms))
@@ -1228,14 +1248,14 @@
         let rawA = await resA.json();
         let rawJ = await resJ.json();
 
-        dataMateri = Array.isArray(rawM) && rawM.length > 0 ? rawM : (dataMateri.length > 0 ? dataMateri : []);
-        dataNilai = Array.isArray(rawN) && rawN.length > 0 ? rawN : (dataNilai.length > 0 ? dataNilai : []);
-        dataUser = Array.isArray(rawU) && rawU.length > 0 ? rawU : (dataUser.length > 0 ? dataUser : []);
-        dataLogLogin = Array.isArray(rawL) ? rawL : [];
-        dataSettings = Array.isArray(rawS) ? rawS : [];
-        dataLogTugas = Array.isArray(rawT) && rawT.length > 0 ? rawT : (dataLogTugas.length > 0 ? dataLogTugas : []);
-        dataAbsen = Array.isArray(rawA) ? rawA : [];
-        dataJurnal = Array.isArray(rawJ) ? rawJ : [];
+        if (Array.isArray(rawM) && rawM.length > 0) { dataMateri = rawM; try { localStorage.setItem('LMS_CACHE_materi', JSON.stringify(rawM)); } catch(e){} }
+        if (Array.isArray(rawN) && rawN.length > 0) { dataNilai = rawN; try { localStorage.setItem('LMS_CACHE_listNilai', JSON.stringify(rawN)); } catch(e){} }
+        if (Array.isArray(rawU) && rawU.length > 0) { dataUser = rawU; try { localStorage.setItem('LMS_CACHE_user', JSON.stringify(rawU)); } catch(e){} }
+        if (Array.isArray(rawL) && rawL.length > 0) dataLogLogin = rawL;
+        if (Array.isArray(rawS) && rawS.length > 0) { dataSettings = rawS; try { localStorage.setItem('LMS_CACHE_settings', JSON.stringify(rawS)); } catch(e){} }
+        if (Array.isArray(rawT) && rawT.length > 0) { dataLogTugas = rawT; try { localStorage.setItem('LMS_CACHE_logTugas', JSON.stringify(rawT)); } catch(e){} }
+        if (Array.isArray(rawA) && rawA.length > 0) dataAbsen = rawA;
+        if (Array.isArray(rawJ) && rawJ.length > 0) dataJurnal = rawJ;
 
         // Penyaringan Data Global untuk Guru Biasa
         if (!IS_SUPER_ADMIN && MY_KELAS.length > 0) {
@@ -1333,6 +1353,15 @@
           }
         }
 
+        renderAllTables();
+      } catch (e) {
+        console.error("loadAllData global error:", e);
+      } finally {
+        hideOverlay();
+      }
+    }
+
+    function renderAllTables() {
         try { renderDashboard(); } catch(e) { console.error("renderDashboard error:", e); }
         try { renderTableMateri(); } catch(e) { console.error("renderTableMateri error:", e); }
         try { renderTableUser(); } catch(e) { console.error("renderTableUser error:", e); }
@@ -1348,12 +1377,6 @@
         if (IS_SUPER_ADMIN) {
           try { renderTableGuru(); } catch(e) { console.error("renderTableGuru error:", e); }
         }
-        
-        hideOverlay();
-      } catch (e) {
-        console.error("loadAllData global error:", e);
-        hideOverlay();
-      }
     }
 
     // ============================================
