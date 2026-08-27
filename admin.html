@@ -1047,11 +1047,31 @@
     function logout() { localStorage.removeItem("admin_user"); window.location.href = "login-admin.html"; }
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-    function showOverlay(text) { 
-      document.getElementById('syncText').innerText = text; 
-      document.getElementById('syncOverlay').style.display = 'flex'; 
+    let overlayTimer = null;
+    function showOverlay(text, autoHideMs = 4000) { 
+      const txtEl = document.getElementById('syncText');
+      const ovEl = document.getElementById('syncOverlay');
+      if (txtEl) txtEl.innerText = text; 
+      if (ovEl) {
+        ovEl.style.display = 'flex'; 
+        ovEl.style.opacity = '1';
+      }
+
+      if (overlayTimer) clearTimeout(overlayTimer);
+      if (autoHideMs > 0) {
+        overlayTimer = setTimeout(() => {
+          hideOverlay();
+        }, autoHideMs);
+      }
     }
-    function hideOverlay() { document.getElementById('syncOverlay').style.display = 'none'; }
+    function hideOverlay() { 
+      if (overlayTimer) clearTimeout(overlayTimer);
+      const ovEl = document.getElementById('syncOverlay');
+      if (ovEl) {
+        ovEl.style.opacity = '0';
+        setTimeout(() => { ovEl.style.display = 'none'; }, 200);
+      }
+    }
 
     // Sorting State
     let sortState = {
@@ -4248,6 +4268,7 @@
 
     async function postData(payload) {
       showOverlay("Menyimpan ke Database...");
+      await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
