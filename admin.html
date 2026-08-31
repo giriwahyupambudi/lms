@@ -596,14 +596,13 @@
               <thead>
                 <tr>
                   <th>No</th>
-                  <th>NISN / Username</th>
                   <th>Nama Lengkap</th>
                   <th>Status Kehadiran</th>
                   <th>Keterangan</th>
                 </tr>
               </thead>
               <tbody id="absenTableBody">
-                <tr><td colspan="5" style="text-align:center;">Pilih kelas dan tanggal terlebih dahulu.</td></tr>
+                <tr><td colspan="4" style="text-align:center;">Pilih kelas dan tanggal terlebih dahulu.</td></tr>
               </tbody>
             </table>
           </div>
@@ -4503,7 +4502,7 @@
       let tbody = document.getElementById('absenTableBody');
       
       if (!selKelas || !selTgl) {
-         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Pilih kelas dan tanggal terlebih dahulu.</td></tr>';
+         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Pilih kelas dan tanggal terlebih dahulu.</td></tr>';
          return;
       }
       
@@ -4511,7 +4510,7 @@
       let students = dataUser.filter(u => norm(getVal(u, ['kelas', 'tingkat'])) === norm(selKelas) && getVal(u, ['role', 'peran']) !== "admin");
       
       if (students.length === 0) {
-         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tidak ada siswa di kelas ini.</td></tr>';
+         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Tidak ada siswa di kelas ini.</td></tr>';
          return;
       }
       
@@ -4538,12 +4537,12 @@
          
          html += `<tr>
            <td style="text-align:center;">${i+1}</td>
-           <td>${nisn}
+           <td style="font-weight:600">
+               ${nama}
                <input type="hidden" class="abs-row" value="${rowNum}">
                <input type="hidden" class="abs-nisn" value="${nisn}">
                <input type="hidden" class="abs-nama" value="${nama}">
            </td>
-           <td style="font-weight:600">${nama}</td>
            <td>
               <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                 <label><input type="radio" name="abs_status_${i}" value="Hadir" ${status==="Hadir"?"checked":""}> Hadir</label>
