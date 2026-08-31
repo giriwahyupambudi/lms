@@ -3367,10 +3367,38 @@
     // ============================================
     // REKAP NILAI & PROGRES
     // ============================================
+    // ============================================
+    // REKAP NILAI & PROGRES
+    // ============================================
     function populateFilterRekap() {
-      let kelasList = [...new Set(dataUser.map(u => (getVal(u, ['kelas', 'tingkat']) || "").toString().trim()))].filter(k => k !== "").sort();
-           let sel = document.getElementById('filterKelasRekap');
-      if (sel) sel.innerHTML = '<option value="">Pilih Kelas</option>' + kelasList.map(k => `<option value="${k}">${k}</option>`).join('');
+      let sel = document.getElementById('filterKelasRekap');
+      if (!sel) return;
+      let oldVal = sel.value;
+
+      let kls = new Set();
+      if (typeof MY_KELAS !== 'undefined' && Array.isArray(MY_KELAS) && MY_KELAS.length > 0) {
+        MY_KELAS.forEach(k => { if (k) kls.add(k.toString().trim()); });
+      }
+
+      (Array.isArray(dataUser) ? dataUser : []).forEach(u => {
+        let r = (getVal(u, ['role', 'peran']) || "").toString().toLowerCase().trim();
+        if (r !== "admin" && r !== "guru") {
+          let k = (getVal(u, ['kelas', 'tingkat', 'rombel']) || "").toString().trim();
+          if (k) kls.add(k);
+        }
+      });
+
+      if (kls.size === 0 && Array.isArray(dataMateri)) {
+        dataMateri.forEach(m => {
+          let k = getVal(m, ['kelas', 'tingkat']);
+          if (k && k.toString().toUpperCase() !== "SEMUA") kls.add(k.toString().trim());
+        });
+      }
+
+      sel.innerHTML = '<option value="">Pilih Kelas</option>' + Array.from(kls).sort().map(k => `<option value="${k}">${k}</option>`).join('');
+      if (oldVal && kls.has(oldVal)) sel.value = oldVal;
+
+      sel.onchange = () => { renderRekapAdmin(); };
     }
 
     function renderRekapAdmin() {
@@ -3386,7 +3414,7 @@
       // Helper: Normalisasi string untuk pencocokan
       const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
 
-      // 1. Ambil Siswa di Kelas Ini (Toleran Format Nama Kelas)
+      // 1. Ambil Siswa di Kelas Ini
       const students = dataUser.filter(u => {
         let r = (getVal(u, ['role', 'peran']) || "").toString().toLowerCase().trim();
         if (r === "admin" || r === "guru") return false;
@@ -3395,7 +3423,7 @@
         return k === sk || k.includes(sk) || sk.includes(k);
       });
       
-      // 2. Ambil Materi yang Sesuai untuk Kelas & Tingkat Ini (Status Aktif)
+      // 2. Ambil Materi yang Sesuai untuk Kelas & Tingkat Ini
       const myTingkat = getTingkatSync({ kelas: selKelas });
       const selKelasUpper = selKelas.toUpperCase().trim();
 
@@ -3420,6 +3448,47 @@
         materials = dataMateri.filter(m => (getVal(m, ['status']) || "Aktif").toString().toLowerCase() === "aktif");
       }
 
+      // OPTIMASI INSTAN O(1): Pre-index logTugas & dataNilai khusus materi yang ada di tabel ini
+      let rekapLogTugasMap = new Map();
+      (Array.isArray(dataLogTugas) ? dataLogTugas : []).forEach(t => {
+        let u = norm(getVal(t, ['username']));
+        let mid = norm(getVal(t, ['id_materi', 'materi']));
+        let mJudul = norm(getVal(t, ['materi', 'judul']));
+        if (u) {
+          if (mid) rekapLogTugasMap.set(`${u}_${mid}`, t);
+          if (mJudul) rekapLogTugasMap.set(`${u}_${mJudul}`, t);
+        }
+      });
+
+      let rekapNilaiMap = new Map();
+      (Array.isArray(dataNilai) ? dataNilai : []).forEach(n => {
+        let u = norm(getVal(n, ['username', 'nisn']));
+        let namaNorm = norm(getVal(n, ['nama', 'namasiswa', 'namalengkap']));
+        let mid = norm(getVal(n, ['id_materi', 'idmateri', 'modul']));
+        let mJudul = norm(getVal(n, ['judul', 'materi', 'judul_materi']));
+
+        let scoreRaw = getVal(n, ['nilai', 'skor']);
+        let nTipe = (getVal(n, ['tipe', 'tipeevaluasi']) || "").toString().toLowerCase();
+        let score = parseInt(scoreRaw, 10);
+        if (isNaN(score)) {
+          score = (nTipe === "survey" && (!scoreRaw || scoreRaw === "" || scoreRaw === "-")) ? 100 : 0;
+        }
+
+        let keys = [];
+        if (u && mid) keys.push(`${u}_${mid}`);
+        if (u && mJudul) keys.push(`${u}_${mJudul}`);
+        if (namaNorm && mid) keys.push(`${namaNorm}_${mid}`);
+        if (namaNorm && mJudul) keys.push(`${namaNorm}_${mJudul}`);
+
+        keys.forEach(k => {
+          if (!rekapNilaiMap.has(k)) {
+            rekapNilaiMap.set(k, score);
+          } else {
+            rekapNilaiMap.set(k, Math.max(rekapNilaiMap.get(k), score));
+          }
+        });
+      });
+
       // 3. Render Header
       let headerHtml = `<tr><th style="position: sticky; left: 0; background: #f1f5f9; z-index: 11; min-width: 200px; border-right: 2px solid #e2e8f0;">Nama Siswa</th>`;
       materials.forEach(m => {
@@ -3431,7 +3500,7 @@
       headerHtml += `</tr>`;
       header.innerHTML = headerHtml;
 
-      // 4. Render Body
+      // 4. Render Body dengan Pencarian O(1) Instan
       let bodyHtml = '';
       students.sort((a, b) => (getVal(a, ['nama']) || "").localeCompare(getVal(b, ['nama']) || ""));
 
@@ -3447,7 +3516,6 @@
         let countScored = 0;
 
         materials.forEach((m, idx) => {
-          // PENTING: Sisi siswa menghitung ID dari index materi yang SUDAH DIFILTER per tingkat ATAU idmateri eksplisit
           const mid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (idx + 1)).toString().trim();
           const mJudul = norm(getVal(m, ['judul', 'materi']));
           const tipe = (getVal(m, ['tipeevaluasi', 'tipe_evaluasi', 'tipe']) || "Praktik").toLowerCase();
@@ -3458,84 +3526,36 @@
           if (tipe === "materi") {
             scoreText = '<i data-lucide="check" style="color:#22c55e; width:14px;"></i>';
           } else {
-            // Cek di logTugas
-            const upload = dataLogTugas.find(t => {
-                const tUser = norm(getVal(t, ['username']));
-                const tMid = (getVal(t, ['id_materi', 'materi']) || "").toString().trim();
-                const tJudul = norm(getVal(t, ['materi', 'judul']));
-                return (tUser === username || (sNamaNorm !== "" && tUser === sNamaNorm)) && (tMid === mid || (mJudul !== "" && tJudul === mJudul));
-            });
+            const midNorm = norm(mid);
+            const mJudulNorm = norm(mJudul);
+
+            const upload = rekapLogTugasMap.get(`${username}_${midNorm}`) || 
+                         rekapLogTugasMap.get(`${username}_${mJudulNorm}`) ||
+                         rekapLogTugasMap.get(`${sNamaNorm}_${midNorm}`) ||
+                         rekapLogTugasMap.get(`${sNamaNorm}_${mJudulNorm}`);
 
             const isUploadType = ["praktik", "tugas", "ujian praktik"].includes(tipe);
 
-            // Pencocokan Nilai menggunakan username, nama, mid, judul materi, dan digit nomor materi
-            const filteredNilai = dataNilai.filter(n => {
-                const nUser = norm(getVal(n, ['username', 'nisn']));
-                const nNama = (getVal(n, ['nama', 'namasiswa', 'namalengkap']) || "").toString().trim().toLowerCase();
-                const nNamaNorm = norm(nNama);
+            let maxS = undefined;
+            let k1 = `${username}_${midNorm}`;
+            let k2 = `${username}_${mJudulNorm}`;
+            let k3 = `${sNamaNorm}_${midNorm}`;
+            let k4 = `${sNamaNorm}_${mJudulNorm}`;
 
-                const isUserMatch = (nUser !== "" && nUser === username) ||
-                                  (sNamaRaw !== "" && nNama === sNamaRaw) ||
-                                  (sNamaNorm !== "" && (nNamaNorm === sNamaNorm || nUser === sNamaNorm));
+            if (rekapNilaiMap.has(k1)) maxS = rekapNilaiMap.get(k1);
+            else if (rekapNilaiMap.has(k2)) maxS = rekapNilaiMap.get(k2);
+            else if (rekapNilaiMap.has(k3)) maxS = rekapNilaiMap.get(k3);
+            else if (rekapNilaiMap.has(k4)) maxS = rekapNilaiMap.get(k4);
 
-                const nMatRaw = (getVal(n, ['id_materi', 'idmateri', 'modul', 'materi', 'judul']) || "").toString();
-                const nJudulRaw = (getVal(n, ['judul', 'materi', 'judul_materi']) || "").toString();
-                const nMatNorm = norm(nMatRaw);
-                const nJudulNorm = norm(nJudulRaw);
-
-                const mIdNorm = norm(mid);
-                const mJudulNorm = norm(mJudul);
-                const idxStr = (idx + 1).toString();
-
-                let isMateriMatch = false;
-
-                // 1. Direct exact match (HANYA jika ID atau Judul cocok persis)
-                if (nMatNorm !== "" && (nMatNorm === mIdNorm || (mJudulNorm !== "" && nMatNorm === mJudulNorm))) {
-                    isMateriMatch = true;
-                } else if (nJudulNorm !== "" && ((mJudulNorm !== "" && nJudulNorm === mJudulNorm) || (mIdNorm !== "" && nJudulNorm === mIdNorm))) {
-                    isMateriMatch = true;
-                }
-
-                // 2. Pencocokan Dinamis berdasarkan Judul/ID di Bank Materi (Tanpa Hardcode Alias)
-                if (!isMateriMatch) {
-                    let parentMat = dataMateri.find(pm => {
-                        let pmId = norm(getVal(pm, ['idmateri', 'id_materi']));
-                        let pmJudul = norm(getVal(pm, ['judul', 'materi']));
-                        return (nMatNorm !== "" && (nMatNorm === pmId || nMatNorm === pmJudul)) ||
-                               (nJudulNorm !== "" && (nJudulNorm === pmJudul || nJudulNorm === pmId));
-                    });
-                    if (parentMat) {
-                        let pMId = norm(getVal(parentMat, ['idmateri', 'id_materi']));
-                        let pMJudul = norm(getVal(parentMat, ['judul', 'materi']));
-                        if (pMId === mIdNorm || (pMJudul !== "" && pMJudul === mJudulNorm)) {
-                            isMateriMatch = true;
-                        }
-                    }
-                }
-
-                return isUserMatch && isMateriMatch;
-            });
-
-            if (filteredNilai.length > 0) {
-              const scores = filteredNilai.map(n => {
-                  let rawVal = getVal(n, ['nilai', 'skor']);
-                  let nTipe = (getVal(n, ['tipe', 'tipeevaluasi']) || "").toString().toLowerCase();
-                  if (nTipe === "survey" && (!rawVal || rawVal === "" || rawVal === "-")) return 100;
-                  let parsedVal = parseInt(rawVal, 10);
-                  return isNaN(parsedVal) ? 0 : parsedVal;
-              }).filter(val => !isNaN(val));
-              if (scores.length > 0) {
-                  const maxS = Math.max(...scores);
-                  totalScore += maxS;
-                  countScored++;
-                  
-                  if (isUploadType && !upload) {
-                      // Siswa belum mengirim tugas tapi sudah diberi nilai
-                      scoreText = `<span style="font-weight:bold; color:#ef4444; background:#fef2f2; padding:3px 6px; border-radius:6px; border:1px solid #fee2e2; display:inline-flex; align-items:center; gap:4px; font-size:0.8rem;" title="Salah Input? Siswa belum mengirim tugas tapi sudah diisi nilai.">${maxS} <i data-lucide="alert-triangle" style="width:13px; height:13px; color:#ef4444;"></i></span>`;
-                  } else {
-                      scoreText = maxS;
-                      cellStyle += "font-weight:bold; color:var(--primary);";
-                  }
+            if (maxS !== undefined) {
+              totalScore += maxS;
+              countScored++;
+              
+              if (isUploadType && !upload) {
+                  scoreText = `<span style="font-weight:bold; color:#ef4444; background:#fef2f2; padding:3px 6px; border-radius:6px; border:1px solid #fee2e2; display:inline-flex; align-items:center; gap:4px; font-size:0.8rem;" title="Salah Input? Siswa belum mengirim tugas tapi sudah diisi nilai.">${maxS} <i data-lucide="alert-triangle" style="width:13px; height:13px; color:#ef4444;"></i></span>`;
+              } else {
+                  scoreText = maxS;
+                  cellStyle += "font-weight:bold; color:var(--primary);";
               }
             } else {
               if (upload) {
