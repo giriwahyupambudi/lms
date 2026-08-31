@@ -894,6 +894,10 @@
               <span style="font-size: 0.68rem; color: #b91c1c; font-weight: 600; display: block; margin-bottom: 2px;">Alpa</span>
               <strong id="countAlpa" style="font-size: 1rem; color: #991b1b; font-weight: 800;">0</strong>
             </div>
+            <div style="background: #fff1f2; border: 1px solid #ffe4e6; padding: 6px 4px; border-radius: 10px;">
+              <span style="font-size: 0.68rem; color: #be123c; font-weight: 600; display: block; margin-bottom: 2px;">No Wearpack</span>
+              <strong id="countTidakWearpack" style="font-size: 1rem; color: #9f1239; font-weight: 800;">0</strong>
+            </div>
           </div>
         </div>
 
@@ -1045,6 +1049,7 @@
       let countSakit = 0;
       let countBolos = 0;
       let countAlpa = 0;
+      let countTidakWearpack = 0;
       let totalRecord = 0;
 
       dataAbsen.forEach(a => {
@@ -1071,6 +1076,8 @@
             countBolos++;
           } else if (status === "alpa" || status === "tanpa keterangan") {
             countAlpa++;
+          } else if (status.includes("wearpack")) {
+            countTidakWearpack++;
           }
         }
       });
@@ -1084,6 +1091,7 @@
       if (document.getElementById("countSakit")) document.getElementById("countSakit").innerText = countSakit;
       if (document.getElementById("countBolos")) document.getElementById("countBolos").innerText = countBolos;
       if (document.getElementById("countAlpa")) document.getElementById("countAlpa").innerText = countAlpa;
+      if (document.getElementById("countTidakWearpack")) document.getElementById("countTidakWearpack").innerText = countTidakWearpack;
     }
 
     // Jalankan pemuatan data cache & sync secara instan tanpa menunggu CDN / window.onload

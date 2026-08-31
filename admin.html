@@ -4552,6 +4552,7 @@
                 <label><input type="radio" name="abs_status_${i}" value="Alpa"  ${status==="Alpa"?"checked":""}> Alpa</label>
                 <label><input type="radio" name="abs_status_${i}" value="Telat" ${status==="Telat"?"checked":""}> Telat</label>
                 <label><input type="radio" name="abs_status_${i}" value="Bolos" ${status==="Bolos"?"checked":""}> Bolos</label>
+                <label><input type="radio" name="abs_status_${i}" value="Tidak Memakai Wearpack" ${(status==="Tidak Memakai Wearpack"||status.toLowerCase().includes("wearpack"))?"checked":""}> Tidak Wearpack</label>
               </div>
            </td>
            <td>
@@ -4711,7 +4712,7 @@
       let tbody = document.getElementById('rekapAbsenTableBody');
       
       if (!selKelas || !selBulan) {
-         tbody.innerHTML = '<tr><td colspan="36" style="text-align:center; padding: 15px;">Pilih kelas dan bulan terlebih dahulu.</td></tr>';
+         tbody.innerHTML = '<tr><td colspan="37" style="text-align:center; padding: 15px;">Pilih kelas dan bulan terlebih dahulu.</td></tr>';
          thead.innerHTML = '';
          return;
       }
@@ -4723,7 +4724,7 @@
       let students = dataUser.filter(u => norm(getVal(u, ['kelas', 'tingkat'])) === norm(selKelas) && getVal(u, ['role', 'peran']) !== "admin");
       
       if (students.length === 0) {
-         tbody.innerHTML = '<tr><td colspan="36" style="text-align:center; padding: 15px;">Tidak ada siswa di kelas ini.</td></tr>';
+         tbody.innerHTML = '<tr><td colspan="37" style="text-align:center; padding: 15px;">Tidak ada siswa di kelas ini.</td></tr>';
          thead.innerHTML = '';
          return;
       }
@@ -4740,6 +4741,7 @@
                    <th style="text-align:center; min-width:40px; background:#fee2e2; color:#b91c1c; border-bottom: 2px solid #fecaca; padding: 10px;">A</th>
                    <th style="text-align:center; min-width:40px; background:#f3e8ff; color:#7e22ce; border-bottom: 2px solid #e9d5ff; padding: 10px;">T</th>
                    <th style="text-align:center; min-width:40px; background:#e0e7ff; color:#4338ca; border-bottom: 2px solid #c7d2fe; padding: 10px;">B</th>
+                   <th style="text-align:center; min-width:40px; background:#fff1f2; color:#be123c; border-bottom: 2px solid #ffe4e6; padding: 10px;">W</th>
                    </tr>`;
       thead.innerHTML = headHtml;
       
@@ -4775,19 +4777,21 @@
             <td style="position: sticky; left: 0; background: #fff; z-index: 9; text-align:center; padding: 10px; border-bottom: 1px solid #f1f5f9;">${idx+1}</td>
             <td style="position: sticky; left: 40px; background: #fff; z-index: 9; font-weight: 500; padding: 10px; border-bottom: 1px solid #f1f5f9;">${nama}</td>`;
             
-         let count = { "Hadir":0, "Sakit":0, "Izin":0, "Alpa":0, "Telat":0, "Bolos":0 };
+         let count = { "Hadir":0, "Sakit":0, "Izin":0, "Alpa":0, "Telat":0, "Bolos":0, "Tidak Memakai Wearpack":0 };
          for(let i=1; i<=daysInMonth; i++) {
             let st = absenMap[i];
             let disp = "-";
             let color = "#cbd5e1";
             if(st) {
-               count[st] = (count[st] || 0) + 1;
-               if(st==="Hadir") { disp = "H"; color="#10b981"; }
-               else if(st==="Sakit") { disp = "S"; color="#f59e0b"; }
-               else if(st==="Izin" || st.toLowerCase()==="ijin") { disp = "I"; color="#eab308"; count["Izin"]++; count[st]--;}
-               else if(st==="Alpa" || st==="Alpha") { disp = "A"; color="#ef4444"; count["Alpa"]++; count[st]--;}
-               else if(st==="Telat") { disp = "T"; color="#8b5cf6"; }
-               else if(st==="Bolos") { disp = "B"; color="#3b82f6"; }
+               let stLower = st.toLowerCase();
+               if(st==="Hadir" || stLower==="hadir") { disp = "H"; color="#10b981"; count["Hadir"]++; }
+               else if(st==="Sakit" || stLower==="sakit") { disp = "S"; color="#f59e0b"; count["Sakit"]++; }
+               else if(st==="Izin" || stLower==="ijin" || stLower==="izin") { disp = "I"; color="#eab308"; count["Izin"]++; }
+               else if(st==="Alpa" || stLower==="alpa" || stLower==="alpha") { disp = "A"; color="#ef4444"; count["Alpa"]++; }
+               else if(st==="Telat" || stLower==="telat" || stLower==="terlambat") { disp = "T"; color="#8b5cf6"; count["Telat"]++; }
+               else if(st==="Bolos" || stLower==="bolos") { disp = "B"; color="#3b82f6"; count["Bolos"]++; }
+               else if(stLower.includes("wearpack")) { disp = "W"; color="#e11d48"; count["Tidak Memakai Wearpack"]++; }
+               else { count[st] = (count[st] || 0) + 1; }
             }
             rowHtml += `<td style="text-align:center; font-weight:600; color:${color}; font-size:0.85rem; border-bottom: 1px solid #f1f5f9;">${disp}</td>`;
          }
@@ -4798,6 +4802,7 @@
                      <td style="text-align:center; font-weight:700; background:#fef2f2; color:#b91c1c; border-bottom: 1px solid #fee2e2;">${count["Alpa"]}</td>
                      <td style="text-align:center; font-weight:700; background:#faf5ff; color:#7e22ce; border-bottom: 1px solid #f3e8ff;">${count["Telat"]}</td>
                      <td style="text-align:center; font-weight:700; background:#eef2ff; color:#4338ca; border-bottom: 1px solid #e0e7ff;">${count["Bolos"]}</td>
+                     <td style="text-align:center; font-weight:700; background:#fff1f2; color:#be123c; border-bottom: 1px solid #ffe4e6;">${count["Tidak Memakai Wearpack"]}</td>
                      </tr>`;
          html += rowHtml;
       });
