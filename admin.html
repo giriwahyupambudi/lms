@@ -4778,8 +4778,14 @@
       }).forEach((u, idx) => {
          let nisn = getVal(u, ['username', 'nisn']) || "";
          let nama = getVal(u, ['nama', 'namalengkap']) || "-";
+         let sNisnNorm = norm(nisn);
+         let sNamaNorm = norm(nama);
          
-         let myAbsen = absenBulanIni.filter(a => norm(getVal(a, ['nisn', 'username'])) === norm(nisn));
+         let myAbsen = absenBulanIni.filter(a => {
+            let aNisn = norm(getVal(a, ['nisn', 'username']));
+            let aNama = norm(getVal(a, ['nama', 'namalengkap', 'namasiswa']));
+            return (sNisnNorm !== "" && aNisn === sNisnNorm) || (sNamaNorm !== "" && aNama === sNamaNorm);
+         });
          let absenMap = {};
          myAbsen.forEach(a => {
             let tgl = getAbsenEffectiveDate(a);
