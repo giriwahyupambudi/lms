@@ -1767,6 +1767,103 @@
       if(idx !== -1) previewSoal(idx);
     }
 
+    // ============================================
+    // CUSTOM NOTIFIKASI TOAST & MODAL (TANPA ALERT CHROME BAWAAN)
+    // ============================================
+    function showToastAdmin(message, type = 'warning') {
+      let container = document.getElementById("adminToastContainer");
+      if (!container) {
+        container = document.createElement("div");
+        container.id = "adminToastContainer";
+        container.style.cssText = "position:fixed; bottom:24px; right:24px; z-index:99999; display:flex; flex-direction:column; gap:10px; max-width:380px; width:90%; pointer-events:none;";
+        document.body.appendChild(container);
+      }
+
+      const toast = document.createElement("div");
+      toast.style.cssText = "pointer-events:auto; display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:12px; font-size:0.85rem; font-weight:600; line-height:1.4; box-shadow:0 10px 25px -5px rgba(0,0,0,0.12); transition:all 0.3s ease;";
+
+      let bgColor = "#ffffff";
+      let borderColor = "#cbd5e1";
+      let textColor = "#1e293b";
+      let iconName = "alert-circle";
+      let iconColor = "#f59e0b";
+
+      if (type === 'warning' || type === 'error') {
+        bgColor = "#fef2f2";
+        borderColor = "#fca5a5";
+        textColor = "#991b1b";
+        iconName = "alert-triangle";
+        iconColor = "#ef4444";
+      } else if (type === 'success') {
+        bgColor = "#f0fdf4";
+        borderColor = "#86efac";
+        textColor = "#166534";
+        iconName = "check-circle";
+        iconColor = "#22c55e";
+      } else if (type === 'info') {
+        bgColor = "#eff6ff";
+        borderColor = "#93c5fd";
+        textColor = "#1e40af";
+        iconName = "info";
+        iconColor = "#3b82f6";
+      }
+
+      toast.style.background = bgColor;
+      toast.style.border = `1px solid ${borderColor}`;
+      toast.style.color = textColor;
+      toast.innerHTML = `<i data-lucide="${iconName}" style="width:20px; height:20px; flex-shrink:0; color:${iconColor};"></i> <span style="flex:1;">${message}</span>`;
+
+      container.appendChild(toast);
+      if (window.lucide) lucide.createIcons();
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    function showCustomAlert(title, message, type = 'warning') {
+      let modal = document.getElementById("customAlertModal");
+      if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "customAlertModal";
+        modal.style.cssText = "display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:99999; align-items:center; justify-content:center; padding:16px;";
+        modal.innerHTML = `
+          <div style="background:#fff; border-radius:16px; width:100%; max-width:420px; padding:24px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); text-align:center;">
+            <div id="customAlertIconBox" style="width:54px; height:54px; border-radius:50%; margin:0 auto 16px auto; display:flex; align-items:center; justify-content:center;">
+              <i id="customAlertIcon" data-lucide="alert-triangle" style="width:28px; height:28px;"></i>
+            </div>
+            <h3 id="customAlertTitle" style="margin:0 0 8px 0; font-size:1.1rem; font-weight:700; color:#0f172a;">Peringatan</h3>
+            <p id="customAlertMessage" style="margin:0 0 20px 0; font-size:0.88rem; color:#475569; line-height:1.5; white-space:pre-wrap;"></p>
+            <button onclick="document.getElementById('customAlertModal').style.display='none'" class="btn btn-primary" style="width:100%; padding:10px; font-weight:600; border-radius:10px;">Saya Mengerti</button>
+          </div>
+        `;
+        document.body.appendChild(modal);
+      }
+
+      const titleEl = document.getElementById("customAlertTitle");
+      const msgEl = document.getElementById("customAlertMessage");
+      const iconBox = document.getElementById("customAlertIconBox");
+      const iconEl = document.getElementById("customAlertIcon");
+
+      titleEl.innerText = title || "Peringatan";
+      msgEl.innerText = message || "";
+
+      if (type === 'error' || type === 'warning') {
+        iconBox.style.background = "#fef2f2";
+        iconEl.setAttribute("data-lucide", "alert-triangle");
+        iconEl.style.color = "#ef4444";
+      } else {
+        iconBox.style.background = "#f0fdf4";
+        iconEl.setAttribute("data-lucide", "check-circle");
+        iconEl.style.color = "#22c55e";
+      }
+
+      modal.style.display = 'flex';
+      if (window.lucide) lucide.createIcons();
+    }
+
     async function saveMateri() {
       let rowNum = document.getElementById('materiRowNum').value;
       let oldId = document.getElementById('oldMId').value;
@@ -1786,8 +1883,8 @@
       const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
       let cleanNewId = (newId || "").toString().trim();
 
-      if (!cleanNewId) return alert("ID Materi wajib diisi (misal: BIO-1)!");
-      if (!judulVal) return alert("Judul materi wajib diisi!");
+      if (!cleanNewId) return showToastAdmin("ID Materi wajib diisi (misal: BIO-1)!", "warning");
+      if (!judulVal) return showToastAdmin("Judul materi wajib diisi!", "warning");
 
       // PROTEKSI DUPLIKAT ID MATERI
       const duplicateMateri = dataMateri.find(m => {
@@ -1799,7 +1896,11 @@
       if (duplicateMateri) {
         let existingJudul = getVal(duplicateMateri, ['judul', 'materi', 'namamateri']) || "Materi Lain";
         let existingKelas = getVal(duplicateMateri, ['kelas', 'tingkat']) || "-";
-        return alert(`⚠️ ID Materi "${cleanNewId}" sudah digunakan oleh materi "${existingJudul}" (Kelas/Tingkat: ${existingKelas})!\n\nSilakan gunakan ID Materi lain yang unik (misal: ${cleanNewId}-2).`);
+        return showCustomAlert(
+          "ID Materi Duplikat!",
+          `ID Materi "${cleanNewId}" sudah digunakan oleh materi "${existingJudul}" (Kelas/Tingkat: ${existingKelas}).\n\nSilakan gunakan ID Materi lain yang unik (misal: ${cleanNewId}-2).`,
+          "warning"
+        );
       }
 
       let data = {
@@ -1810,30 +1911,47 @@
         "kelas": kelasVal, "tingkat": kelasVal,
         "tipe": tipeVal, "tipe_evaluasi": tipeVal, "tipeevaluasi": tipeVal,
         "status": statusVal,
-        "id": newId,
-        "id_materi": newId,
-        "idmateri": newId,
-        "materiid": newId
+        "id": cleanNewId,
+        "id_materi": cleanNewId,
+        "idmateri": cleanNewId,
+        "materiid": cleanNewId
       };
       
       closeModal('materiModal');
 
-      if (rowNum && (oldId && newId && newId !== oldId)) {
+      // OPTIMISTIC LOCAL STATE UPDATE & INSTANT TABLE RE-RENDER (TANPA RELOAD HALAMAN!)
+      let existingIdx = dataMateri.findIndex(m => (rowNum && m.rowNumber == rowNum) || (oldId && norm(getVal(m, ['idmateri', 'id_materi'])) === norm(oldId)));
+      if (existingIdx !== -1) {
+        dataMateri[existingIdx] = { ...dataMateri[existingIdx], ...data };
+      } else {
+        data = { ...data, rowNumber: dataMateri.length + 2 };
+        dataMateri.push(data);
+      }
+
+      try {
+        localStorage.setItem("LMS_CACHE_materi", JSON.stringify(dataMateri));
+      } catch(e) {}
+
+      renderTableMateri();
+      if (typeof populateFilterAnalisis === 'function') populateFilterAnalisis();
+      showToastAdmin("Materi berhasil disimpan dan ditampilkan ke tabel!", "success");
+
+      if (rowNum && (oldId && cleanNewId && cleanNewId !== oldId)) {
         // Update lokal pada dataNilai & dataLogTugas agar UI langsung sinkron tanpa refresh
         (Array.isArray(dataNilai) ? dataNilai : []).forEach(n => {
            let nid = getVal(n, ['id_materi', 'idmateri']);
            if (nid === oldId || norm(nid) === norm(oldId)) {
-               n.id_materi = newId;
-               n.idmateri = newId;
-               n['ID Materi'] = newId;
+               n.id_materi = cleanNewId;
+               n.idmateri = cleanNewId;
+               n['ID Materi'] = cleanNewId;
            }
         });
         (Array.isArray(dataLogTugas) ? dataLogTugas : []).forEach(t => {
            let tid = getVal(t, ['id_materi', 'idmateri']);
            if (tid === oldId || norm(tid) === norm(oldId)) {
-               t.id_materi = newId;
-               t.idmateri = newId;
-               t['ID Materi'] = newId;
+               t.id_materi = cleanNewId;
+               t.idmateri = cleanNewId;
+               t['ID Materi'] = cleanNewId;
            }
         });
 
@@ -1842,18 +1960,21 @@
         if (typeof renderTableTugas === 'function') renderTableTugas();
         if (typeof renderRankingAdmin === 'function') renderRankingAdmin();
 
-        // Kirim instruksi updateMateriId ke Apps Script untuk memperbarui teks ID Materi fisik di Spreadsheet (materi, soal, listNilai, logTugas)
+        // Kirim instruksi updateMateriId ke Apps Script
         await postData({ 
           action: "updateMateriId", 
           rowNumber: rowNum, 
           oldId: oldId, 
-          newId: newId, 
+          newId: cleanNewId, 
           tingkat: kelasVal,
           data: JSON.stringify(data) 
         });
       } else {
         await postData({ action: "saveData", sheet: "materi", rowNumber: rowNum, data: JSON.stringify(data) });
       }
+
+      // Refresh data dari server di latar belakang agar rowNumber 100% presisi
+      setTimeout(() => { loadAllData(); }, 1000);
     }
 
     async function toggleMateriStatus(rowNum) {
