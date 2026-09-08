@@ -4791,6 +4791,23 @@
       let jCatatan = document.getElementById('jurnalCatatan')?.value || "";
       let jRowNumber = document.getElementById('jurnalRowNumber')?.value || "";
       
+      // PENGAMAN DUPLIKASI JURNAL:
+      // Jika jRowNumber kosong di DOM, cari lagi di dataJurnal untuk tanggal + kelas + guru ini
+      if (!jRowNumber) {
+        let adminNameNorm = norm(document.getElementById('admin-name').innerText);
+        let matchExisting = dataJurnal.find(j => {
+          let jTgl = getAbsenEffectiveDate(j);
+          let jKelas = norm(getVal(j, ['kelas']));
+          let jGuru = norm(getVal(j, ['guru']));
+          let jTglRaw = parseTanggalOnly(getVal(j, ['tanggal']));
+          let isTglMatch = (jTgl === selTgl || jTgl.includes(selTgl) || jTglRaw === selTgl);
+          return isTglMatch && jKelas === norm(selKelas) && (jGuru === adminNameNorm || !jGuru);
+        });
+        if (matchExisting && matchExisting.rowNumber) {
+          jRowNumber = matchExisting.rowNumber;
+        }
+      }
+
       if (jTopik.trim() !== "" || jCatatan.trim() !== "" || jRowNumber !== "") {
           payloads.push({
              action: "saveData",
@@ -4979,6 +4996,23 @@
             let jKelas = norm(getVal(j, ['kelas']));
             return jTgl.startsWith(selBulan) && jKelas === norm(selKelas);
          });
+         
+         let uniqueJurnalMap = new Map();
+         jurnalBulanIni.forEach(j => {
+            let tgl = getAbsenEffectiveDate(j) || getVal(j, ['tanggal']) || "";
+            let guru = norm(getVal(j, ['guru']));
+            let tpk = norm(getVal(j, ['topik']));
+            let key = `${tgl}_${guru}_${tpk}`;
+            if (!uniqueJurnalMap.has(key)) {
+               uniqueJurnalMap.set(key, j);
+            } else {
+               let existing = uniqueJurnalMap.get(key);
+               if (parseInt(j.rowNumber || 0, 10) >= parseInt(existing.rowNumber || 0, 10)) {
+                  uniqueJurnalMap.set(key, j);
+               }
+            }
+         });
+         jurnalBulanIni = Array.from(uniqueJurnalMap.values());
          
          if (jurnalBulanIni.length === 0) {
             jTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Tidak ada jurnal untuk bulan ini.</td></tr>';
