@@ -1783,8 +1783,24 @@
       let tipeVal = document.getElementById('mTipe').value;
       let statusVal = document.getElementById('mStatus').value;
 
-      if (!newId) return alert("ID Materi wajib diisi (misal: BIO-1)!");
+      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      let cleanNewId = (newId || "").toString().trim();
+
+      if (!cleanNewId) return alert("ID Materi wajib diisi (misal: BIO-1)!");
       if (!judulVal) return alert("Judul materi wajib diisi!");
+
+      // PROTEKSI DUPLIKAT ID MATERI
+      const duplicateMateri = dataMateri.find(m => {
+        if (rowNum && m.rowNumber == rowNum) return false;
+        let mId = getVal(m, ['idmateri', 'id_materi', 'materiid', 'id']);
+        return norm(mId) === norm(cleanNewId);
+      });
+
+      if (duplicateMateri) {
+        let existingJudul = getVal(duplicateMateri, ['judul', 'materi', 'namamateri']) || "Materi Lain";
+        let existingKelas = getVal(duplicateMateri, ['kelas', 'tingkat']) || "-";
+        return alert(`⚠️ ID Materi "${cleanNewId}" sudah digunakan oleh materi "${existingJudul}" (Kelas/Tingkat: ${existingKelas})!\n\nSilakan gunakan ID Materi lain yang unik (misal: ${cleanNewId}-2).`);
+      }
 
       let data = {
         "judul": judulVal, "materi": judulVal, "namamateri": judulVal,
@@ -3252,8 +3268,8 @@
           } else if (link.includes("drive.google.com")) {
             let match = link.match(/[-\w]{25,}/);
             if (match) {
-                let dlUrl = `https://drive.google.com/uc?export=download&id=${match[0]}`;
-                embed = `<iframe src="https://docs.google.com/gview?url=${encodeURIComponent(dlUrl)}&embedded=true" style="width:100%; height:450px; border-radius:12px; border:none;"></iframe>`;
+                let fileId = match[0];
+                embed = `<iframe src="https://drive.google.com/file/d/${fileId}/preview" style="width:100%; height:450px; border-radius:12px; border:none;" allowfullscreen></iframe>`;
             }
           } else {
             embed = `<iframe src="${link}" style="width:100%; height:450px; border-radius:12px; border:none; background:white;"></iframe>`;
