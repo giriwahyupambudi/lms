@@ -263,16 +263,23 @@
 
                             <!-- Kop Surat Dinamis -->
                             <div id="dynamic-kop"
-                                style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
-                                <h2 id="doc-title"
-                                    style="margin: 0; font-size: 22px; font-weight: bold; font-family: 'Inter', sans-serif;">
-                                    Judul Tugas</h2>
-                                <p id="doc-student"
-                                    style="margin: 6px 0 0 0; font-size: 14px; color: #333; font-family: 'Inter', sans-serif;">
-                                    Nama: - | Kelas: -</p>
-                                <p id="doc-date"
-                                    style="margin: 6px 0 0 0; font-size: 14px; color: #333; font-family: 'Inter', sans-serif;">
-                                    Waktu: -</p>
+                                style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                                <div>
+                                    <h2 id="doc-title"
+                                        style="margin: 0; font-size: 22px; font-weight: bold; font-family: 'Inter', sans-serif;">
+                                        Judul Tugas</h2>
+                                    <p id="doc-student"
+                                        style="margin: 6px 0 0 0; font-size: 14px; color: #333; font-family: 'Inter', sans-serif;">
+                                        Nama: - | Kelas: -</p>
+                                    <p id="doc-date"
+                                        style="margin: 6px 0 0 0; font-size: 14px; color: #333; font-family: 'Inter', sans-serif;">
+                                        Waktu: -</p>
+                                </div>
+                                <div id="draft-sync-badge"
+                                    style="font-size:0.72rem; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:20px; padding:4px 10px; display:inline-flex; align-items:center; gap:6px; color:#475569; font-weight:600; flex-shrink:0; margin-top:2px;">
+                                    <i data-lucide="cloud" id="draft-status-icon" style="width:14px; height:14px; color:#64748b;"></i>
+                                    <span id="draft-status-text">Memuat Draft...</span>
+                                </div>
                             </div>
 
                             <div id="editor-container"
@@ -567,20 +574,197 @@
                 qlToolbar.style.border = 'none'; // hapus border bawaan
             }
 
-            // --- FITUR AUTO-SAVE (DRAFT) ---
+            // --- FITUR AUTO-SAVE HYBRID (LOCAL + CLOUD DRAFT WITH MIGRATION GUARD) ---
             const draftKey = `draft_editor_${userData.username}_${idMateri}`;
+            window.currentDraftRowNumber = null;
+            let cloudSyncTimer = null;
+            let lastLocalTimestamp = 0;
 
-            // Muat draft jika ada
-            const savedDraft = localStorage.getItem(draftKey);
-            if (savedDraft) {
-                quill.root.innerHTML = savedDraft;
+            // HELPER REKAP STATUS VISUAL
+            function updateDraftStatus(statusType, message) {
+                const statusEl = document.getElementById('draft-status-text');
+                const iconEl = document.getElementById('draft-status-icon');
+                if (!statusEl) return;
+                
+                if (statusType === 'saving') {
+                    statusEl.innerText = message || "Menyimpan ke Cloud...";
+                    statusEl.className = "text-amber-600 font-semibold";
+                    if (iconEl) iconEl.className = "w-3.5 h-3.5 text-amber-500 animate-spin";
+                } else if (statusType === 'synced') {
+                    statusEl.innerText = message || "Tersimpan (Lokal & Cloud)";
+                    statusEl.className = "text-emerald-600 font-semibold";
+                    if (iconEl) iconEl.className = "w-3.5 h-3.5 text-emerald-500";
+                } else if (statusType === 'local') {
+                    statusEl.innerText = message || "Tersimpan di Perangkat Ini";
+                    statusEl.className = "text-blue-600 font-semibold";
+                    if (iconEl) iconEl.className = "w-3.5 h-3.5 text-blue-500";
+                } else if (statusType === 'error') {
+                    statusEl.innerText = message || "Tersimpan Lokal (Offline)";
+                    statusEl.className = "text-slate-500 font-medium";
+                    if (iconEl) iconEl.className = "w-3.5 h-3.5 text-slate-400";
+                }
             }
 
-            // Simpan setiap ada perubahan ketikan
+            // 1. LOCAL FIRST: BACA MEMORI LOKAL DULU (0.001 DETIK SINKRON, COMPATIBLE DENGAN DRAFT KEMARIN)
+            let localData = null;
+            const rawLocal = localStorage.getItem(draftKey);
+            
+            if (rawLocal) {
+                try {
+                    let parsed = JSON.parse(rawLocal);
+                    if (parsed && typeof parsed === 'object' && parsed.html !== undefined) {
+                        localData = {
+                            html: parsed.html,
+                            updatedAt: parsed.updatedAt || Date.now(),
+                            isLegacy: false
+                        };
+                    } else {
+                        // Raw HTML string dari kemarin (Legacy)
+                        localData = {
+                            html: rawLocal,
+                            updatedAt: 1, // Legacy timestamp = 1 (akan diutamakan jika Cloud kosong)
+                            isLegacy: true
+                        };
+                    }
+                } catch (e) {
+                    // String HTML biasa (Legacy)
+                    localData = {
+                        html: rawLocal,
+                        updatedAt: 1,
+                        isLegacy: true
+                    };
+                }
+            }
+
+            // Jika ada draft lokal (termasuk ketikan kemarin), LANGSUNG TAMPILKAN DI EKRAN SINKRON 0,001 DETIK!
+            if (localData && localData.html) {
+                quill.root.innerHTML = localData.html;
+                lastLocalTimestamp = localData.updatedAt;
+                updateDraftStatus('local', localData.isLegacy ? "Draft Kemarin Dimuat (Lokal)" : "Draft Lokal Dimuat");
+            } else {
+                updateDraftStatus('synced', "Draft Kosong");
+            }
+
+            // 2. BACKGROUND CLOUD FETCH & MIGRATION GUARD
+            async function syncCloudDraftInitial() {
+                try {
+                    const norm = s => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+                    const userNorm = norm(userData.username || userData.nisn);
+                    const idNorm = norm(idMateri);
+
+                    // Fetch data draft dari cloud
+                    const res = await fetch(`${API_URL}?sheet=draft_tugas`);
+                    if (!res.ok) throw new Error("Gagal koneksi server");
+                    const cloudList = await res.json();
+
+                    let cloudItem = null;
+                    if (Array.isArray(cloudList)) {
+                        cloudItem = cloudList.find(d => {
+                            let dUser = norm(d.username || d.nisn);
+                            let dMid = norm(d.id_materi || d.idmateri || d.materi);
+                            return dUser === userNorm && dMid === idNorm;
+                        });
+                    }
+
+                    if (cloudItem) {
+                        window.currentDraftRowNumber = cloudItem.rowNumber || null;
+                        const cloudHtml = cloudItem.isi_html || cloudItem.html || "";
+                        const cloudTime = parseInt(cloudItem.updated_at || cloudItem.updatedAt || 0, 10);
+
+                        // MIGRATION GUARD RULES:
+                        if (!localData || !localData.html) {
+                            // Skenario A: Local kosong, Cloud ada -> Pakai Cloud!
+                            if (cloudHtml) {
+                                quill.root.innerHTML = cloudHtml;
+                                lastLocalTimestamp = cloudTime || Date.now();
+                                localStorage.setItem(draftKey, JSON.stringify({ html: cloudHtml, updatedAt: lastLocalTimestamp }));
+                                updateDraftStatus('synced', "Draft Cloud Dimuat");
+                            }
+                        } else {
+                            // Skenario B: Local ada, Cloud ada -> Bandingkan Timestamp!
+                            if (localData.isLegacy || lastLocalTimestamp >= cloudTime) {
+                                // Local lebih baru (atau draft kemarin)! Simpan Local ke Cloud untuk pertama kali
+                                updateDraftStatus('saving', "Mengamankan Draft ke Cloud...");
+                                await saveDraftToCloud(localData.html, Date.now());
+                            } else {
+                                // Cloud lebih baru -> Pakai Cloud!
+                                quill.root.innerHTML = cloudHtml;
+                                lastLocalTimestamp = cloudTime;
+                                localStorage.setItem(draftKey, JSON.stringify({ html: cloudHtml, updatedAt: cloudTime }));
+                                updateDraftStatus('synced', "Draft Cloud Terbaru Dimuat");
+                            }
+                        }
+                    } else if (localData && localData.html) {
+                        // Skenario C: Local ada, Cloud belum ada -> UPLOAD LOCAL KE CLOUD (Mengamankan draft kemarin ke Cloud!)
+                        updateDraftStatus('saving', "Mengamankan Draft Kemarin ke Cloud...");
+                        await saveDraftToCloud(localData.html, Date.now());
+                    } else {
+                        updateDraftStatus('synced', "Draft Siap");
+                    }
+                } catch (err) {
+                    console.warn("Cloud Draft Sync notice:", err);
+                    updateDraftStatus('error', "Draft Tersimpan di HP (Lokal)");
+                }
+            }
+
+            // 3. FUNGSI SAVE DRAFT TO CLOUD
+            async function saveDraftToCloud(htmlContent, timestamp) {
+                if (!htmlContent || htmlContent === "<p><br></p>") return;
+                try {
+                    const payload = {
+                        action: "saveData",
+                        sheet: "draft_tugas",
+                        rowNumber: window.currentDraftRowNumber,
+                        data: JSON.stringify({
+                            username: userData.username || userData.nisn || "-",
+                            nama: userData.nama || "-",
+                            kelas: userData.kelas || userData.tingkat || "-",
+                            id_materi: idMateri,
+                            judul: decodeURIComponent(titleParam),
+                            isi_html: htmlContent,
+                            updated_at: timestamp
+                        })
+                    };
+
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload)
+                    });
+                    const res = await response.json();
+                    if (res.status === "success" || res.rowNumber) {
+                        if (res.rowNumber) window.currentDraftRowNumber = res.rowNumber;
+                        updateDraftStatus('synced', "Tersimpan (Lokal & Cloud)");
+                    } else {
+                        updateDraftStatus('local', "Tersimpan di HP (Cloud Pending)");
+                    }
+                } catch (e) {
+                    console.warn("Save draft cloud error:", e);
+                    updateDraftStatus('error', "Tersimpan di HP (Lokal)");
+                }
+            }
+
+            // 4. REALTIME EVENT LISTENER (LOCAL INSTANT + DEBOUNCED CLOUD SAVE)
             quill.on('text-change', function () {
-                localStorage.setItem(draftKey, quill.root.innerHTML);
+                const currentHtml = quill.root.innerHTML;
+                const now = Date.now();
+                lastLocalTimestamp = now;
+
+                // A. Simpan ke Local Storage SEKETIKA (0 delay, 100% aman)
+                localStorage.setItem(draftKey, JSON.stringify({ html: currentHtml, updatedAt: now }));
+                updateDraftStatus('local', "Menyimpan...");
+
+                // B. Debounce Cloud Sync (Kirim ke Cloud 4 detik setelah selesai ngetik)
+                if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
+                cloudSyncTimer = setTimeout(() => {
+                    updateDraftStatus('saving', "Mengirim ke Cloud...");
+                    saveDraftToCloud(currentHtml, now);
+                }, 4000);
             });
-            // -------------------------------
+
+            // Jalankan sinkronisasi Cloud di latar belakang tanpa mengganggu tampilan
+            setTimeout(syncCloudDraftInitial, 500);
+            // --------------------------------------------------------------------------
 
             document.getElementById('preview-btn').addEventListener('click', generatePreview);
 
@@ -958,8 +1142,25 @@
                 const result = await response.json();
 
                 if (result.status === "success") {
-                    // Hapus draft karena tugas sudah terkirim
+                    // Hapus draft lokal & cloud karena tugas sudah terkirim
                     localStorage.removeItem(`draft_editor_${userData.username}_${idMateri}`);
+                    if (window.currentDraftRowNumber) {
+                        fetch(API_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({
+                                action: "saveData",
+                                sheet: "draft_tugas",
+                                rowNumber: window.currentDraftRowNumber,
+                                data: JSON.stringify({
+                                    username: userData.username || userData.nisn || "-",
+                                    id_materi: idMateri,
+                                    isi_html: "",
+                                    updated_at: Date.now()
+                                })
+                            })
+                        }).catch(() => {});
+                    }
 
                     // Success
                     document.getElementById('preview-modal').classList.add('hidden');
