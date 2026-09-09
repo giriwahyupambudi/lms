@@ -1047,7 +1047,7 @@
           inputNilai.style.fontWeight = "";
           const originalVal = inputNilai.getAttribute("data-original-value") || "";
           if (val !== "" || originalVal !== "") {
-             statusCell.innerHTML = `<span class="badge active">Tuntas</span>`;
+             statusCell.innerHTML = "";
           } else {
              statusCell.innerHTML = `<span class="badge draft">Belum</span>`;
           }
@@ -3004,7 +3004,7 @@
            authorName = parsedMeta.pembuat_asli || getVal(upload, ['pembuat_asli', 'author']) || "";
         }
 
-        return { u, username, nama, maxNilai, statusKuis: maxNilai !== "" ? "Tuntas" : "Belum", waktuSubmit, durasiKuis, rawDate, upload, isUploadType, createdDate, authorName };
+        return { u, username, nama, maxNilai, statusKuis: maxNilai !== "" ? "Sudah" : "Belum", waktuSubmit, durasiKuis, rawDate, upload, isUploadType, createdDate, authorName };
       });
 
       // Hitung urutan upload kronologis (1, 2, 3...) untuk seluruh siswa yang telah mengumpulkan
@@ -3129,7 +3129,7 @@
            inputStyle = "border-color: #ef4444; background-color: #fef2f2; color: #b91c1c; font-weight: bold;";
            statusBadge = `<span class="badge" style="background:#fee2e2; color:#ef4444; border:1px solid #fca5a5; display:inline-flex; align-items:center; gap:2px;" title="Siswa belum mengunggah tugas tetapi sudah memiliki nilai!"><i data-lucide="alert-circle" style="width:12px; height:12px;"></i> Salah Input?</span>`;
         } else {
-           statusBadge = maxNilai !== "" ? `<span class="badge active">Tuntas</span>` : `<span class="badge draft">Belum</span>`;
+           statusBadge = maxNilai !== "" ? "" : `<span class="badge draft">Belum</span>`;
         }
 
         html += `<tr>
