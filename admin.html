@@ -116,6 +116,21 @@
     .form-control { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
     .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
     .input-nilai { width: 80px; text-align: center; padding: 8px; }
+
+    /* GRADE QUICK BUTTONS */
+    .btn-grade-container { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; max-width: 175px; margin-top: 6px; }
+    .btn-grade { padding: 3px 6px; font-size: 0.68rem; font-weight: 700; border-radius: 5px; border: 1px solid transparent; cursor: pointer; transition: all 0.15s ease-in-out; line-height: 1.1; user-select: none; }
+    .btn-grade:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.12); filter: brightness(0.95); }
+    .btn-grade:active { transform: scale(0.94); }
+    .btn-grade-ap { background: #059669; color: white; border-color: #047857; }
+    .btn-grade-a  { background: #10b981; color: white; border-color: #059669; }
+    .btn-grade-am { background: #34d399; color: #064e3b; border-color: #10b981; }
+    .btn-grade-bp { background: #2563eb; color: white; border-color: #1d4ed8; }
+    .btn-grade-b  { background: #3b82f6; color: white; border-color: #2563eb; }
+    .btn-grade-bm { background: #60a5fa; color: #1e3a8a; border-color: #3b82f6; }
+    .btn-grade-cp { background: #d97706; color: white; border-color: #b45309; }
+    .btn-grade-c  { background: #f59e0b; color: white; border-color: #d97706; }
+    .btn-grade-cm { background: #fbbf24; color: #78350f; border-color: #f59e0b; }
     .filter-bar { display: flex; gap: 12px; padding: 16px 20px; background: white; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; }
 
     /* MODAL */
@@ -558,7 +573,7 @@
                   <th style="cursor:pointer; user-select:none;" onclick="handleSort('nilai', 'nama')">Nama Siswa <span id="sort_nilai_nama" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
                   <th style="cursor:pointer; user-select:none;" onclick="handleSort('nilai', 'waktu')">Waktu Submit <span id="sort_nilai_waktu" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
                   <th style="cursor:pointer; user-select:none;" onclick="handleSort('nilai', 'durasi')">Durasi <span id="sort_nilai_durasi" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
-                  <th style="cursor:pointer; user-select:none; text-align:center; width: 120px;" onclick="handleSort('nilai', 'nilai')">Nilai Akhir <span id="sort_nilai_nilai" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
+                  <th style="cursor:pointer; user-select:none; text-align:center; min-width: 180px;" onclick="handleSort('nilai', 'nilai')">Nilai Akhir <span id="sort_nilai_nilai" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
                   <th style="cursor:pointer; user-select:none;" onclick="handleSort('nilai', 'status')">Status <span id="sort_nilai_status" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
                   <th>Aksi</th>
                 </tr>
@@ -3125,7 +3140,20 @@
              <input type="text" id="durasi_${username}" class="form-control" value="${durasiRender}" data-original-value="${durasiOriginal}" oninput="updateDraft('${safeMateri}', '${username}', 'durasi', this.value)" placeholder="00:00" style="max-width:70px; display:inline-block; text-align:center; padding: 0.3rem;">
           </td>
           <td style="text-align:center">
-             <input type="number" id="nilai_${username}" class="form-control input-nilai" value="${nilaiRender}" data-original-value="${nilaiOriginal}" oninput="updateDraft('${safeMateri}', '${username}', 'nilai', this.value); checkMismatch('${username}', ${isUploadType}, ${!!upload})" placeholder="-" style="max-width:80px; display:inline-block; text-align:center; ${inputStyle}">
+             <div style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                <input type="number" id="nilai_${username}" class="form-control input-nilai" value="${nilaiRender}" data-original-value="${nilaiOriginal}" data-is-upload="${isUploadType}" data-has-upload="${!!upload}" oninput="updateDraft('${safeMateri}', '${username}', 'nilai', this.value); checkMismatch('${username}', ${isUploadType}, ${!!upload})" placeholder="-" style="max-width:80px; text-align:center; ${inputStyle}">
+                <div class="btn-grade-container">
+                   <button type="button" class="btn-grade btn-grade-ap" onclick="quickSimpanNilai('${username}', '${safeMateri}', '${safeNama}', '${safeKelas}', 95)" title="Simpan Nilai 95 (A+)">A+</button>
+                   <button type="button" class="btn-grade btn-grade-a" onclick="quickSimpanNilai('${username}', '${safeMateri}', '${safeNama}', '${safeKelas}', 90)" title="Simpan Nilai 90 (A)">A</button>
+                   <button type="button" class="btn-grade btn-grade-am" onclick="quickSimpanNilai('${username}', '${safeMateri}', '${safeNama}', '${safeKelas}', 85)" title="Simpan Nilai 85 (A-)">A-</button>
+                   <button type="button" class="btn-grade btn-grade-bp" onclick="quickSimpanNilai('${username}', '${safeMateri}', '${safeNama}', '${safeKelas}', 80)" title="Simpan Nilai 80 (B+)">B+</button>
+                   <button type="button" class="btn-grade btn-grade-b" onclick="quickSimpanNilai('${username}', '${safeMateri}', '${safeNama}', '${safeKelas}', 75)" title="Simpan Nilai 75 (B)">B</button>
+                   <button type="button" class="btn-grade btn-grade-bm" onclick="quickSimpanNilai('${username}', '${safeMateri}', '${safeNama}', '${safeKelas}', 70)" title="Simpan Nilai 70 (B-)">B-</button>
+                   <button type="button" class="btn-grade btn-grade-cp" onclick="quickSimpanNilai('${username}', '${safeMateri}', '${safeNama}', '${safeKelas}', 65)" title="Simpan Nilai 65 (C+)">C+</button>
+                   <button type="button" class="btn-grade btn-grade-c" onclick="quickSimpanNilai('${username}', '${safeMateri}', '${safeNama}', '${safeKelas}', 60)" title="Simpan Nilai 60 (C)">C</button>
+                   <button type="button" class="btn-grade btn-grade-cm" onclick="quickSimpanNilai('${username}', '${safeMateri}', '${safeNama}', '${safeKelas}', 55)" title="Simpan Nilai 55 (C-)">C-</button>
+                </div>
+             </div>
           </td>
           <td style="text-align:center" id="status_cell_${username}">
              ${statusBadge}
@@ -3181,10 +3209,23 @@
       }
     }
 
+    async function quickSimpanNilai(username, idMateri, nama, kelas, numericVal) {
+      let inputEl = document.getElementById(`nilai_${username}`);
+      if (inputEl) {
+        inputEl.value = numericVal;
+        updateDraft(idMateri, username, 'nilai', numericVal);
+        let isUploadType = inputEl.getAttribute('data-is-upload') === 'true';
+        let hasUpload = inputEl.getAttribute('data-has-upload') === 'true';
+        checkMismatch(username, isUploadType, hasUpload);
+      }
+      showToastAdmin(`Menyimpan nilai ${numericVal} untuk ${nama}...`, 'success');
+      await simpanNilai(username, idMateri, nama, kelas);
+    }
+
     async function simpanNilai(username, idMateri, nama, kelas) {
       let inputVal = document.getElementById(`nilai_${username}`).value;
       let durasiVal = document.getElementById(`durasi_${username}`).value;
-      if(inputVal === "") return alert("Masukkan angka nilai!");
+      if(inputVal === "") return showToastAdmin("Masukkan angka nilai!", "warning");
       
       let mSelect = document.getElementById('filterMateriNilai');
       let selOption = mSelect && mSelect.selectedIndex >= 0 ? mSelect.options[mSelect.selectedIndex] : null;
