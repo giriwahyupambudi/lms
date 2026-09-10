@@ -1,4 +1,4 @@
-const CACHE_NAME = 'al-ilmi-lms-v18';
+const CACHE_NAME = 'al-ilmi-lms-v19';
 const ASSETS_TO_CACHE = [
   'index.html',
   'dashboard.html',
@@ -13,8 +13,6 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      // Use a more resilient approach: try to cache everything, 
-      // but don't let one missing file break the whole installation
       return Promise.allSettled(
         ASSETS_TO_CACHE.map(url => 
           cache.add(url).catch(err => console.warn(`Failed to cache: ${url}`, err))
@@ -41,6 +39,12 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  // Jangan cegat API Google Apps Script agar Safari (iOS) tidak melempar CORS/Redirect NetworkError
+  const url = event.request.url;
+  if (url.includes('script.google.com') || url.includes('script.googleusercontent.com')) {
+    return;
+  }
 
   event.respondWith(
     fetch(event.request)

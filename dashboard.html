@@ -1143,7 +1143,7 @@
 
       try {
         const t = new Date().getTime(); // Cache buster
-        const fetchWithTimeout = (url, ms = 6000) => {
+        const fetchWithTimeout = (url, ms = 15000) => {
           return Promise.race([
             fetch(url),
             new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms))
@@ -1171,22 +1171,22 @@
           localStorage.setItem("cache_materi", JSON.stringify(dataMateri));
           allMateriMentah = dataMateri;
         }
-        if (Array.isArray(dataListNilai)) {
+        if (Array.isArray(dataListNilai) && dataListNilai.length > 0) {
           localStorage.setItem("cache_listNilai", JSON.stringify(dataListNilai));
           allProgresMentah = dataListNilai;
         }
-        if (Array.isArray(dataUser)) {
+        if (Array.isArray(dataUser) && dataUser.length > 0) {
           localStorage.setItem("cache_user", JSON.stringify(dataUser));
         }
-        if (Array.isArray(dataLogTugas)) {
+        if (Array.isArray(dataLogTugas) && dataLogTugas.length > 0) {
           localStorage.setItem("cache_logTugas", JSON.stringify(dataLogTugas));
           allLogTugasMentah = dataLogTugas;
         }
-        if (Array.isArray(dataGuru)) {
+        if (Array.isArray(dataGuru) && dataGuru.length > 0) {
           localStorage.setItem("cache_guru", JSON.stringify(dataGuru));
           allGuruMentah = dataGuru;
         }
-        if (Array.isArray(dataAbsen)) {
+        if (Array.isArray(dataAbsen) && dataAbsen.length > 0) {
           localStorage.setItem("cache_absen", JSON.stringify(dataAbsen));
           allAbsenMentah = dataAbsen;
         }
