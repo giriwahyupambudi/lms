@@ -497,6 +497,31 @@ function doPost(e) {
         }
       }
       
+      // DEDUP / OVERWRITE GUARD KHUSUS DRAFT TUGAS:
+      if ((!postData.rowNumber || postData.rowNumber === "") && sheetName === "draft_tugas") {
+        var existingDrafts = sheet.getDataRange().getValues();
+        if (existingDrafts.length > 1) {
+          var hList = existingDrafts[0].map(function(h) { return h.toString().toLowerCase().replace(/[^a-z0-9]/g, ''); });
+          var uIdx = hList.indexOf("username");
+          var mIdx = hList.indexOf("idmateri");
+          if (mIdx === -1) mIdx = hList.indexOf("id_materi");
+          
+          if (uIdx !== -1 && mIdx !== -1) {
+            var targetUser = (dataToSave.username || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+            var targetMat = (dataToSave.id_materi || dataToSave.idmateri || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+            
+            for (var r = existingDrafts.length - 1; r >= 1; r--) {
+              var rUser = existingDrafts[r][uIdx].toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+              var rMat = existingDrafts[r][mIdx].toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+              if (rUser === targetUser && rMat === targetMat) {
+                postData.rowNumber = r + 1; // Pakai kembali nomor baris yang sudah ada (overwrite)!
+                break;
+              }
+            }
+          }
+        }
+      }
+      
       // JIKA MENGEDIT BARIS YANG ADA
       if (postData.rowNumber && postData.rowNumber !== "") {
         var rowNum = parseInt(postData.rowNumber);
@@ -516,7 +541,7 @@ function doPost(e) {
           }
         }
         sheet.getRange(rowNum, 1, 1, headers.length).setValues([updateRow]);
-        return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Data berhasil diperbarui" }))
+        return ContentService.createTextOutput(JSON.stringify({ status: "success", rowNumber: rowNum, message: "Data berhasil diperbarui" }))
                              .setMimeType(ContentService.MimeType.JSON);
       } 
       // JIKA MENAMBAH BARIS BARU
@@ -533,7 +558,8 @@ function doPost(e) {
           }
         }
         sheet.appendRow(newRow);
-        return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Data baru berhasil ditambahkan" }))
+        var addedRowIndex = sheet.getLastRow();
+        return ContentService.createTextOutput(JSON.stringify({ status: "success", rowNumber: addedRowIndex, message: "Data baru berhasil ditambahkan" }))
                              .setMimeType(ContentService.MimeType.JSON);
       }
     }
