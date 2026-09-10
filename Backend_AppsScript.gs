@@ -40,6 +40,9 @@ function doGet(e) {
     } else if (sheetName === "jurnal") {
       sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet("jurnal");
       sheet.appendRow(["waktu", "tanggal", "guru", "kelas", "mapel", "topik", "catatan"]);
+    } else if (sheetName === "draft_tugas") {
+      sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet("draft_tugas");
+      sheet.appendRow(["username", "nama", "kelas", "id_materi", "judul", "isi_html", "updated_at"]);
     } else {
       return ContentService.createTextOutput(JSON.stringify([]))
                            .setMimeType(ContentService.MimeType.JSON);
@@ -460,8 +463,11 @@ function doPost(e) {
         if (sheetName === "settings") {
           sheet = ss.insertSheet("settings");
           sheet.appendRow(["key", "value"]);
+        } else if (sheetName === "draft_tugas") {
+          sheet = ss.insertSheet("draft_tugas");
+          sheet.appendRow(["username", "nama", "kelas", "id_materi", "judul", "isi_html", "updated_at"]);
         } else {
-          throw new Error("Sheet " + sheetName + " tidak ditemukan");
+          sheet = ss.insertSheet(sheetName);
         }
       }
 
