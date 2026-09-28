@@ -12,6 +12,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link rel="manifest" href="manifest.json">
   <script src="pwa-handler.js" defer></script>
 
@@ -3579,62 +3580,71 @@
       sel.onchange = () => { renderRekapAdmin(); };
     }
 
-    function renderRekapAdmin() {
-      const selKelas = document.getElementById('filterKelasRekap').value;
-      const header = document.getElementById('rekapTableHeader');
-      const body = document.getElementById('rekapTableBody');
-      
-      if (!selKelas) {
-        body.innerHTML = '<tr><td colspan="3" style="text-align:center;">Pilih kelas terlebih dahulu.</td></tr>';
-        return;
-      }
+    function ensureXlsxLoaded() {
+      if (typeof XLSX !== 'undefined') return Promise.resolve(true);
+      return new Promise((resolve) => {
+        let script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        script.onload = () => resolve(true);
+        script.onerror = () => {
+          let fallback = document.createElement('script');
+          fallback.src = 'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
+          fallback.onload = () => resolve(true);
+          fallback.onerror = () => resolve(false);
+          document.head.appendChild(fallback);
+        };
+        document.head.appendChild(script);
+      });
+    }
 
-      // Helper: Normalisasi string untuk pencocokan
+    function formatWaktuIndo(d = new Date()) {
+      const pad = (n) => String(n).padStart(2, '0');
+      const dStr = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+      const tStr = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      return `${dStr} ${tStr} WIB`;
+    }
+
+    function getTimestampFile(d = new Date()) {
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+    }
+
+    function calculateColWidths(aoa) {
+      if (!aoa || aoa.length === 0) return [];
+      const colCount = Math.max(...aoa.map(r => (r ? r.length : 0)));
+      const widths = [];
+      for (let c = 0; c < colCount; c++) {
+        let maxLen = 0;
+        aoa.forEach(row => {
+          if (row && row[c] !== undefined && row[c] !== null) {
+            let str = row[c].toString();
+            if (str.length > 40 && c === 0) {
+              str = str.substring(0, 20);
+            }
+            if (str.length > maxLen) maxLen = str.length;
+          }
+        });
+        widths.push({ wch: Math.min(Math.max(maxLen + 3, 8), 45) });
+      }
+      return widths;
+    }
+
+    function buildRekapIndexMaps() {
       const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
 
-      // 1. Ambil Siswa di Kelas Ini
-      const students = dataUser.filter(u => {
-        let r = (getVal(u, ['role', 'peran']) || "").toString().toLowerCase().trim();
-        if (r === "admin" || r === "guru") return false;
-        let k = norm(getVal(u, ['kelas', 'tingkat']));
-        let sk = norm(selKelas);
-        return k === sk || k.includes(sk) || sk.includes(k);
-      });
-      
-      // 2. Ambil Materi yang Sesuai untuk Kelas & Tingkat Ini
-      const myTingkat = getTingkatSync({ kelas: selKelas });
-      const selKelasUpper = selKelas.toUpperCase().trim();
-
-      let materials = dataMateri.filter(m => {
-        const mStatus = (getVal(m, ['status']) || "Aktif").toString().toLowerCase();
-        if (mStatus !== "aktif") return false;
-
-        const mKelasMentah = (getVal(m, ['kelas', 'tingkat']) || "").toString().trim().toUpperCase();
-        const mTingkat = getTingkatSync(m);
-        
-        if (mTingkat === "SEMUA" || mKelasMentah === "SEMUA" || mKelasMentah === "") return true;
-
-        let mKelasArray = mKelasMentah.split(',').map(k => k.trim());
-        
-        if (selKelasUpper && mKelasArray.includes(selKelasUpper)) return true;
-        if (mKelasArray.includes(myTingkat)) return true;
-        if (mTingkat === myTingkat) return true;
-
-        return false;
-      });
-      if (materials.length === 0) {
-        materials = dataMateri.filter(m => (getVal(m, ['status']) || "Aktif").toString().toLowerCase() === "aktif");
-      }
-
-      // OPTIMASI INSTAN O(1): Pre-index logTugas & dataNilai khusus materi yang ada di tabel ini
       let rekapLogTugasMap = new Map();
       (Array.isArray(dataLogTugas) ? dataLogTugas : []).forEach(t => {
         let u = norm(getVal(t, ['username']));
+        let namaNorm = norm(getVal(t, ['nama', 'namasiswa', 'namalengkap']));
         let mid = norm(getVal(t, ['id_materi', 'materi']));
         let mJudul = norm(getVal(t, ['materi', 'judul']));
         if (u) {
           if (mid) rekapLogTugasMap.set(`${u}_${mid}`, t);
           if (mJudul) rekapLogTugasMap.set(`${u}_${mJudul}`, t);
+        }
+        if (namaNorm) {
+          if (mid) rekapLogTugasMap.set(`${namaNorm}_${mid}`, t);
+          if (mJudul) rekapLogTugasMap.set(`${namaNorm}_${mJudul}`, t);
         }
       });
 
@@ -3652,6 +3662,10 @@
           score = (nTipe === "survey" && (!scoreRaw || scoreRaw === "" || scoreRaw === "-")) ? 100 : 0;
         }
 
+        let timeVal = (getVal(n, ['timestamp', 'waktusubmit', 'tanggal', 'waktu']) || "").toString().trim();
+        let durasiVal = (getVal(n, ['waktu', 'durasi']) || "").toString().trim();
+        let record = { score, time: timeVal, durasi: durasiVal, raw: n };
+
         let keys = [];
         if (u && mid) keys.push(`${u}_${mid}`);
         if (u && mJudul) keys.push(`${u}_${mJudul}`);
@@ -3660,90 +3674,306 @@
 
         keys.forEach(k => {
           if (!rekapNilaiMap.has(k)) {
-            rekapNilaiMap.set(k, score);
+            rekapNilaiMap.set(k, record);
           } else {
-            rekapNilaiMap.set(k, Math.max(rekapNilaiMap.get(k), score));
+            let existing = rekapNilaiMap.get(k);
+            if (score > existing.score) {
+              rekapNilaiMap.set(k, record);
+            }
           }
         });
       });
 
+      return { rekapLogTugasMap, rekapNilaiMap };
+    }
+
+    function getMaterialsForClass(selKelas) {
+      const myTingkat = getTingkatSync({ kelas: selKelas });
+      const selKelasUpper = (selKelas || "").toUpperCase().trim();
+
+      let materials = (Array.isArray(dataMateri) ? dataMateri : []).filter(m => {
+        const mStatus = (getVal(m, ['status']) || "Aktif").toString().toLowerCase();
+        if (mStatus !== "aktif") return false;
+
+        const mKelasMentah = (getVal(m, ['kelas', 'tingkat']) || "").toString().trim().toUpperCase();
+        const mTingkat = getTingkatSync(m);
+        
+        if (mTingkat === "SEMUA" || mKelasMentah === "SEMUA" || mKelasMentah === "") return true;
+
+        let mKelasArray = mKelasMentah.split(',').map(k => k.trim());
+        if (selKelasUpper && mKelasArray.includes(selKelasUpper)) return true;
+        if (mKelasArray.includes(myTingkat)) return true;
+        if (mTingkat === myTingkat) return true;
+
+        return false;
+      });
+
+      if (materials.length === 0) {
+        materials = (Array.isArray(dataMateri) ? dataMateri : []).filter(m => (getVal(m, ['status']) || "Aktif").toString().toLowerCase() === "aktif");
+      }
+      return materials;
+    }
+
+    function getStudentsForClass(selKelas) {
+      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      const sk = norm(selKelas);
+
+      return (Array.isArray(dataUser) ? dataUser : []).filter(u => {
+        let r = (getVal(u, ['role', 'peran']) || "").toString().toLowerCase().trim();
+        if (r === "admin" || r === "guru") return false;
+        let k = norm(getVal(u, ['kelas', 'tingkat', 'rombel']));
+        return k === sk || k.includes(sk) || sk.includes(k);
+      }).sort((a, b) => (getVal(a, ['nama']) || "").localeCompare(getVal(b, ['nama']) || ""));
+    }
+
+    function buildRekapDataForClass(selKelas, preRekapNilaiMap, preRekapLogTugasMap) {
+      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      const students = getStudentsForClass(selKelas);
+      const materials = getMaterialsForClass(selKelas);
+
+      if (students.length === 0) return { aoaRekap: null, aoaLog: null, rawLogs: [] };
+
+      let rekapNilaiMap = preRekapNilaiMap;
+      let rekapLogTugasMap = preRekapLogTugasMap;
+      if (!rekapNilaiMap || !rekapLogTugasMap) {
+        const maps = buildRekapIndexMaps();
+        rekapNilaiMap = maps.rekapNilaiMap;
+        rekapLogTugasMap = maps.rekapLogTugasMap;
+      }
+
+      const now = new Date();
+      const nowStr = formatWaktuIndo(now);
+
+      // Sheet 1: Rekap Nilai
+      const aoaRekap = [
+        [`REKAPITULASI NILAI & PROGRES SISWA - KELAS ${selKelas.toUpperCase()}`],
+        [`Waktu Unduh: ${nowStr}`],
+        [],
+        ['No', 'NISN', 'Nama Siswa', ...materials.map(m => getVal(m, ['judul', 'materi']) || 'Materi'), 'Total', 'Rata-rata']
+      ];
+
+      // Kumpulkan log submit untuk Sheet 2
+      let rawLogs = [];
+
+      students.forEach((s, sIdx) => {
+        const rawUsername = (getVal(s, ['username', 'nisn']) || "").toString().trim();
+        const username = norm(rawUsername);
+        const sNamaRaw = (getVal(s, ['nama', 'namalengkap', 'namasiswa']) || "").toString().trim();
+        const sNamaNorm = norm(sNamaRaw);
+        const nama = sNamaRaw || rawUsername;
+
+        const row = [sIdx + 1, rawUsername, nama];
+        let totalScore = 0;
+        let countScored = 0;
+
+        materials.forEach((m, idx) => {
+          const mid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (idx + 1)).toString().trim();
+          const mJudulRaw = (getVal(m, ['judul', 'materi']) || "Materi").toString().trim();
+          const mJudul = norm(mJudulRaw);
+          const tipe = (getVal(m, ['tipeevaluasi', 'tipe_evaluasi', 'tipe']) || "Praktik").toLowerCase();
+
+          if (tipe === "materi") {
+            row.push('✓');
+            return;
+          }
+
+          const midNorm = norm(mid);
+          const upload = rekapLogTugasMap.get(`${username}_${midNorm}`) || 
+                         rekapLogTugasMap.get(`${username}_${mJudul}`) ||
+                         rekapLogTugasMap.get(`${sNamaNorm}_${midNorm}`) ||
+                         rekapLogTugasMap.get(`${sNamaNorm}_${mJudul}`);
+
+          let rec = undefined;
+          let k1 = `${username}_${midNorm}`;
+          let k2 = `${username}_${mJudul}`;
+          let k3 = `${sNamaNorm}_${midNorm}`;
+          let k4 = `${sNamaNorm}_${mJudul}`;
+
+          if (rekapNilaiMap.has(k1)) rec = rekapNilaiMap.get(k1);
+          else if (rekapNilaiMap.has(k2)) rec = rekapNilaiMap.get(k2);
+          else if (rekapNilaiMap.has(k3)) rec = rekapNilaiMap.get(k3);
+          else if (rekapNilaiMap.has(k4)) rec = rekapNilaiMap.get(k4);
+
+          if (rec !== undefined) {
+            totalScore += rec.score;
+            countScored++;
+            row.push(rec.score);
+
+            rawLogs.push({
+              time: rec.time || (upload ? upload.waktu : '-'),
+              username: rawUsername,
+              nama: nama,
+              kelas: selKelas,
+              materi: mJudulRaw,
+              tipe: tipe.toUpperCase(),
+              nilai: rec.score,
+              durasi: rec.durasi || '-',
+              keterangan: rec.raw ? (getVal(rec.raw, ['keterangan', 'catatan']) || '-') : '-'
+            });
+          } else if (upload) {
+            row.push('Terkirim');
+            rawLogs.push({
+              time: upload.waktu || '-',
+              username: rawUsername,
+              nama: nama,
+              kelas: selKelas,
+              materi: mJudulRaw,
+              tipe: 'TUGAS / PRAKTIK',
+              nilai: 'Terkirim (Belum Dinilai)',
+              durasi: '-',
+              keterangan: upload.nama_asli || upload.link_tugas || '-'
+            });
+          } else {
+            row.push('-');
+          }
+        });
+
+        const avg = countScored > 0 ? Math.round(totalScore / countScored) : 0;
+        row.push(totalScore);
+        row.push(avg);
+        aoaRekap.push(row);
+      });
+
+      // Urutkan rawLogs berdasarkan waktu descending
+      rawLogs.sort((a, b) => (b.time || '').localeCompare(a.time || ''));
+
+      // Sheet 2: Detail Waktu & Log
+      const aoaLog = [
+        [`LOG DETAIL WAKTU PENGERJAAN & PENGUMPULAN TUGAS - KELAS ${selKelas.toUpperCase()}`],
+        [`Waktu Unduh: ${nowStr}`],
+        [],
+        ['No', 'Tanggal & Waktu Submit', 'NISN', 'Nama Siswa', 'Kelas', 'Judul Materi', 'Tipe', 'Nilai / Status', 'Durasi', 'Keterangan']
+      ];
+
+      rawLogs.forEach((l, lIdx) => {
+        aoaLog.push([
+          lIdx + 1,
+          l.time || '-',
+          l.username || '-',
+          l.nama || '-',
+          l.kelas || selKelas,
+          l.materi || '-',
+          l.tipe || '-',
+          l.nilai !== undefined ? l.nilai : '-',
+          l.durasi || '-',
+          l.keterangan || '-'
+        ]);
+      });
+
+      return { aoaRekap, aoaLog, rawLogs };
+    }
+
+    function renderRekapAdmin() {
+      const selKelas = document.getElementById('filterKelasRekap').value;
+      const header = document.getElementById('rekapTableHeader');
+      const body = document.getElementById('rekapTableBody');
+      
+      if (!selKelas) {
+        body.innerHTML = '<tr><td colspan="5" style="text-align:center;">Pilih kelas terlebih dahulu.</td></tr>';
+        return;
+      }
+
+      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      const students = getStudentsForClass(selKelas);
+      const materials = getMaterialsForClass(selKelas);
+
+      // Pre-index O(1)
+      const { rekapLogTugasMap, rekapNilaiMap } = buildRekapIndexMaps();
+
       // 3. Render Header
-      let headerHtml = `<tr><th style="position: sticky; left: 0; background: #f1f5f9; z-index: 11; min-width: 200px; border-right: 2px solid #e2e8f0;">Nama Siswa</th>`;
+      let headerHtml = `<tr>
+        <th style="position: sticky; left: 0; background: #f1f5f9; z-index: 12; width: 45px; text-align: center; border-right: 1px solid #e2e8f0;">No</th>
+        <th style="position: sticky; left: 45px; background: #f1f5f9; z-index: 12; min-width: 100px; border-right: 1px solid #e2e8f0;">NISN</th>
+        <th style="position: sticky; left: 145px; background: #f1f5f9; z-index: 12; min-width: 180px; border-right: 2px solid #e2e8f0;">Nama Siswa</th>`;
+      
       materials.forEach(m => {
         const judul = getVal(m, ['judul', 'materi']) || "Materi";
         headerHtml += `<th style="min-width: 100px; text-align:center; font-size: 0.7rem;">${judul}</th>`;
       });
-      headerHtml += `<th style="min-width: 80px; text-align:center; background: #f1f5f9; font-weight:bold;">Total</th>`;
-      headerHtml += `<th style="min-width: 80px; text-align:center; background: #f1f5f9; font-weight:bold;">Rata2</th>`;
+      headerHtml += `<th style="min-width: 75px; text-align:center; background: #f1f5f9; font-weight:bold;">Total</th>`;
+      headerHtml += `<th style="min-width: 75px; text-align:center; background: #f1f5f9; font-weight:bold;">Rata2</th>`;
       headerHtml += `</tr>`;
       header.innerHTML = headerHtml;
 
       // 4. Render Body dengan Pencarian O(1) Instan
       let bodyHtml = '';
-      students.sort((a, b) => (getVal(a, ['nama']) || "").localeCompare(getVal(b, ['nama']) || ""));
 
-      students.forEach(s => {
-        const username = norm(getVal(s, ['username', 'nisn']));
-        const sNamaRaw = (getVal(s, ['nama', 'namalengkap', 'namasiswa']) || "").toString().trim().toLowerCase();
+      students.forEach((s, sIdx) => {
+        const rawUsername = (getVal(s, ['username', 'nisn']) || "").toString().trim();
+        const username = norm(rawUsername);
+        const sNamaRaw = (getVal(s, ['nama', 'namalengkap', 'namasiswa']) || "").toString().trim();
         const sNamaNorm = norm(sNamaRaw);
-        const nama = getVal(s, ['nama']) || username;
+        const nama = sNamaRaw || rawUsername;
         
-        bodyHtml += `<tr><td style="position: sticky; left: 0; background: #fff; z-index: 9; font-weight: 600; border-right: 2px solid #e2e8f0;">${nama}</td>`;
+        bodyHtml += `<tr>
+          <td style="position: sticky; left: 0; background: #fff; z-index: 10; text-align: center; border-right: 1px solid #e2e8f0; font-size: 0.8rem; color: var(--text-muted);">${sIdx + 1}</td>
+          <td style="position: sticky; left: 45px; background: #fff; z-index: 10; border-right: 1px solid #e2e8f0; font-family: monospace; font-size: 0.8rem; color: var(--text-muted);">${rawUsername || '-'}</td>
+          <td style="position: sticky; left: 145px; background: #fff; z-index: 10; font-weight: 600; border-right: 2px solid #e2e8f0;">${nama}</td>`;
         
         let totalScore = 0;
         let countScored = 0;
 
         materials.forEach((m, idx) => {
           const mid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (idx + 1)).toString().trim();
-          const mJudul = norm(getVal(m, ['judul', 'materi']));
+          const mJudulRaw = (getVal(m, ['judul', 'materi']) || "Materi").toString().trim();
+          const mJudul = norm(mJudulRaw);
           const tipe = (getVal(m, ['tipeevaluasi', 'tipe_evaluasi', 'tipe']) || "Praktik").toLowerCase();
           
           let scoreText = "-";
           let cellStyle = "text-align:center;";
+          let titleAttr = "";
           
           if (tipe === "materi") {
             scoreText = '<i data-lucide="check" style="color:#22c55e; width:14px;"></i>';
+            titleAttr = 'Materi telah dipelajari';
           } else {
             const midNorm = norm(mid);
-            const mJudulNorm = norm(mJudul);
 
             const upload = rekapLogTugasMap.get(`${username}_${midNorm}`) || 
-                         rekapLogTugasMap.get(`${username}_${mJudulNorm}`) ||
+                         rekapLogTugasMap.get(`${username}_${mJudul}`) ||
                          rekapLogTugasMap.get(`${sNamaNorm}_${midNorm}`) ||
-                         rekapLogTugasMap.get(`${sNamaNorm}_${mJudulNorm}`);
+                         rekapLogTugasMap.get(`${sNamaNorm}_${mJudul}`);
 
             const isUploadType = ["praktik", "tugas", "ujian praktik"].includes(tipe);
 
-            let maxS = undefined;
+            let rec = undefined;
             let k1 = `${username}_${midNorm}`;
-            let k2 = `${username}_${mJudulNorm}`;
+            let k2 = `${username}_${mJudul}`;
             let k3 = `${sNamaNorm}_${midNorm}`;
-            let k4 = `${sNamaNorm}_${mJudulNorm}`;
+            let k4 = `${sNamaNorm}_${mJudul}`;
 
-            if (rekapNilaiMap.has(k1)) maxS = rekapNilaiMap.get(k1);
-            else if (rekapNilaiMap.has(k2)) maxS = rekapNilaiMap.get(k2);
-            else if (rekapNilaiMap.has(k3)) maxS = rekapNilaiMap.get(k3);
-            else if (rekapNilaiMap.has(k4)) maxS = rekapNilaiMap.get(k4);
+            if (rekapNilaiMap.has(k1)) rec = rekapNilaiMap.get(k1);
+            else if (rekapNilaiMap.has(k2)) rec = rekapNilaiMap.get(k2);
+            else if (rekapNilaiMap.has(k3)) rec = rekapNilaiMap.get(k3);
+            else if (rekapNilaiMap.has(k4)) rec = rekapNilaiMap.get(k4);
 
-            if (maxS !== undefined) {
+            if (rec !== undefined) {
+              const maxS = rec.score;
               totalScore += maxS;
               countScored++;
               
+              let tInfo = rec.time ? ` | Waktu: ${rec.time}` : '';
+              let dInfo = rec.durasi ? ` (Durasi: ${rec.durasi})` : '';
+
               if (isUploadType && !upload) {
-                  scoreText = `<span style="font-weight:bold; color:#ef4444; background:#fef2f2; padding:3px 6px; border-radius:6px; border:1px solid #fee2e2; display:inline-flex; align-items:center; gap:4px; font-size:0.8rem;" title="Salah Input? Siswa belum mengirim tugas tapi sudah diisi nilai.">${maxS} <i data-lucide="alert-triangle" style="width:13px; height:13px; color:#ef4444;"></i></span>`;
+                  scoreText = `<span style="font-weight:bold; color:#ef4444; background:#fef2f2; padding:3px 6px; border-radius:6px; border:1px solid #fee2e2; display:inline-flex; align-items:center; gap:4px; font-size:0.8rem;">${maxS} <i data-lucide="alert-triangle" style="width:13px; height:13px; color:#ef4444;"></i></span>`;
+                  titleAttr = `Nilai: ${maxS} (Salah Input? Siswa belum mengirim file tugas)${tInfo}`;
               } else {
                   scoreText = maxS;
                   cellStyle += "font-weight:bold; color:var(--primary);";
+                  titleAttr = `Nilai: ${maxS}${tInfo}${dInfo}`;
               }
             } else {
               if (upload) {
                 scoreText = '<span style="font-size:0.65rem; color:#d97706; background:#fffbeb; padding:2px 4px; border-radius:4px; border:1px solid #fef3c7;">Terkirim</span>';
+                titleAttr = `Tugas Terkirim${upload.waktu ? ' pada ' + upload.waktu : ''}${upload.nama_asli ? ' (' + upload.nama_asli + ')' : ''}`;
               } else {
                 scoreText = '<span style="color:#ef4444; opacity:0.2;">-</span>';
+                titleAttr = 'Belum ada pengerjaan';
               }
             }
           }
-          bodyHtml += `<td style="${cellStyle}">${scoreText}</td>`;
+          bodyHtml += `<td style="${cellStyle}" title="${titleAttr}">${scoreText}</td>`;
         });
         
         const avg = countScored > 0 ? Math.round(totalScore / countScored) : 0;
@@ -3756,177 +3986,151 @@
       lucide.createIcons();
     }
 
-    function downloadRekap() {
+    async function downloadRekap() {
       let selKelas = document.getElementById('filterKelasRekap').value;
-      if(!selKelas) return alert("Pilih kelas terlebih dahulu!");
+      if (!selKelas) return alert("Pilih kelas terlebih dahulu!");
 
-      let table = document.querySelector("#rekapSection table");
-      let rows = table.querySelectorAll("tr");
-
-      // Kumpulkan data dari tabel sebagai array of arrays
-      let aoa = [];
-      for (let i = 0; i < rows.length; i++) {
-        let row = [];
-        let cols = rows[i].querySelectorAll("td, th");
-        for (let j = 0; j < cols.length; j++) {
-          let text = cols[j].innerText.split('\n')[0].trim();
-          // Coba konversi ke angka jika memungkinkan (untuk kolom nilai)
-          let num = Number(text);
-          row.push(text !== '' && !isNaN(num) && i > 0 && j > 1 ? num : text);
+      if (typeof XLSX === 'undefined') {
+        if (typeof showOverlay === 'function') showOverlay("Memuat library Excel...", 2000);
+        const loaded = await ensureXlsxLoaded();
+        if (typeof hideOverlay === 'function') hideOverlay();
+        if (!loaded || typeof XLSX === 'undefined') {
+          return alert("Library Excel belum berhasil dimuat. Pastikan koneksi internet aktif lalu coba lagi.");
         }
-        aoa.push(row);
       }
 
-      // Buat worksheet dari array of arrays
-      let ws = XLSX.utils.aoa_to_sheet(aoa);
+      const { aoaRekap, aoaLog } = buildRekapDataForClass(selKelas);
+      if (!aoaRekap || aoaRekap.length <= 4) {
+        return alert("Tidak ada data siswa untuk kelas " + selKelas);
+      }
 
-      // Auto-lebar kolom berdasarkan konten
-      let colWidths = aoa[0].map((_, colIdx) => {
-        let maxLen = 0;
-        aoa.forEach(row => {
-          let cellLen = row[colIdx] ? row[colIdx].toString().length : 0;
-          if (cellLen > maxLen) maxLen = cellLen;
-        });
-        return { wch: Math.min(Math.max(maxLen + 2, 10), 40) };
-      });
-      ws['!cols'] = colWidths;
-
-      // Buat workbook dan tambahkan sheet
       let wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Rekap Nilai");
 
-      // Simpan file .xlsx
-      XLSX.writeFile(wb, "Rekap_Nilai_" + selKelas + ".xlsx");
+      // Sheet 1: Rekap Nilai
+      let wsRekap = XLSX.utils.aoa_to_sheet(aoaRekap);
+      wsRekap['!cols'] = calculateColWidths(aoaRekap);
+      XLSX.utils.book_append_sheet(wb, wsRekap, "Rekap Nilai");
+
+      // Sheet 2: Detail Waktu & Log
+      if (aoaLog && aoaLog.length > 4) {
+        let wsLog = XLSX.utils.aoa_to_sheet(aoaLog);
+        wsLog['!cols'] = calculateColWidths(aoaLog);
+        XLSX.utils.book_append_sheet(wb, wsLog, "Detail Waktu & Log");
+      }
+
+      const now = new Date();
+      const tgl = getTimestampFile(now);
+      const safeKelas = selKelas.replace(/[^a-zA-Z0-9_-]/g, '_');
+      XLSX.writeFile(wb, `Rekap_Nilai_${safeKelas}_${tgl}.xlsx`);
     }
 
     function buildRekapAoa(selKelas) {
-      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
-      const students = dataUser
-        .filter(u => norm(getVal(u, ['kelas', 'tingkat'])) === norm(selKelas))
-        .sort((a, b) => (getVal(a, ['nama']) || "").localeCompare(getVal(b, ['nama']) || ""));
-
-      const myTingkat = getTingkatSync({ kelas: selKelas });
-      const selKelasUpper = selKelas.toUpperCase();
-
-      const materials = dataMateri.filter(m => {
-        const mStatus = (getVal(m, ['status']) || "Aktif").toString().toLowerCase();
-        if (mStatus !== "aktif") return false;
-
-        const mKelasMentah = (getVal(m, ['kelas', 'tingkat']) || "").toString().trim().toUpperCase();
-        const mTingkat = getTingkatSync(m);
-        
-        if (mTingkat === "SEMUA" || mKelasMentah === "SEMUA" || mKelasMentah === "") return true;
-
-        let mKelasArray = mKelasMentah.split(',').map(k => k.trim());
-        
-        if (selKelasUpper && mKelasArray.includes(selKelasUpper)) return true;
-        if (mKelasArray.includes(myTingkat)) return true;
-
-        return false;
-      });
-
-      if (students.length === 0 || materials.length === 0) return null;
-
-      // Header row
-      const header = ['Nama Siswa', ...materials.map(m => getVal(m, ['judul', 'materi']) || 'Materi'), 'Total', 'Rata-rata'];
-      const aoa = [header];
-
-      students.forEach(s => {
-        const username = norm(getVal(s, ['username', 'nisn']));
-        const nama = getVal(s, ['nama']) || username;
-        const row = [nama];
-        let totalScore = 0, countScored = 0;
-
-        materials.forEach((m, idx) => {
-          const mid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (idx + 1)).toString();
-          const mJudul = norm(getVal(m, ['judul', 'materi']));
-          const tipe = (getVal(m, ['tipeevaluasi', 'tipe_evaluasi', 'tipe']) || 'Praktik').toLowerCase();
-
-          if (tipe === 'materi') {
-            row.push('✓');
-            return;
-          }
-
-          const upload = dataLogTugas.find(t => {
-            const tUser = norm(getVal(t, ['username']));
-            const tMid = (getVal(t, ['id_materi', 'materi']) || '').toString().trim();
-            const tJudul = norm(getVal(t, ['materi', 'judul']));
-            return tUser === username && (tMid === mid || (mJudul !== '' && tJudul === mJudul));
-          });
-
-          const filteredNilai = dataNilai.filter(n => {
-            const nUser = norm(getVal(n, ['username', 'nisn']));
-            const nMid = (getVal(n, ['id_materi', 'idmateri']) || '').toString().trim();
-            const nJudul = norm(getVal(n, ['judul', 'materi', 'judul_materi']));
-            return nUser === username && (nMid === mid || (mJudul !== '' && nJudul === mJudul));
-          });
-
-          if (filteredNilai.length > 0) {
-            const scores = filteredNilai.map(n => {
-                if (tipe === "survey") return 100;
-                return parseInt(getVal(n, ['nilai', 'skor']) || 0);
-            }).filter(v => !isNaN(v));
-            if (scores.length > 0) {
-              const maxS = Math.max(...scores);
-              totalScore += maxS;
-              countScored++;
-              row.push(maxS);
-            } else {
-              row.push('');
-            }
-          } else if (upload) {
-            row.push('Terkirim');
-          } else {
-            row.push('');
-          }
-        });
-
-        const avg = countScored > 0 ? Math.round(totalScore / countScored) : 0;
-        row.push(totalScore);
-        row.push(avg);
-        aoa.push(row);
-      });
-
-      return aoa;
+      const data = buildRekapDataForClass(selKelas);
+      return data ? data.aoaRekap : null;
     }
 
-    function downloadSemuaKelas() {
-      const kelasList = [...new Set(dataUser.map(u => (getVal(u, ['kelas', 'tingkat']) || '').toString().trim()))]
-        .filter(k => k !== '')
-        .sort();
+    async function downloadSemuaKelas() {
+      if (typeof XLSX === 'undefined') {
+        if (typeof showOverlay === 'function') showOverlay("Memuat library Excel...", 2000);
+        const loaded = await ensureXlsxLoaded();
+        if (typeof hideOverlay === 'function') hideOverlay();
+        if (!loaded || typeof XLSX === 'undefined') {
+          return alert("Library Excel belum berhasil dimuat. Pastikan koneksi internet aktif lalu coba lagi.");
+        }
+      }
+
+      let klsSet = new Set();
+      if (typeof MY_KELAS !== 'undefined' && Array.isArray(MY_KELAS) && MY_KELAS.length > 0) {
+        MY_KELAS.forEach(k => { if (k) klsSet.add(k.toString().trim()); });
+      }
+      (Array.isArray(dataUser) ? dataUser : []).forEach(u => {
+        let r = (getVal(u, ['role', 'peran']) || "").toString().toLowerCase().trim();
+        if (r !== "admin" && r !== "guru") {
+          let k = (getVal(u, ['kelas', 'tingkat', 'rombel']) || "").toString().trim();
+          if (k) klsSet.add(k);
+        }
+      });
+      let kelasList = Array.from(klsSet).filter(k => k !== '').sort();
 
       if (kelasList.length === 0) return alert('Data kelas belum tersedia!');
 
+      if (typeof showOverlay === 'function') showOverlay("Memproses rekap semua kelas...", 3000);
+
+      // Pre-index O(1) sekali saja untuk seluruh kelas
+      const { rekapNilaiMap, rekapLogTugasMap } = buildRekapIndexMaps();
+
       const wb = XLSX.utils.book_new();
       let sheetCount = 0;
+      let usedSheetNames = new Set();
+      const now = new Date();
+      const nowStr = formatWaktuIndo(now);
+
+      let masterLogAoa = [
+        ["LOG DETAIL WAKTU PENGERJAAN - SEMUA KELAS"],
+        [`Waktu Unduh: ${nowStr}`],
+        [],
+        ["No", "Tanggal & Waktu Submit", "NISN", "Nama Siswa", "Kelas", "Judul Materi", "Tipe", "Nilai / Status", "Durasi", "Keterangan"]
+      ];
 
       kelasList.forEach(kelas => {
-        const aoa = buildRekapAoa(kelas);
-        if (!aoa) return;
+        const { aoaRekap, rawLogs } = buildRekapDataForClass(kelas, rekapNilaiMap, rekapLogTugasMap);
+        if (!aoaRekap || aoaRekap.length <= 4) return;
 
-        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        const ws = XLSX.utils.aoa_to_sheet(aoaRekap);
+        ws['!cols'] = calculateColWidths(aoaRekap);
 
-        // Auto-lebar kolom
-        const colWidths = aoa[0].map((_, colIdx) => {
-          let maxLen = 0;
-          aoa.forEach(row => {
-            const cellLen = row[colIdx] ? row[colIdx].toString().length : 0;
-            if (cellLen > maxLen) maxLen = cellLen;
-          });
-          return { wch: Math.min(Math.max(maxLen + 2, 10), 40) };
-        });
-        ws['!cols'] = colWidths;
+        // Sanitize sheet name (max 31 chars, no special chars)
+        let baseName = kelas.replace(/[\\/?*:[\]]/g, '_').trim().substring(0, 28) || 'Kelas';
+        let sheetName = baseName;
+        let counter = 1;
+        while (usedSheetNames.has(sheetName.toLowerCase())) {
+          sheetName = `${baseName}_${counter}`;
+          counter++;
+        }
+        usedSheetNames.add(sheetName.toLowerCase());
 
-        // Nama sheet: maksimal 31 karakter (batas Excel)
-        const sheetName = kelas.substring(0, 31);
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
         sheetCount++;
+
+        if (Array.isArray(rawLogs)) {
+          rawLogs.forEach(l => {
+            masterLogAoa.push([
+              masterLogAoa.length - 3,
+              l.time || '-',
+              l.username || '-',
+              l.nama || '-',
+              kelas,
+              l.materi || '-',
+              l.tipe || '-',
+              l.nilai !== undefined ? l.nilai : '-',
+              l.durasi || '-',
+              l.keterangan || '-'
+            ]);
+          });
+        }
       });
 
-      if (sheetCount === 0) return alert('Tidak ada data rekap yang bisa diekspor!');
+      if (sheetCount === 0) {
+        if (typeof hideOverlay === 'function') hideOverlay();
+        return alert('Tidak ada data rekap siswa yang bisa diekspor!');
+      }
 
-      const now = new Date();
-      const tgl = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+      // Tambahkan sheet Log Waktu Semua Kelas di akhir
+      if (masterLogAoa.length > 4) {
+        const headerRows = masterLogAoa.slice(0, 4);
+        const dataRows = masterLogAoa.slice(4);
+        dataRows.sort((a, b) => (b[1] || '').localeCompare(a[1] || ''));
+        dataRows.forEach((r, idx) => { r[0] = idx + 1; });
+        const finalMasterLogAoa = headerRows.concat(dataRows);
+
+        const wsMasterLog = XLSX.utils.aoa_to_sheet(finalMasterLogAoa);
+        wsMasterLog['!cols'] = calculateColWidths(finalMasterLogAoa);
+        XLSX.utils.book_append_sheet(wb, wsMasterLog, "Log Waktu Semua Kelas");
+      }
+
+      if (typeof hideOverlay === 'function') hideOverlay();
+
+      const tgl = getTimestampFile(now);
       XLSX.writeFile(wb, `Rekap_Nilai_Semua_Kelas_${tgl}.xlsx`);
     }
 
@@ -5083,10 +5287,15 @@
       }
     }
 
-    function downloadRekapAbsen() {
-      if(typeof XLSX === 'undefined') {
-         alert("Library excel belum dimuat, silakan muat ulang halaman.");
-         return;
+    async function downloadRekapAbsen() {
+      if (typeof XLSX === 'undefined') {
+         if (typeof showOverlay === 'function') showOverlay("Memuat library Excel...", 2000);
+         await ensureXlsxLoaded();
+         if (typeof hideOverlay === 'function') hideOverlay();
+         if (typeof XLSX === 'undefined') {
+            alert("Library excel belum dimuat, silakan periksa koneksi internet.");
+            return;
+         }
       }
       let selKelas = document.getElementById('filterKelasRekapAbsen').value;
       let selBulan = document.getElementById('filterBulanRekapAbsen').value;
@@ -5730,6 +5939,8 @@ TUGAS ANDA:
 
     async function callGeminiAPI(apiKey, promptText, onWaitNotify = null) {
       const models = [
+        'gemini-3.8-flash',
+        'gemini-3.8-pro',
         'gemini-3.6-flash',
         'gemini-3.6-pro',
         'gemini-3.0-flash',
