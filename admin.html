@@ -562,8 +562,9 @@
               <label>Pilih Materi/Kuis</label>
               <select class="form-control" id="filterMateriNilai" onchange="renderTableNilai()"></select>
             </div>
-            <div style="margin-bottom: 0;">
+            <div style="margin-bottom: 0; display:flex; gap:8px; flex-wrap:wrap;">
               <button class="btn btn-primary" onclick="simpanSemuaNilai()"><i data-lucide="saveAll"></i> Simpan Semua</button>
+              <button class="btn btn-outline" onclick="downloadRekapNilaiMateri()"><i data-lucide="download"></i> Download Excel</button>
             </div>
           </div>
           <div class="table-responsive">
@@ -572,7 +573,7 @@
                 <tr>
                   <th style="width: 50px;">No</th>
                   <th style="cursor:pointer; user-select:none;" onclick="handleSort('nilai', 'nama')">Nama Siswa <span id="sort_nilai_nama" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
-                  <th style="cursor:pointer; user-select:none;" onclick="handleSort('nilai', 'waktu')">Waktu Submit <span id="sort_nilai_waktu" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
+                  <th style="cursor:pointer; user-select:none;" onclick="handleSort('nilai', 'waktu')">Urutan Maju <span id="sort_nilai_waktu" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
                   <th style="cursor:pointer; user-select:none;" onclick="handleSort('nilai', 'durasi')">Durasi <span id="sort_nilai_durasi" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
                   <th style="cursor:pointer; user-select:none; text-align:center; min-width: 180px;" onclick="handleSort('nilai', 'nilai')">Nilai Akhir <span id="sort_nilai_nilai" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
                   <th style="cursor:pointer; user-select:none;" onclick="handleSort('nilai', 'status')">Status <span id="sort_nilai_status" class="sort-icon-nilai"><i data-lucide="chevrons-up-down" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></span></th>
@@ -837,6 +838,7 @@
               <select class="form-control" id="filterKelasRekap" onchange="renderRekapAdmin()"></select>
             </div>
             <div id="rekapLegend" style="font-size: 0.8rem; color: var(--text-muted); display: flex; gap: 1rem; align-items: center; background: #f8fafc; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-left: auto; flex-wrap: wrap;">
+              <span style="display: inline-flex; align-items: center; gap: 4px;"><span style="font-size:0.68rem; color:#3730a3; background:#e0e7ff; border:1px solid #c7d2fe; border-radius:4px; padding:1px 5px; font-weight:700;">Maju #1</span> Urutan submit</span>
               <span style="display: inline-flex; align-items: center; gap: 4px;"><span style="font-size:0.65rem; color:#d97706; background:#fffbeb; padding:2px 4px; border-radius:4px; border:1px solid #fef3c7; font-weight:bold;">Terkirim</span> Sudah kirim & belum dinilai</span>
               <span style="display: inline-flex; align-items: center; gap: 4px;"><span style="font-weight:bold; color:#ef4444; background:#fef2f2; padding:2px 6px; border-radius:6px; border:1px solid #fee2e2; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px;">90 <i data-lucide="alert-triangle" style="width:12px; height:12px; color:#ef4444;"></i></span> Salah Input? (Nilai ada tapi tugas belum dikirim)</span>
             </div>
@@ -3726,12 +3728,81 @@
       }).sort((a, b) => (getVal(a, ['nama']) || "").localeCompare(getVal(b, ['nama']) || ""));
     }
 
+    function computeUrutanMajuMap(students, materials, rekapNilaiMap, rekapLogTugasMap) {
+      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      const urutanMap = new Map();
+
+      materials.forEach((m, mIdx) => {
+        const mid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (mIdx + 1)).toString().trim();
+        const midNorm = norm(mid);
+        const mJudulRaw = (getVal(m, ['judul', 'materi']) || "Materi").toString().trim();
+        const mJudul = norm(mJudulRaw);
+
+        let candidates = [];
+
+        students.forEach(s => {
+          const rawUsername = (getVal(s, ['username', 'nisn']) || "").toString().trim();
+          const uNorm = norm(rawUsername);
+          const sNamaRaw = (getVal(s, ['nama', 'namalengkap', 'namasiswa']) || "").toString().trim();
+          const sNamaNorm = norm(sNamaRaw);
+
+          let upload = rekapLogTugasMap.get(`${uNorm}_${midNorm}`) || 
+                       rekapLogTugasMap.get(`${uNorm}_${mJudul}`) ||
+                       rekapLogTugasMap.get(`${sNamaNorm}_${midNorm}`) ||
+                       rekapLogTugasMap.get(`${sNamaNorm}_${mJudul}`);
+
+          let rec = undefined;
+          let k1 = `${uNorm}_${midNorm}`;
+          let k2 = `${uNorm}_${mJudul}`;
+          let k3 = `${sNamaNorm}_${midNorm}`;
+          let k4 = `${sNamaNorm}_${mJudul}`;
+
+          if (rekapNilaiMap.has(k1)) rec = rekapNilaiMap.get(k1);
+          else if (rekapNilaiMap.has(k2)) rec = rekapNilaiMap.get(k2);
+          else if (rekapNilaiMap.has(k3)) rec = rekapNilaiMap.get(k3);
+          else if (rekapNilaiMap.has(k4)) rec = rekapNilaiMap.get(k4);
+
+          if (rec || upload) {
+            let rawTime = (rec && rec.time) ? rec.time : (upload ? (getVal(upload, ['waktu', 'timestamp', 'tanggal']) || "") : "");
+            if (!rawTime && rec && rec.raw) {
+              rawTime = getVal(rec.raw, ['timestamp', 'waktu', 'waktusubmit', 'tanggal']) || "";
+            }
+            let pTime = parseDateTimestamp(rawTime);
+            candidates.push({
+              rawUsername,
+              uNorm,
+              sNamaNorm,
+              rawTime: rawTime || "",
+              pTime: pTime > 0 ? pTime : Number.MAX_SAFE_INTEGER
+            });
+          }
+        });
+
+        // Urutkan berdasarkan waktu pengerjaan kronologis (tercepat / terawal mengumpulkan di nomor 1)
+        candidates.sort((a, b) => {
+          if (a.pTime !== b.pTime) return a.pTime - b.pTime;
+          return (a.rawTime || "").localeCompare(b.rawTime || "");
+        });
+
+        candidates.forEach((c, idx) => {
+          let order = idx + 1;
+          let mKeys = [midNorm, mJudul].filter(Boolean);
+          mKeys.forEach(mk => {
+            if (c.uNorm) urutanMap.set(`${mk}_${c.uNorm}`, order);
+            if (c.sNamaNorm) urutanMap.set(`${mk}_${c.sNamaNorm}`, order);
+          });
+        });
+      });
+
+      return urutanMap;
+    }
+
     function buildRekapDataForClass(selKelas, preRekapNilaiMap, preRekapLogTugasMap) {
       const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
       const students = getStudentsForClass(selKelas);
       const materials = getMaterialsForClass(selKelas);
 
-      if (students.length === 0) return { aoaRekap: null, aoaLog: null, rawLogs: [] };
+      if (students.length === 0) return { aoaDetail: null, aoaMatriksNilai: null, aoaMatriksUrutan: null, aoaRekap: null, aoaLog: null, rawLogs: [], detailRows: [] };
 
       let rekapNilaiMap = preRekapNilaiMap;
       let rekapLogTugasMap = preRekapLogTugasMap;
@@ -3741,20 +3812,141 @@
         rekapLogTugasMap = maps.rekapLogTugasMap;
       }
 
+      const urutanMap = computeUrutanMajuMap(students, materials, rekapNilaiMap, rekapLogTugasMap);
+
       const now = new Date();
       const nowStr = formatWaktuIndo(now);
 
-      // Sheet 1: Rekap Nilai
-      const aoaRekap = [
-        [`REKAPITULASI NILAI & PROGRES SISWA - KELAS ${selKelas.toUpperCase()}`],
+      // Sheet 1: Rekap Urutan Maju & Nilai (Detail per Materi & Siswa)
+      const aoaDetail = [
+        [`REKAP NILAI, URUTAN MAJU & WAKTU PENGERJAAN - KELAS ${selKelas.toUpperCase()}`],
+        [`Waktu Unduh: ${nowStr}`],
+        [],
+        ['No', 'Urutan Maju', 'NISN', 'Nama Siswa', 'Judul Materi', 'Tipe', 'Nilai', 'Durasi Mengerjakan', 'Tanggal & Waktu Submit', 'Status Pengerjaan', 'Keterangan']
+      ];
+
+      // Sheet 2: Matriks Nilai
+      const aoaMatriksNilai = [
+        [`REKAPITULASI MATRIKS NILAI SISWA - KELAS ${selKelas.toUpperCase()}`],
         [`Waktu Unduh: ${nowStr}`],
         [],
         ['No', 'NISN', 'Nama Siswa', ...materials.map(m => getVal(m, ['judul', 'materi']) || 'Materi'), 'Total', 'Rata-rata']
       ];
 
-      // Kumpulkan log submit untuk Sheet 2
-      let rawLogs = [];
+      // Sheet 3: Matriks Urutan & Durasi
+      const aoaMatriksUrutan = [
+        [`MATRIKS URUTAN MAJU & DURASI PENGERJAAN - KELAS ${selKelas.toUpperCase()}`],
+        [`Waktu Unduh: ${nowStr}`],
+        [],
+        ['No', 'NISN', 'Nama Siswa', ...materials.map(m => getVal(m, ['judul', 'materi']) || 'Materi')]
+      ];
 
+      // Kumpulkan log submit untuk Sheet 4
+      let rawLogs = [];
+      let detailRows = [];
+
+      // Bangun detailRows per materi
+      materials.forEach((m, mIdx) => {
+        const mid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (mIdx + 1)).toString().trim();
+        const midNorm = norm(mid);
+        const mJudulRaw = (getVal(m, ['judul', 'materi']) || "Materi").toString().trim();
+        const mJudul = norm(mJudulRaw);
+        const tipe = (getVal(m, ['tipeevaluasi', 'tipe_evaluasi', 'tipe']) || "Praktik").toLowerCase();
+
+        let matStudents = [];
+
+        students.forEach(s => {
+          const rawUsername = (getVal(s, ['username', 'nisn']) || "").toString().trim();
+          const username = norm(rawUsername);
+          const sNamaRaw = (getVal(s, ['nama', 'namalengkap', 'namasiswa']) || "").toString().trim();
+          const sNamaNorm = norm(sNamaRaw);
+          const nama = sNamaRaw || rawUsername;
+
+          const upload = rekapLogTugasMap.get(`${username}_${midNorm}`) || 
+                         rekapLogTugasMap.get(`${username}_${mJudul}`) ||
+                         rekapLogTugasMap.get(`${sNamaNorm}_${midNorm}`) ||
+                         rekapLogTugasMap.get(`${sNamaNorm}_${mJudul}`);
+
+          let rec = undefined;
+          let k1 = `${username}_${midNorm}`;
+          let k2 = `${username}_${mJudul}`;
+          let k3 = `${sNamaNorm}_${midNorm}`;
+          let k4 = `${sNamaNorm}_${mJudul}`;
+
+          if (rekapNilaiMap.has(k1)) rec = rekapNilaiMap.get(k1);
+          else if (rekapNilaiMap.has(k2)) rec = rekapNilaiMap.get(k2);
+          else if (rekapNilaiMap.has(k3)) rec = rekapNilaiMap.get(k3);
+          else if (rekapNilaiMap.has(k4)) rec = rekapNilaiMap.get(k4);
+
+          let uOrder = urutanMap.get(`${midNorm}_${username}`) || urutanMap.get(`${mJudul}_${username}`) ||
+                       urutanMap.get(`${midNorm}_${sNamaNorm}`) || urutanMap.get(`${mJudul}_${sNamaNorm}`);
+
+          let nilaiVal = '-';
+          let statusStr = 'Belum Mengumpulkan';
+          let waktuStr = '-';
+          let durasiStr = '-';
+          let ketStr = '-';
+
+          if (tipe === 'materi') {
+            nilaiVal = 100;
+            statusStr = 'Selesai Membaca';
+          } else if (rec !== undefined) {
+            nilaiVal = rec.score;
+            statusStr = 'Selesai (Dinilai)';
+            waktuStr = rec.time || (upload ? (upload.waktu || upload.timestamp || '-') : '-');
+            durasiStr = rec.durasi || '-';
+            if (rec.raw) {
+              ketStr = getVal(rec.raw, ['keterangan', 'catatan', 'feedback']) || '-';
+            }
+          } else if (upload) {
+            nilaiVal = 'Terkirim';
+            statusStr = 'Menunggu Penilaian';
+            waktuStr = upload.waktu || upload.timestamp || '-';
+            durasiStr = '-';
+            ketStr = upload.nama_asli || upload.link_tugas || '-';
+          }
+
+          matStudents.push({
+            urutan: uOrder || 999999,
+            urutanLabel: uOrder ? uOrder : '-',
+            nisn: rawUsername || '-',
+            nama: nama,
+            materi: mJudulRaw,
+            tipe: tipe.toUpperCase(),
+            nilai: nilaiVal,
+            durasi: durasiStr,
+            waktu: waktuStr,
+            status: statusStr,
+            keterangan: ketStr
+          });
+        });
+
+        // Urutkan siswa pada materi ini: yang memiliki urutan maju (1, 2, 3...) terlebih dahulu, lalu nama
+        matStudents.sort((a, b) => {
+          if (a.urutan !== b.urutan) return a.urutan - b.urutan;
+          return a.nama.localeCompare(b.nama);
+        });
+
+        detailRows.push(...matStudents);
+      });
+
+      detailRows.forEach((r, idx) => {
+        aoaDetail.push([
+          idx + 1,
+          r.urutanLabel,
+          r.nisn,
+          r.nama,
+          r.materi,
+          r.tipe,
+          r.nilai,
+          r.durasi,
+          r.waktu,
+          r.status,
+          r.keterangan
+        ]);
+      });
+
+      // Bangun Sheet 2 (Matriks Nilai) dan Sheet 3 (Matriks Urutan & Durasi)
       students.forEach((s, sIdx) => {
         const rawUsername = (getVal(s, ['username', 'nisn']) || "").toString().trim();
         const username = norm(rawUsername);
@@ -3762,7 +3954,8 @@
         const sNamaNorm = norm(sNamaRaw);
         const nama = sNamaRaw || rawUsername;
 
-        const row = [sIdx + 1, rawUsername, nama];
+        const rowNilai = [sIdx + 1, rawUsername, nama];
+        const rowUrutan = [sIdx + 1, rawUsername, nama];
         let totalScore = 0;
         let countScored = 0;
 
@@ -3773,7 +3966,8 @@
           const tipe = (getVal(m, ['tipeevaluasi', 'tipe_evaluasi', 'tipe']) || "Praktik").toLowerCase();
 
           if (tipe === "materi") {
-            row.push('✓');
+            rowNilai.push('✓');
+            rowUrutan.push('Selesai');
             return;
           }
 
@@ -3794,13 +3988,24 @@
           else if (rekapNilaiMap.has(k3)) rec = rekapNilaiMap.get(k3);
           else if (rekapNilaiMap.has(k4)) rec = rekapNilaiMap.get(k4);
 
+          let uOrder = urutanMap.get(`${midNorm}_${username}`) || urutanMap.get(`${mJudul}_${username}`) ||
+                       urutanMap.get(`${midNorm}_${sNamaNorm}`) || urutanMap.get(`${mJudul}_${sNamaNorm}`);
+
+          let durVal = (rec && rec.durasi && rec.durasi !== '-') ? rec.durasi : '';
+          let urutanText = '-';
+          if (uOrder) {
+            urutanText = `Maju #${uOrder}` + (durVal ? ` (${durVal})` : '');
+          }
+
           if (rec !== undefined) {
             totalScore += rec.score;
             countScored++;
-            row.push(rec.score);
+            rowNilai.push(rec.score);
+            rowUrutan.push(urutanText);
 
             rawLogs.push({
-              time: rec.time || (upload ? upload.waktu : '-'),
+              urutan: uOrder || '-',
+              time: rec.time || (upload ? (upload.waktu || upload.timestamp) : '-'),
               username: rawUsername,
               nama: nama,
               kelas: selKelas,
@@ -3811,9 +4016,11 @@
               keterangan: rec.raw ? (getVal(rec.raw, ['keterangan', 'catatan']) || '-') : '-'
             });
           } else if (upload) {
-            row.push('Terkirim');
+            rowNilai.push('Terkirim');
+            rowUrutan.push(urutanText !== '-' ? urutanText : 'Terkirim');
             rawLogs.push({
-              time: upload.waktu || '-',
+              urutan: uOrder || '-',
+              time: upload.waktu || upload.timestamp || '-',
               username: rawUsername,
               nama: nama,
               kelas: selKelas,
@@ -3824,30 +4031,33 @@
               keterangan: upload.nama_asli || upload.link_tugas || '-'
             });
           } else {
-            row.push('-');
+            rowNilai.push('-');
+            rowUrutan.push('-');
           }
         });
 
         const avg = countScored > 0 ? Math.round(totalScore / countScored) : 0;
-        row.push(totalScore);
-        row.push(avg);
-        aoaRekap.push(row);
+        rowNilai.push(totalScore);
+        rowNilai.push(avg);
+        aoaMatriksNilai.push(rowNilai);
+        aoaMatriksUrutan.push(rowUrutan);
       });
 
       // Urutkan rawLogs berdasarkan waktu descending
       rawLogs.sort((a, b) => (b.time || '').localeCompare(a.time || ''));
 
-      // Sheet 2: Detail Waktu & Log
+      // Sheet 4: Detail Waktu & Log
       const aoaLog = [
         [`LOG DETAIL WAKTU PENGERJAAN & PENGUMPULAN TUGAS - KELAS ${selKelas.toUpperCase()}`],
         [`Waktu Unduh: ${nowStr}`],
         [],
-        ['No', 'Tanggal & Waktu Submit', 'NISN', 'Nama Siswa', 'Kelas', 'Judul Materi', 'Tipe', 'Nilai / Status', 'Durasi', 'Keterangan']
+        ['No', 'Urutan Maju', 'Tanggal & Waktu Submit', 'NISN', 'Nama Siswa', 'Kelas', 'Judul Materi', 'Tipe', 'Nilai / Status', 'Durasi', 'Keterangan']
       ];
 
       rawLogs.forEach((l, lIdx) => {
         aoaLog.push([
           lIdx + 1,
+          l.urutan || '-',
           l.time || '-',
           l.username || '-',
           l.nama || '-',
@@ -3860,7 +4070,15 @@
         ]);
       });
 
-      return { aoaRekap, aoaLog, rawLogs };
+      return {
+        aoaDetail,
+        aoaMatriksNilai,
+        aoaMatriksUrutan,
+        aoaRekap: aoaMatriksNilai,
+        aoaLog,
+        rawLogs,
+        detailRows
+      };
     }
 
     function renderRekapAdmin() {
@@ -3879,6 +4097,7 @@
 
       // Pre-index O(1)
       const { rekapLogTugasMap, rekapNilaiMap } = buildRekapIndexMaps();
+      const urutanMap = computeUrutanMajuMap(students, materials, rekapNilaiMap, rekapLogTugasMap);
 
       // 3. Render Header
       let headerHtml = `<tr>
@@ -3888,7 +4107,7 @@
       
       materials.forEach(m => {
         const judul = getVal(m, ['judul', 'materi']) || "Materi";
-        headerHtml += `<th style="min-width: 100px; text-align:center; font-size: 0.7rem;">${judul}</th>`;
+        headerHtml += `<th style="min-width: 105px; text-align:center; font-size: 0.7rem;">${judul}</th>`;
       });
       headerHtml += `<th style="min-width: 75px; text-align:center; background: #f1f5f9; font-weight:bold;">Total</th>`;
       headerHtml += `<th style="min-width: 75px; text-align:center; background: #f1f5f9; font-weight:bold;">Rata2</th>`;
@@ -3920,7 +4139,7 @@
           const tipe = (getVal(m, ['tipeevaluasi', 'tipe_evaluasi', 'tipe']) || "Praktik").toLowerCase();
           
           let scoreText = "-";
-          let cellStyle = "text-align:center;";
+          let cellStyle = "text-align:center; vertical-align:middle;";
           let titleAttr = "";
           
           if (tipe === "materi") {
@@ -3947,6 +4166,11 @@
             else if (rekapNilaiMap.has(k3)) rec = rekapNilaiMap.get(k3);
             else if (rekapNilaiMap.has(k4)) rec = rekapNilaiMap.get(k4);
 
+            let uMaju = urutanMap.get(`${midNorm}_${username}`) || urutanMap.get(`${mJudul}_${username}`) ||
+                        urutanMap.get(`${midNorm}_${sNamaNorm}`) || urutanMap.get(`${mJudul}_${sNamaNorm}`);
+
+            let majuBadge = uMaju ? `<div style="font-size:0.68rem; color:#3730a3; background:#e0e7ff; border:1px solid #c7d2fe; border-radius:4px; padding:1px 4px; margin-top:2px; font-weight:700; display:inline-block;">Maju #${uMaju}</div>` : '';
+
             if (rec !== undefined) {
               const maxS = rec.score;
               totalScore += maxS;
@@ -3954,19 +4178,20 @@
               
               let tInfo = rec.time ? ` | Waktu: ${rec.time}` : '';
               let dInfo = rec.durasi ? ` (Durasi: ${rec.durasi})` : '';
+              let uInfo = uMaju ? ` | Urutan Maju: #${uMaju}` : '';
+              let durText = (rec.durasi && rec.durasi !== '-') ? `<div style="font-size:0.65rem; color:var(--text-muted);">${rec.durasi}</div>` : '';
 
               if (isUploadType && !upload) {
-                  scoreText = `<span style="font-weight:bold; color:#ef4444; background:#fef2f2; padding:3px 6px; border-radius:6px; border:1px solid #fee2e2; display:inline-flex; align-items:center; gap:4px; font-size:0.8rem;">${maxS} <i data-lucide="alert-triangle" style="width:13px; height:13px; color:#ef4444;"></i></span>`;
-                  titleAttr = `Nilai: ${maxS} (Salah Input? Siswa belum mengirim file tugas)${tInfo}`;
+                  scoreText = `<div style="display:flex; flex-direction:column; align-items:center; gap:2px;"><span style="font-weight:bold; color:#ef4444; background:#fef2f2; padding:2px 6px; border-radius:6px; border:1px solid #fee2e2; display:inline-flex; align-items:center; gap:4px; font-size:0.8rem;">${maxS} <i data-lucide="alert-triangle" style="width:12px; height:12px; color:#ef4444;"></i></span>${majuBadge}${durText}</div>`;
+                  titleAttr = `Nilai: ${maxS} (Salah Input? Siswa belum mengirim file tugas)${uInfo}${tInfo}${dInfo}`;
               } else {
-                  scoreText = maxS;
-                  cellStyle += "font-weight:bold; color:var(--primary);";
-                  titleAttr = `Nilai: ${maxS}${tInfo}${dInfo}`;
+                  scoreText = `<div style="display:flex; flex-direction:column; align-items:center; gap:2px;"><div style="font-weight:bold; color:var(--primary); font-size:0.95rem;">${maxS}</div>${majuBadge}${durText}</div>`;
+                  titleAttr = `Nilai: ${maxS}${uInfo}${tInfo}${dInfo}`;
               }
             } else {
               if (upload) {
-                scoreText = '<span style="font-size:0.65rem; color:#d97706; background:#fffbeb; padding:2px 4px; border-radius:4px; border:1px solid #fef3c7;">Terkirim</span>';
-                titleAttr = `Tugas Terkirim${upload.waktu ? ' pada ' + upload.waktu : ''}${upload.nama_asli ? ' (' + upload.nama_asli + ')' : ''}`;
+                scoreText = `<div style="display:flex; flex-direction:column; align-items:center; gap:2px;"><span style="font-size:0.65rem; color:#d97706; background:#fffbeb; padding:2px 4px; border-radius:4px; border:1px solid #fef3c7; font-weight:600;">Terkirim</span>${majuBadge}</div>`;
+                titleAttr = `Tugas Terkirim${uMaju ? ' (Urutan Maju #' + uMaju + ')' : ''}${upload.waktu ? ' pada ' + upload.waktu : ''}${upload.nama_asli ? ' (' + upload.nama_asli + ')' : ''}`;
               } else {
                 scoreText = '<span style="color:#ef4444; opacity:0.2;">-</span>';
                 titleAttr = 'Belum ada pengerjaan';
@@ -3999,19 +4224,33 @@
         }
       }
 
-      const { aoaRekap, aoaLog } = buildRekapDataForClass(selKelas);
-      if (!aoaRekap || aoaRekap.length <= 4) {
+      const { aoaDetail, aoaMatriksNilai, aoaMatriksUrutan, aoaLog } = buildRekapDataForClass(selKelas);
+      if (!aoaDetail || aoaDetail.length <= 4) {
         return alert("Tidak ada data siswa untuk kelas " + selKelas);
       }
 
       let wb = XLSX.utils.book_new();
 
-      // Sheet 1: Rekap Nilai
-      let wsRekap = XLSX.utils.aoa_to_sheet(aoaRekap);
-      wsRekap['!cols'] = calculateColWidths(aoaRekap);
-      XLSX.utils.book_append_sheet(wb, wsRekap, "Rekap Nilai");
+      // Sheet 1: Urutan Maju & Nilai
+      let wsDetail = XLSX.utils.aoa_to_sheet(aoaDetail);
+      wsDetail['!cols'] = calculateColWidths(aoaDetail);
+      XLSX.utils.book_append_sheet(wb, wsDetail, "Urutan Maju & Nilai");
 
-      // Sheet 2: Detail Waktu & Log
+      // Sheet 2: Matriks Nilai
+      if (aoaMatriksNilai && aoaMatriksNilai.length > 4) {
+        let wsMatriks = XLSX.utils.aoa_to_sheet(aoaMatriksNilai);
+        wsMatriks['!cols'] = calculateColWidths(aoaMatriksNilai);
+        XLSX.utils.book_append_sheet(wb, wsMatriks, "Matriks Nilai");
+      }
+
+      // Sheet 3: Matriks Urutan & Durasi
+      if (aoaMatriksUrutan && aoaMatriksUrutan.length > 4) {
+        let wsUrutan = XLSX.utils.aoa_to_sheet(aoaMatriksUrutan);
+        wsUrutan['!cols'] = calculateColWidths(aoaMatriksUrutan);
+        XLSX.utils.book_append_sheet(wb, wsUrutan, "Matriks Urutan & Durasi");
+      }
+
+      // Sheet 4: Detail Waktu & Log
       if (aoaLog && aoaLog.length > 4) {
         let wsLog = XLSX.utils.aoa_to_sheet(aoaLog);
         wsLog['!cols'] = calculateColWidths(aoaLog);
@@ -4024,9 +4263,187 @@
       XLSX.writeFile(wb, `Rekap_Nilai_${safeKelas}_${tgl}.xlsx`);
     }
 
+    async function downloadRekapNilaiMateri() {
+      let selKelas = (document.getElementById('filterKelasNilai') ? document.getElementById('filterKelasNilai').value : "").trim();
+      let selMateri = (document.getElementById('filterMateriNilai') ? document.getElementById('filterMateriNilai').value : "").trim();
+
+      if (!selKelas) return alert("Pilih kelas terlebih dahulu!");
+      if (!selMateri) return alert("Pilih materi/kuis terlebih dahulu!");
+
+      if (typeof XLSX === 'undefined') {
+        if (typeof showOverlay === 'function') showOverlay("Memuat library Excel...", 2000);
+        const loaded = await ensureXlsxLoaded();
+        if (typeof hideOverlay === 'function') hideOverlay();
+        if (!loaded || typeof XLSX === 'undefined') {
+          return alert("Library Excel belum berhasil dimuat. Pastikan koneksi internet aktif lalu coba lagi.");
+        }
+      }
+
+      let mSelect = document.getElementById('filterMateriNilai');
+      let judulMateriStr = mSelect && mSelect.selectedIndex >= 0 ? mSelect.options[mSelect.selectedIndex].text : selMateri;
+
+      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      let students = getStudentsForClass(selKelas);
+      if (students.length === 0) return alert("Tidak ada data siswa untuk kelas " + selKelas);
+
+      let mJudulClean = norm(judulMateriStr);
+
+      let targetLogTugasMap = new Map();
+      (Array.isArray(dataLogTugas) ? dataLogTugas : []).forEach(t => {
+        let tUser = norm(getVal(t, ['username']));
+        let tMid = (getVal(t, ['id_materi', 'materi']) || "").toString().trim();
+        let tJudul = norm(getVal(t, ['materi', 'judul']));
+        if (tMid === selMateri || (mJudulClean !== "" && tJudul === mJudulClean)) {
+          if (tUser) targetLogTugasMap.set(tUser, t);
+        }
+      });
+
+      let targetNilaiList = (Array.isArray(dataNilai) ? dataNilai : []).filter(n => {
+        let nMid = (getVal(n, ['id_materi', 'idmateri', 'modul']) || "").toString().trim();
+        let nJudul = norm(getVal(n, ['judul', 'materi', 'judul_materi']));
+        return nMid === selMateri || (mJudulClean !== "" && nJudul === mJudulClean);
+      });
+
+      let mappedStudents = students.map(u => {
+        let username = (getVal(u, ['username', 'nisn']) || "").toString().trim();
+        let nama = getVal(u, ['nama', 'namalengkap', 'namasiswa']) || "-";
+        let uUserNorm = norm(username);
+        let uNamaRaw = nama.toString().trim().toLowerCase();
+        let uNamaNorm = norm(uNamaRaw);
+
+        let inputNilai = document.getElementById(`nilai_${username}`);
+        let inputDurasi = document.getElementById(`durasi_${username}`);
+
+        let userNilaiData = targetNilaiList.filter(n => {
+          let nUserRaw = (getVal(n, ['username', 'nisn']) || "").toString().trim().toLowerCase();
+          let nUserNorm = norm(nUserRaw);
+          let nNamaRaw = (getVal(n, ['nama', 'namasiswa', 'namalengkap']) || "").toString().trim().toLowerCase();
+          let nNamaNorm = norm(nNamaRaw);
+
+          return (nUserNorm !== "" && nUserNorm === uUserNorm) ||
+                 (nNamaNorm !== "" && (nNamaNorm === uNamaNorm || nNamaNorm === uNamaRaw)) ||
+                 (nUserRaw !== "" && (nUserRaw === uNamaRaw || nUserRaw === username.toLowerCase()));
+        });
+
+        let maxNilai = "";
+        let waktuSubmit = "-";
+        let durasiKuis = "-";
+        let rawDate = 0;
+
+        if (userNilaiData.length > 0) {
+          userNilaiData.sort((a, b) => {
+            let valA = parseFloat(getVal(a, ['nilai', 'skor'])) || 0;
+            let valB = parseFloat(getVal(b, ['nilai', 'skor'])) || 0;
+            return valB - valA;
+          });
+          let bestAttempt = userNilaiData[0];
+          maxNilai = parseFloat(getVal(bestAttempt, ['nilai', 'skor'])) || 0;
+          let rawW = getVal(bestAttempt, ['timestamp', 'waktu', 'waktusubmit', 'tanggal']);
+          waktuSubmit = rawW || "-";
+          rawDate = parseDateTimestamp(rawW);
+          durasiKuis = getVal(bestAttempt, ['waktu', 'durasi', 'waktuaktif']) || "-";
+        }
+
+        let upload = targetLogTugasMap.get(uUserNorm);
+        if (upload && (!rawDate || rawDate === 0)) {
+          let tW = getVal(upload, ['waktu', 'timestamp', 'tanggal']);
+          if (tW) {
+            rawDate = parseDateTimestamp(tW);
+            if (waktuSubmit === "-") waktuSubmit = tW;
+          }
+        }
+
+        let draftKey = `${selMateri}_${username}`;
+        let draftObj = (typeof draftNilai !== 'undefined' && draftNilai[draftKey]) ? draftNilai[draftKey] : {};
+
+        let currentNilai = inputNilai && inputNilai.value.trim() !== "" ? inputNilai.value.trim() : (draftObj.nilai !== undefined && draftObj.nilai !== "" ? draftObj.nilai : maxNilai);
+        let currentDurasi = inputDurasi && inputDurasi.value.trim() !== "" ? inputDurasi.value.trim() : (draftObj.durasi !== undefined && draftObj.durasi !== "" ? draftObj.durasi : durasiKuis);
+
+        let finalNilai = currentNilai !== "" ? currentNilai : (upload ? "Terkirim" : "-");
+        let status = currentNilai !== "" ? "Sudah Dinilai" : (upload ? "Terkirim (Belum Dinilai)" : "Belum Mengerjakan");
+
+        let keterangan = "-";
+        if (upload) {
+          keterangan = getVal(upload, ['nama_asli', 'link_tugas']) || "-";
+        }
+
+        return {
+          username,
+          nama,
+          nilai: finalNilai,
+          durasi: currentDurasi || "-",
+          waktuSubmit: waktuSubmit || "-",
+          rawDate: rawDate,
+          status,
+          keterangan
+        };
+      });
+
+      // Hitung urutan upload kronologis
+      let uploadTimes = [];
+      mappedStudents.forEach(item => {
+        if (item.rawDate && item.rawDate > 0) {
+          uploadTimes.push({ username: item.username, time: item.rawDate });
+        }
+      });
+      uploadTimes.sort((a, b) => a.time - b.time);
+      let orderMap = new Map();
+      uploadTimes.forEach((entry, idx) => {
+        orderMap.set(entry.username, idx + 1);
+      });
+
+      mappedStudents.forEach(item => {
+        item.urutan = orderMap.has(item.username) ? orderMap.get(item.username) : 999999;
+        item.urutanLabel = orderMap.has(item.username) ? orderMap.get(item.username) : '-';
+      });
+
+      // Urutkan siswa: yang punya urutan maju (1, 2, 3...) terlebih dahulu, lalu nama
+      mappedStudents.sort((a, b) => {
+        if (a.urutan !== b.urutan) return a.urutan - b.urutan;
+        return a.nama.localeCompare(b.nama);
+      });
+
+      const now = new Date();
+      const nowStr = formatWaktuIndo(now);
+
+      const aoa = [
+        [`REKAP NILAI & URUTAN MAJU - ${judulMateriStr.toUpperCase()}`],
+        [`Kelas: ${selKelas.toUpperCase()} | Waktu Unduh: ${nowStr}`],
+        [],
+        ['No', 'Urutan Maju', 'NISN', 'Nama Siswa', 'Kelas', 'Judul Materi', 'Nilai', 'Durasi Mengerjakan', 'Tanggal & Waktu Submit', 'Status', 'Keterangan']
+      ];
+
+      mappedStudents.forEach((st, idx) => {
+        aoa.push([
+          idx + 1,
+          st.urutanLabel,
+          st.username,
+          st.nama,
+          selKelas,
+          judulMateriStr,
+          st.nilai,
+          st.durasi,
+          st.waktuSubmit,
+          st.status,
+          st.keterangan
+        ]);
+      });
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols'] = calculateColWidths(aoa);
+      let cleanSheetName = judulMateriStr.replace(/[\\/?*:[\]]/g, '_').trim().substring(0, 28) || 'Rekap Nilai';
+      XLSX.utils.book_append_sheet(wb, ws, cleanSheetName);
+
+      const tgl = getTimestampFile(now);
+      const safeKls = selKelas.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const safeMat = judulMateriStr.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 20);
+      XLSX.writeFile(wb, `Rekap_Nilai_${safeKls}_${safeMat}_${tgl}.xlsx`);
+    }
+
     function buildRekapAoa(selKelas) {
       const data = buildRekapDataForClass(selKelas);
-      return data ? data.aoaRekap : null;
+      return data ? data.aoaMatriksNilai : null;
     }
 
     async function downloadSemuaKelas() {
@@ -4060,26 +4477,51 @@
       const { rekapNilaiMap, rekapLogTugasMap } = buildRekapIndexMaps();
 
       const wb = XLSX.utils.book_new();
-      let sheetCount = 0;
       let usedSheetNames = new Set();
       const now = new Date();
       const nowStr = formatWaktuIndo(now);
+
+      let masterDetailAoa = [
+        ["REKAP NILAI, URUTAN MAJU & WAKTU PENGERJAAN - SEMUA KELAS"],
+        [`Waktu Unduh: ${nowStr}`],
+        [],
+        ["No", "Kelas", "Urutan Maju", "NISN", "Nama Siswa", "Judul Materi", "Tipe", "Nilai", "Durasi Mengerjakan", "Tanggal & Waktu Submit", "Status Pengerjaan", "Keterangan"]
+      ];
 
       let masterLogAoa = [
         ["LOG DETAIL WAKTU PENGERJAAN - SEMUA KELAS"],
         [`Waktu Unduh: ${nowStr}`],
         [],
-        ["No", "Tanggal & Waktu Submit", "NISN", "Nama Siswa", "Kelas", "Judul Materi", "Tipe", "Nilai / Status", "Durasi", "Keterangan"]
+        ["No", "Urutan Maju", "Tanggal & Waktu Submit", "NISN", "Nama Siswa", "Kelas", "Judul Materi", "Tipe", "Nilai / Status", "Durasi", "Keterangan"]
       ];
 
+      let validClassSheets = [];
+
       kelasList.forEach(kelas => {
-        const { aoaRekap, rawLogs } = buildRekapDataForClass(kelas, rekapNilaiMap, rekapLogTugasMap);
-        if (!aoaRekap || aoaRekap.length <= 4) return;
+        const res = buildRekapDataForClass(kelas, rekapNilaiMap, rekapLogTugasMap);
+        if (!res || !res.aoaMatriksNilai || res.aoaMatriksNilai.length <= 4) return;
 
-        const ws = XLSX.utils.aoa_to_sheet(aoaRekap);
-        ws['!cols'] = calculateColWidths(aoaRekap);
+        // Collect all detailRows for Sheet 1
+        if (Array.isArray(res.detailRows)) {
+          res.detailRows.forEach(dr => {
+            masterDetailAoa.push([
+              masterDetailAoa.length - 3,
+              kelas,
+              dr.urutanLabel,
+              dr.nisn,
+              dr.nama,
+              dr.materi,
+              dr.tipe,
+              dr.nilai,
+              dr.durasi,
+              dr.waktu,
+              dr.status,
+              dr.keterangan
+            ]);
+          });
+        }
 
-        // Sanitize sheet name (max 31 chars, no special chars)
+        // Prepare per-class sheet
         let baseName = kelas.replace(/[\\/?*:[\]]/g, '_').trim().substring(0, 28) || 'Kelas';
         let sheetName = baseName;
         let counter = 1;
@@ -4089,13 +4531,16 @@
         }
         usedSheetNames.add(sheetName.toLowerCase());
 
-        XLSX.utils.book_append_sheet(wb, ws, sheetName);
-        sheetCount++;
+        validClassSheets.push({
+          name: sheetName,
+          aoa: res.aoaMatriksNilai
+        });
 
-        if (Array.isArray(rawLogs)) {
-          rawLogs.forEach(l => {
+        if (Array.isArray(res.rawLogs)) {
+          res.rawLogs.forEach(l => {
             masterLogAoa.push([
               masterLogAoa.length - 3,
+              l.urutan || '-',
               l.time || '-',
               l.username || '-',
               l.nama || '-',
@@ -4110,16 +4555,30 @@
         }
       });
 
-      if (sheetCount === 0) {
+      if (masterDetailAoa.length <= 4 && validClassSheets.length === 0) {
         if (typeof hideOverlay === 'function') hideOverlay();
         return alert('Tidak ada data rekap siswa yang bisa diekspor!');
       }
 
-      // Tambahkan sheet Log Waktu Semua Kelas di akhir
+      // Sheet 1: Master Urutan Maju & Nilai Semua Kelas
+      if (masterDetailAoa.length > 4) {
+        const wsMaster = XLSX.utils.aoa_to_sheet(masterDetailAoa);
+        wsMaster['!cols'] = calculateColWidths(masterDetailAoa);
+        XLSX.utils.book_append_sheet(wb, wsMaster, "Semua Kelas (Urutan Maju)");
+      }
+
+      // Sheet 2+: Lembar Matriks Nilai per Kelas
+      validClassSheets.forEach(item => {
+        const wsClass = XLSX.utils.aoa_to_sheet(item.aoa);
+        wsClass['!cols'] = calculateColWidths(item.aoa);
+        XLSX.utils.book_append_sheet(wb, wsClass, item.name);
+      });
+
+      // Sheet Terakhir: Log Waktu Semua Kelas
       if (masterLogAoa.length > 4) {
         const headerRows = masterLogAoa.slice(0, 4);
         const dataRows = masterLogAoa.slice(4);
-        dataRows.sort((a, b) => (b[1] || '').localeCompare(a[1] || ''));
+        dataRows.sort((a, b) => (b[2] || '').localeCompare(a[2] || ''));
         dataRows.forEach((r, idx) => { r[0] = idx + 1; });
         const finalMasterLogAoa = headerRows.concat(dataRows);
 
