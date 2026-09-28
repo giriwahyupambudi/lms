@@ -838,7 +838,6 @@
               <select class="form-control" id="filterKelasRekap" onchange="renderRekapAdmin()"></select>
             </div>
             <div id="rekapLegend" style="font-size: 0.8rem; color: var(--text-muted); display: flex; gap: 1rem; align-items: center; background: #f8fafc; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-left: auto; flex-wrap: wrap;">
-              <span style="display: inline-flex; align-items: center; gap: 4px;"><span style="font-size:0.68rem; color:#3730a3; background:#e0e7ff; border:1px solid #c7d2fe; border-radius:4px; padding:1px 5px; font-weight:700;">Maju #1</span> Urutan submit</span>
               <span style="display: inline-flex; align-items: center; gap: 4px;"><span style="font-size:0.65rem; color:#d97706; background:#fffbeb; padding:2px 4px; border-radius:4px; border:1px solid #fef3c7; font-weight:bold;">Terkirim</span> Sudah kirim & belum dinilai</span>
               <span style="display: inline-flex; align-items: center; gap: 4px;"><span style="font-weight:bold; color:#ef4444; background:#fef2f2; padding:2px 6px; border-radius:6px; border:1px solid #fee2e2; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px;">90 <i data-lucide="alert-triangle" style="width:12px; height:12px; color:#ef4444;"></i></span> Salah Input? (Nilai ada tapi tugas belum dikirim)</span>
             </div>
@@ -4169,8 +4168,6 @@
             let uMaju = urutanMap.get(`${midNorm}_${username}`) || urutanMap.get(`${mJudul}_${username}`) ||
                         urutanMap.get(`${midNorm}_${sNamaNorm}`) || urutanMap.get(`${mJudul}_${sNamaNorm}`);
 
-            let majuBadge = uMaju ? `<div style="font-size:0.68rem; color:#3730a3; background:#e0e7ff; border:1px solid #c7d2fe; border-radius:4px; padding:1px 4px; margin-top:2px; font-weight:700; display:inline-block;">Maju #${uMaju}</div>` : '';
-
             if (rec !== undefined) {
               const maxS = rec.score;
               totalScore += maxS;
@@ -4179,18 +4176,17 @@
               let tInfo = rec.time ? ` | Waktu: ${rec.time}` : '';
               let dInfo = rec.durasi ? ` (Durasi: ${rec.durasi})` : '';
               let uInfo = uMaju ? ` | Urutan Maju: #${uMaju}` : '';
-              let durText = (rec.durasi && rec.durasi !== '-') ? `<div style="font-size:0.65rem; color:var(--text-muted);">${rec.durasi}</div>` : '';
 
               if (isUploadType && !upload) {
-                  scoreText = `<div style="display:flex; flex-direction:column; align-items:center; gap:2px;"><span style="font-weight:bold; color:#ef4444; background:#fef2f2; padding:2px 6px; border-radius:6px; border:1px solid #fee2e2; display:inline-flex; align-items:center; gap:4px; font-size:0.8rem;">${maxS} <i data-lucide="alert-triangle" style="width:12px; height:12px; color:#ef4444;"></i></span>${majuBadge}${durText}</div>`;
+                  scoreText = `<span style="font-weight:bold; color:#ef4444; background:#fef2f2; padding:3px 6px; border-radius:6px; border:1px solid #fee2e2; display:inline-flex; align-items:center; gap:4px; font-size:0.8rem;">${maxS} <i data-lucide="alert-triangle" style="width:12px; height:12px; color:#ef4444;"></i></span>`;
                   titleAttr = `Nilai: ${maxS} (Salah Input? Siswa belum mengirim file tugas)${uInfo}${tInfo}${dInfo}`;
               } else {
-                  scoreText = `<div style="display:flex; flex-direction:column; align-items:center; gap:2px;"><div style="font-weight:bold; color:var(--primary); font-size:0.95rem;">${maxS}</div>${majuBadge}${durText}</div>`;
+                  scoreText = `<span style="font-weight:bold; color:var(--primary); font-size:0.95rem;">${maxS}</span>`;
                   titleAttr = `Nilai: ${maxS}${uInfo}${tInfo}${dInfo}`;
               }
             } else {
               if (upload) {
-                scoreText = `<div style="display:flex; flex-direction:column; align-items:center; gap:2px;"><span style="font-size:0.65rem; color:#d97706; background:#fffbeb; padding:2px 4px; border-radius:4px; border:1px solid #fef3c7; font-weight:600;">Terkirim</span>${majuBadge}</div>`;
+                scoreText = '<span style="font-size:0.65rem; color:#d97706; background:#fffbeb; padding:2px 4px; border-radius:4px; border:1px solid #fef3c7; font-weight:600;">Terkirim</span>';
                 titleAttr = `Tugas Terkirim${uMaju ? ' (Urutan Maju #' + uMaju + ')' : ''}${upload.waktu ? ' pada ' + upload.waktu : ''}${upload.nama_asli ? ' (' + upload.nama_asli + ')' : ''}`;
               } else {
                 scoreText = '<span style="color:#ef4444; opacity:0.2;">-</span>';
