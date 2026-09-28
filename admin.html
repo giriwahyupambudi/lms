@@ -6421,21 +6421,37 @@ TUGAS ANDA:
       }
     }
 
-    async function callGeminiAPI(apiKey, promptText, onWaitNotify = null) {
+    function arrayBufferToBase64(buffer) {
+      let binary = '';
+      let bytes = new Uint8Array(buffer);
+      let chunkSize = 8192;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+      }
+      return window.btoa(binary);
+    }
+
+    async function callGeminiAPI(apiKey, promptText, onWaitNotify = null, inlineData = null) {
       const models = [
+        'gemini-3.5-flash',
         'gemini-3.8-flash',
         'gemini-3.8-pro',
         'gemini-3.6-flash',
         'gemini-3.6-pro',
         'gemini-3.0-flash',
+        'gemini-flash-latest',
         'gemini-2.5-flash',
         'gemini-2.0-flash',
-        'gemini-flash-latest',
         'gemini-1.5-flash-latest',
         'gemini-flash-lite-latest'
       ];
 
       let lastErrText = "";
+
+      let parts = [{ text: promptText }];
+      if (inlineData && inlineData.data) {
+        parts.push({ inlineData: inlineData });
+      }
 
       for (let pass = 0; pass < 3; pass++) {
         for (let m of models) {
@@ -6444,7 +6460,7 @@ TUGAS ANDA:
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                contents: [{ parts: [{ text: promptText }] }]
+                contents: [{ parts: parts }]
               })
             });
 
@@ -6684,6 +6700,7 @@ TUGAS ANDA:
 
         try {
           let docxDetails = null;
+          let studentInlineData = null;
 
           if (fileUrl.includes("drive.google.com") || fileUrl.includes("docs.google.com") || fileUrl.toLowerCase().includes(".docx") || fileUrl.toLowerCase().includes(".pdf") || fileUrl.includes("google")) {
             let fileMatch = fileUrl.match(/[-\w]{25,}/);
@@ -6708,7 +6725,16 @@ TUGAS ANDA:
                   if (!docxDetails || !docxDetails.fullText) {
                     docxDetails = await parsePdfFormattingDetails(ab);
                   }
-                  if (docxDetails && docxDetails.fullText) break;
+
+                  // 3. Deteksi apakah ini berkas PDF (terutama Tugas Editor berbasis canvas gambar)
+                  let uint8 = new Uint8Array(ab.slice(0, 5));
+                  let isPdfHeader = uint8[0] === 0x25 && uint8[1] === 0x50 && uint8[2] === 0x44 && uint8[3] === 0x46; // %PDF
+                  if (isPdfHeader && ab.byteLength < 15 * 1024 * 1024) {
+                    let base64Pdf = arrayBufferToBase64(ab);
+                    studentInlineData = { mimeType: 'application/pdf', data: base64Pdf };
+                  }
+
+                  if ((docxDetails && docxDetails.fullText && docxDetails.fullText.length > 30) || studentInlineData) break;
                 }
               } catch(fe) {}
             }
@@ -6741,7 +6767,9 @@ DAFTAR HASIL PENGERJAAN & METADATA SISWA LAIN PADA MATERI INI (UNTUK PEMANDINGAN
 ${existingPeerTexts.slice(0, 10).join("\n")}
 ` : "";
 
-          let formatInfoText = docxDetails ? `
+          let formatInfoText = "";
+          if (docxDetails && docxDetails.fullText && docxDetails.fullText.length >= 30) {
+            formatInfoText = `
 - Detail & Manipulasi Gambar Terdeteksi:
   * Jumlah Gambar: ${docxDetails.imageCount > 0 ? docxDetails.imageCount + " gambar" : "0 gambar (TIDAK ADA GAMBAR)"}
   * Status Crop (Pemotongan Gambar di Word): ${docxDetails.isCropped ? "BERHASIL (Siswa melakukan Crop gambar)" : "TIDAK / Belum di-crop"}
@@ -6753,7 +6781,15 @@ ${existingPeerTexts.slice(0, 10).join("\n")}
 - Jenis Font: ${docxDetails.fonts.join(", ") || "Standar"}
 - Ukuran Font: ${docxDetails.fontSizes.join(", ") || "Standar"}
 - Teks Dokumen Siswa: ${docxDetails.fullText.substring(0, 2000)}
-` : `Catatan: File disimpan di Drive (${fileUrl}). Evaluasi kepatuhan berdasarkan instruksi Guru.`;
+`;
+          } else if (studentInlineData) {
+            formatInfoText = `
+- DOKUMEN HASIL PENGERJAAN SISWA TERLAMPIR LANGSUNG SEBAGAI ATTACHMENT PDF MULTIMODAL PADA PESAN INI.
+- BACA, IDENTIFIKASI, dan EVALUASI seluruh isi naskah jawaban serta teks yang diketik siswa (${namaSiswa}) langsung dari gambar/halaman PDF yang terlampir tersebut!
+`;
+          } else {
+            formatInfoText = `Catatan: File disimpan di Drive (${fileUrl}). Evaluasi kepatuhan berdasarkan instruksi Guru.`;
+          }
 
           let masterInfoText = masterDocxData ? `
 DOKUMEN MASTER GURU / KUNCI JAWABAN (ACUAN):
@@ -6798,7 +6834,7 @@ Jawab HANYA format JSON murni:
           let rawResp = await callGeminiAPI(apiKey, promptText, (msg) => {
             logEl.innerText += `${msg}\n`;
             logEl.scrollTop = logEl.scrollHeight;
-          });
+          }, studentInlineData);
           rawResp = rawResp.replace(/```json/gi, '').replace(/```/g, '').trim();
           
           let parsedEval = { nilai: 80, catatan: "Tugas telah dievaluasi AI.", catatan_guru: "Tidak ada indikasi plagiasi." };
