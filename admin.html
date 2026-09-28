@@ -6212,25 +6212,48 @@ TUGAS ANDA:
 
       let selKls = document.getElementById('modalKelasKoreksiAI');
       let klsSet = new Set();
-      dataUser.forEach(u => {
-        let k = getVal(u, ['kelas', 'tingkat']);
-        if (k && getVal(u, ['role', 'peran']) !== "admin") klsSet.add(k.toString().trim());
+      if (typeof MY_KELAS !== 'undefined' && Array.isArray(MY_KELAS)) {
+        MY_KELAS.forEach(k => { if (k) klsSet.add(k.toString().trim()); });
+      }
+      (Array.isArray(dataUser) ? dataUser : []).forEach(u => {
+        let k = getVal(u, ['kelas', 'tingkat', 'rombel']);
+        let r = (getVal(u, ['role', 'peran']) || "").toString().toLowerCase().trim();
+        if (k && r !== "admin" && r !== "guru") klsSet.add(k.toString().trim());
       });
       selKls.innerHTML = '<option value="">-- Semua Kelas --</option>';
       Array.from(klsSet).sort().forEach(k => {
         selKls.innerHTML += `<option value="${k}">${k}</option>`;
       });
 
+      // Sinkronkan pilihan kelas dengan filter kelas aktif di Input Nilai / Rekap
+      let curKls = (document.getElementById('filterKelasNilai') ? document.getElementById('filterKelasNilai').value : "") ||
+                   (document.getElementById('filterKelasRekap') ? document.getElementById('filterKelasRekap').value : "");
+      if (curKls && klsSet.has(curKls)) {
+        selKls.value = curKls;
+      }
+
       let selMat = document.getElementById('modalMateriKoreksiAI');
       let matSet = new Set();
-      dataLogTugas.forEach(t => {
-        let m = getVal(t, ['materi', 'tugas', 'judul']);
-        if (m) matSet.add(m.toString().trim());
+      (Array.isArray(dataMateri) ? dataMateri : []).forEach(m => {
+        let judul = (getVal(m, ['judul', 'materi']) || "").toString().trim();
+        let status = (getVal(m, ['status']) || "Aktif").toString().toLowerCase();
+        if (judul && status === "aktif") matSet.add(judul);
+      });
+      (Array.isArray(dataLogTugas) ? dataLogTugas : []).forEach(t => {
+        let m = (getVal(t, ['materi', 'tugas', 'judul']) || "").toString().trim();
+        if (m) matSet.add(m);
       });
       selMat.innerHTML = '<option value="">-- Semua Tugas --</option>';
       Array.from(matSet).sort().forEach(m => {
         selMat.innerHTML += `<option value="${m}">${m}</option>`;
       });
+
+      // Sinkronkan pilihan materi jika ada filter aktif di Input Nilai
+      let curMatSelect = document.getElementById('filterMateriNilai');
+      let curMatText = curMatSelect && curMatSelect.selectedIndex >= 0 ? curMatSelect.options[curMatSelect.selectedIndex].text.trim() : "";
+      if (curMatText && matSet.has(curMatText)) {
+        selMat.value = curMatText;
+      }
 
       switchAiTab('diskusi');
       onMateriAiSelectionChanged();
@@ -6480,53 +6503,123 @@ TUGAS ANDA:
       const chkOnlyUnscored = document.getElementById('chkOnlyUnscoredAi');
       const onlyUnscored = chkOnlyUnscored ? chkOnlyUnscored.checked : false;
 
-      let allMatchingTugas = dataLogTugas.filter(t => {
-        let k = norm(getVal(t, ['kelas']));
-        let tMat = norm(getVal(t, ['materi', 'tugas', 'judul']));
-        let tMid = norm(getVal(t, ['idmateri', 'id_materi']));
-        let selMatNorm = norm(selMateri);
+      // 1. Ambil daftar siswa untuk selKelas dari dataUser agar sinkron 100% dengan Rekap Nilai
+      let studentUsernames = null;
+      let studentNames = null;
+      if (selKelas) {
+        let studentsInClass = getStudentsForClass(selKelas);
+        studentUsernames = new Set(studentsInClass.map(s => norm(getVal(s, ['username', 'nisn']))));
+        studentNames = new Set(studentsInClass.map(s => norm(getVal(s, ['nama', 'namalengkap', 'namasiswa']))));
+      }
 
-        let matchK = !selKelas || k === norm(selKelas);
-        let matchM = !selMateri || tMat === selMatNorm || tMid === selMatNorm;
-        return matchK && matchM;
+      // 2. Ambil objek materi target dari dataMateri jika selMateri dipilih
+      let selMNorm = norm(selMateri);
+      let targetMateriObj = null;
+      if (selMNorm) {
+        targetMateriObj = (Array.isArray(dataMateri) ? dataMateri : []).find(m => {
+          let mid = norm(getVal(m, ['idmateri', 'id_materi', 'materiid']));
+          let mJudul = norm(getVal(m, ['judul', 'materi']));
+          return (mid && mid === selMNorm) || (mJudul && mJudul === selMNorm);
+        });
+      }
+
+      // 3. Pre-index rekapNilaiMap untuk verifikasi nilai secara akurat & identik dengan Rekap Nilai
+      const { rekapNilaiMap } = buildRekapIndexMaps();
+
+      // 4. Kumpulkan seluruh tugas yang cocok dengan filter Kelas dan Materi
+      let allMatchingTugas = (Array.isArray(dataLogTugas) ? dataLogTugas : []).filter(t => {
+        let tUser = norm(getVal(t, ['username', 'nisn']));
+        let tNama = norm(getVal(t, ['nama', 'namalengkap', 'namasiswa']));
+        let tKelas = norm(getVal(t, ['kelas', 'tingkat', 'rombel']));
+
+        // Filter Kelas: Cocok jika selKelas kosong, atau t.kelas cocok, atau siswa terdaftar di selKelas pada dataUser
+        let matchK = true;
+        if (selKelas) {
+          let selKNorm = norm(selKelas);
+          matchK = (tKelas === selKNorm) ||
+                   (studentUsernames && tUser && studentUsernames.has(tUser)) ||
+                   (studentNames && tNama && studentNames.has(tNama));
+        }
+        if (!matchK) return false;
+
+        // Filter Materi: Cocok jika selMateri kosong, atau cocok dengan id_materi / judul di logTugas / dataMateri
+        let matchM = true;
+        if (selMateri) {
+          let tMid = norm(getVal(t, ['id_materi', 'idmateri', 'materi']));
+          let tJudul = norm(getVal(t, ['materi', 'judul', 'tugas']));
+
+          let pMid = targetMateriObj ? norm(getVal(targetMateriObj, ['idmateri', 'id_materi', 'materiid'])) : '';
+          let pJudul = targetMateriObj ? norm(getVal(targetMateriObj, ['judul', 'materi'])) : '';
+
+          matchM = (tMid && tMid === selMNorm) || (tJudul && tJudul === selMNorm) ||
+                   (pMid && (tMid === pMid || tJudul === pMid)) ||
+                   (pJudul && (tJudul === pJudul || tMid === pJudul));
+        }
+        return matchM;
       });
 
+      if (allMatchingTugas.length === 0) {
+        progressText.innerHTML = `⚠️ <b>Tidak ada file tugas siswa yang cocok dengan filter.</b><br><small style="color:#64748b;">Filter aktif: Kelas: <b>${selKelas || 'Semua'}</b>, Materi: <b>${selMateri || 'Semua'}</b>. Pastikan siswa telah mengunggah tugas pada materi ini.</small>`;
+        logEl.innerText = `Total log tugas di database: ${dataLogTugas.length}. Tidak ada yang cocok dengan Kelas="${selKelas || 'Semua'}" & Materi="${selMateri || 'Semua'}".\n`;
+        btn.disabled = false;
+        return;
+      }
+
+      // 5. Filter siswa yang belum memiliki nilai jika proteksi siswa menyusul dicentang
       let listTugas = allMatchingTugas;
       let skippedAlreadyScoredCount = 0;
 
       if (onlyUnscored) {
         listTugas = allMatchingTugas.filter(t => {
-          let usernameSiswa = getVal(t, ['username', 'nisn']) || "";
-          let rawMateriTugas = getVal(t, ['materi', 'tugas', 'idmateri', 'id_materi']) || selMateri || "Tugas Word";
-          let parentMat = dataMateri.find(pm => {
-            let mJudul = getVal(pm, ['judul', 'materi']);
-            let mId = getVal(pm, ['idmateri', 'id_materi', 'materiid']);
-            return norm(mJudul) === norm(rawMateriTugas) || norm(mId) === norm(rawMateriTugas) || norm(mJudul) === norm(selMateri) || norm(mId) === norm(selMateri);
-          });
-          let idMateriVal = parentMat ? (getVal(parentMat, ['idmateri', 'id_materi']) || rawMateriTugas) : rawMateriTugas;
-          let judulMateriVal = parentMat ? (getVal(parentMat, ['judul', 'materi']) || rawMateriTugas) : rawMateriTugas;
+          let u = norm(getVal(t, ['username', 'nisn']));
+          let namaNorm = norm(getVal(t, ['nama', 'namalengkap', 'namasiswa']));
+          let tMid = norm(getVal(t, ['id_materi', 'idmateri', 'materi']));
+          let tJudul = norm(getVal(t, ['materi', 'judul', 'tugas']));
 
-          let hasNilai = dataNilai.some(n => {
-            let nUser = norm(getVal(n, ['username', 'nisn']));
-            let nMid = (getVal(n, ['id_materi', 'idmateri']) || '').toString().trim();
-            let nJudul = norm(getVal(n, ['judul', 'materi']));
-            let scoreVal = getVal(n, ['nilai', 'skor']);
-            
-            let matchUser = nUser === norm(usernameSiswa);
-            let matchMat = (norm(nMid) === norm(idMateriVal) || (judulMateriVal !== '' && nJudul === norm(judulMateriVal)));
-            if (!matchUser || !matchMat) return false;
+          // Cari parent materi di dataMateri
+          let parentMat = (Array.isArray(dataMateri) ? dataMateri : []).find(m => {
+            let mid = norm(getVal(m, ['idmateri', 'id_materi', 'materiid']));
+            let mJudul = norm(getVal(m, ['judul', 'materi']));
+            if (mid && (mid === tMid || mid === tJudul)) return true;
+            if (mJudul && (mJudul === tJudul || mJudul === tMid)) return true;
+            return false;
+          }) || targetMateriObj;
 
-            if (scoreVal === "" || scoreVal === null || scoreVal === undefined || scoreVal === "-" || scoreVal === "Selesai" || scoreVal === "Belum") return false;
-            let num = Number(scoreVal);
-            return !isNaN(num) && num > 0;
+          let pMid = parentMat ? norm(getVal(parentMat, ['idmateri', 'id_materi', 'materiid'])) : '';
+          let pJudul = parentMat ? norm(getVal(parentMat, ['judul', 'materi'])) : '';
+
+          // Kunci pencarian persis seperti di Rekap Nilai
+          let keysToCheck = [];
+          let userKeys = [u, namaNorm].filter(Boolean);
+          let matKeys = [tMid, tJudul, pMid, pJudul].filter(Boolean);
+
+          userKeys.forEach(uk => {
+            matKeys.forEach(mk => {
+              keysToCheck.push(`${uk}_${mk}`);
+            });
           });
-          if (hasNilai) skippedAlreadyScoredCount++;
-          return !hasNilai;
+
+          let hasNilai = false;
+          for (let k of keysToCheck) {
+            if (rekapNilaiMap.has(k)) {
+              let rec = rekapNilaiMap.get(k);
+              if (rec && rec.score !== undefined && rec.score !== null && !isNaN(rec.score) && rec.score > 0) {
+                hasNilai = true;
+                break;
+              }
+            }
+          }
+
+          if (hasNilai) {
+            skippedAlreadyScoredCount++;
+            return false; // Lewati siswa yang sudah memiliki nilai
+          }
+          return true; // Siswa berstatus 'Terkirim' (belum dinilai) -> masukkan ke antrean koreksi
         });
       }
 
       if (listTugas.length === 0) {
-        progressText.innerText = onlyUnscored ? `Seluruh ${allMatchingTugas.length} siswa sudah memiliki nilai di database. (Hilangkan centang pengaman di atas jika ingin mengoreksi ulang seluruh siswa).` : "Tidak ada file pengumpulan tugas yang sesuai filter.";
+        progressText.innerHTML = `ℹ️ <b>Seluruh ${allMatchingTugas.length} siswa yang mengumpulkan tugas sudah memiliki nilai di database.</b><br><small style="color:#64748b;">Jika Anda ingin mengoreksi ulang seluruh siswa, <b>hilangkan centang</b> pada opsi <i>"Hanya koreksi siswa yang BELUM memiliki nilai"</i> di atas lalu klik tombol ini lagi.</small>`;
         btn.disabled = false;
         return;
       }
@@ -6535,9 +6628,8 @@ TUGAS ANDA:
       listTugas.sort((a, b) => {
         let tA = getVal(a, ['waktu', 'timestamp', 'tanggal']);
         let tB = getVal(b, ['waktu', 'timestamp', 'tanggal']);
-        let timeA = 0, timeB = 0;
-        try { if (tA) timeA = new Date(tA).getTime() || 0; } catch(e) {}
-        try { if (tB) timeB = new Date(tB).getTime() || 0; } catch(e) {}
+        let timeA = parseDateTimestamp(tA);
+        let timeB = parseDateTimestamp(tB);
         return timeA - timeB;
       });
 
@@ -6546,28 +6638,41 @@ TUGAS ANDA:
 
       let successCount = 0;
       let payloads = [];
-      let nowStr = new Date().toLocaleString('id-ID');
 
       for (let i = 0; i < listTugas.length; i++) {
         let t = listTugas[i];
-        let namaSiswa = getVal(t, ['nama', 'namalengkap', 'username']) || "Siswa";
+        let namaSiswa = getVal(t, ['nama', 'namalengkap', 'namasiswa']) || "Siswa";
         let fileUrl = getVal(t, ['link_tugas', 'linktugas', 'file', 'fileurl', 'url', 'link', 'drive', 'tugas']) || "";
-        let rawMateriTugas = getVal(t, ['materi', 'tugas', 'idmateri', 'id_materi']) || selMateri || "Tugas Word";
-        let kelasSiswa = getVal(t, ['kelas']) || selKelas || "X";
         let usernameSiswa = getVal(t, ['username', 'nisn']) || "";
+        let tKelas = getVal(t, ['kelas', 'tingkat', 'rombel']);
+        
+        // Cari kelas siswa dari dataUser jika di logTugas kosong
+        let kelasSiswa = tKelas && tKelas !== "-" ? tKelas : selKelas;
+        if (!kelasSiswa || kelasSiswa === "-") {
+          let userObj = (Array.isArray(dataUser) ? dataUser : []).find(u => norm(getVal(u, ['username', 'nisn'])) === norm(usernameSiswa));
+          if (userObj) kelasSiswa = getVal(userObj, ['kelas', 'tingkat', 'rombel']) || "X";
+        }
+        if (!kelasSiswa || kelasSiswa === "-") kelasSiswa = "X";
+
+        let tMid = getVal(t, ['id_materi', 'idmateri', 'materi']);
+        let tJudul = getVal(t, ['materi', 'judul', 'tugas']);
+
+        let parentMat = (Array.isArray(dataMateri) ? dataMateri : []).find(m => {
+          let mid = norm(getVal(m, ['idmateri', 'id_materi', 'materiid']));
+          let mJudul = norm(getVal(m, ['judul', 'materi']));
+          if (mid && (mid === norm(tMid) || mid === norm(tJudul) || (selMNorm && mid === selMNorm))) return true;
+          if (mJudul && (mJudul === norm(tJudul) || mJudul === norm(tMid) || (selMNorm && mJudul === selMNorm))) return true;
+          return false;
+        }) || targetMateriObj;
+
+        let idMateriVal = parentMat ? (getVal(parentMat, ['idmateri', 'id_materi', 'materiid']) || tMid || selMateri) : (tMid || selMateri || "1");
+        let judulMateriVal = parentMat ? (getVal(parentMat, ['judul', 'materi']) || tJudul || selMateri) : (tJudul || selMateri || "Tugas");
+
+        let isoTimestamp = new Date().toISOString();
+        let tWaktuSubmit = getVal(t, ['waktu', 'timestamp', 'tanggal']) || isoTimestamp;
+        let tDurasi = getVal(t, ['durasi', 'waktuaktif']) || "-";
 
         logEl.innerText += `[${i+1}/${listTugas.length}] (Urutan Upload #${i+1}) Memproses ${namaSiswa}... `;
-        logEl.scrollTop = logEl.scrollHeight;
-
-        let parentMat = dataMateri.find(m => {
-          let mJudul = getVal(m, ['judul', 'materi']);
-          let mId = getVal(m, ['idmateri', 'id_materi', 'materiid']);
-          return norm(mJudul) === norm(rawMateriTugas) || norm(mId) === norm(rawMateriTugas) || norm(mJudul) === norm(selMateri) || norm(mId) === norm(selMateri);
-        });
-
-        let idMateriVal = parentMat ? (getVal(parentMat, ['idmateri', 'id_materi']) || rawMateriTugas) : rawMateriTugas;
-        let judulMateriVal = parentMat ? (getVal(parentMat, ['judul', 'materi']) || rawMateriTugas) : rawMateriTugas;
-        let isoTimestamp = new Date().toISOString();
         logEl.scrollTop = logEl.scrollHeight;
 
         if (!fileUrl) {
@@ -6608,13 +6713,12 @@ TUGAS ANDA:
           let existingPeerTexts = [];
           dataLogTugas.forEach(peerTask => {
             let peerUser = getVal(peerTask, ['username', 'nisn']);
-            let peerName = getVal(peerTask, ['nama', 'namalengkap']) || peerUser;
+            let peerName = getVal(peerTask, ['nama', 'namalengkap', 'namasiswa']) || peerUser;
             let peerKelas = getVal(peerTask, ['kelas']) || "";
             let peerMat = norm(getVal(peerTask, ['materi', 'tugas', 'judul']));
             let peerMid = norm(getVal(peerTask, ['idmateri', 'id_materi']));
-            let selMatNorm = norm(selMateri);
 
-            let isSameMateri = !selMateri || peerMat === selMatNorm || peerMid === selMatNorm || peerMat === norm(idMateriVal) || peerMid === norm(idMateriVal);
+            let isSameMateri = !selMateri || peerMat === selMNorm || peerMid === selMNorm || peerMat === norm(idMateriVal) || peerMid === norm(idMateriVal);
 
             if (norm(peerUser) !== norm(usernameSiswa) && isSameMateri && peerTask._parsedText) {
               let pDet = peerTask._docxDetails;
@@ -6652,8 +6756,6 @@ DOKUMEN MASTER GURU / KUNCI JAWABAN (ACUAN):
   * Italic: ${masterDocxData.italicPhrases.length ? masterDocxData.italicPhrases.join(", ") : "(Tidak ada)"}
   * Underline: ${masterDocxData.underlinePhrases.length ? masterDocxData.underlinePhrases.join(", ") : "(Tidak ada)"}
 ` : "";
-
-          let firstName = (namaSiswa || "").split(" ")[0] || namaSiswa || "Siswa";
 
           let promptText = `Anda bertindak sebagai Guru penilai tugas yang objektif, lugas, dan tegas untuk siswa (${namaSiswa}).
 Tugas Anda adalah menilai dan menyebutkan fakta kesalahan nyata hasil pengerjaan siswa berdasarkan PROMPT & ATURAN GURU berikut.
@@ -6701,9 +6803,9 @@ Jawab HANYA format JSON murni:
 
           let existingNilaiRow = dataNilai.find(n => {
             let nUser = norm(getVal(n, ['username', 'nisn']));
-            let nMid = (getVal(n, ['id_materi', 'idmateri']) || '').toString().trim();
+            let nMid = (getVal(n, ['id_materi', 'idmateri', 'modul']) || '').toString().trim();
             let nJudul = norm(getVal(n, ['judul', 'materi']));
-            return nUser === norm(usernameSiswa) && (norm(nMid) === norm(idMateriVal) || nJudul === norm(judulMateriVal));
+            return nUser === norm(usernameSiswa) && (norm(nMid) === norm(idMateriVal) || (judulMateriVal !== '' && nJudul === norm(judulMateriVal)));
           });
 
           let payloadItem = {
@@ -6711,11 +6813,14 @@ Jawab HANYA format JSON murni:
             sheet: "listNilai",
             data: JSON.stringify({
               timestamp: isoTimestamp,
-              waktu: (i + 1).toString(),
+              waktu: tWaktuSubmit,
+              durasi: tDurasi,
               username: usernameSiswa,
               nama: namaSiswa,
               kelas: kelasSiswa,
               "ID Materi": idMateriVal,
+              id_materi: idMateriVal,
+              judul: judulMateriVal,
               tipe: "Praktik",
               nilai: finalScore,
               keterangan: finalNote,
@@ -6728,6 +6833,37 @@ Jawab HANYA format JSON murni:
           }
 
           payloads.push(payloadItem);
+
+          // Update dataNilai di memory lokal secara instan agar UI langsung sinkron
+          let existingIdx = dataNilai.findIndex(n => {
+            let nUser = norm(getVal(n, ['username', 'nisn']));
+            let nMid = norm(getVal(n, ['id_materi', 'idmateri', 'modul']));
+            let nJudul = norm(getVal(n, ['judul', 'materi']));
+            return nUser === norm(usernameSiswa) && (nMid === norm(idMateriVal) || nJudul === norm(judulMateriVal));
+          });
+
+          let newScoreRecord = {
+            timestamp: isoTimestamp,
+            waktu: tWaktuSubmit,
+            durasi: tDurasi,
+            username: usernameSiswa,
+            nama: namaSiswa,
+            kelas: kelasSiswa,
+            id_materi: idMateriVal,
+            "ID Materi": idMateriVal,
+            judul: judulMateriVal,
+            tipe: "Praktik",
+            nilai: finalScore,
+            skor: finalScore,
+            keterangan: finalNote,
+            catatan_guru: teacherNote
+          };
+
+          if (existingIdx !== -1) {
+            dataNilai[existingIdx] = { ...dataNilai[existingIdx], ...newScoreRecord };
+          } else {
+            dataNilai.push(newScoreRecord);
+          }
 
           successCount++;
           logEl.innerText += `✅ Nilai: ${finalScore} (${finalNote})\n`;
@@ -6754,6 +6890,11 @@ Jawab HANYA format JSON murni:
             headers: { 'Content-Type': 'text/plain;charset=utf-8' }
           });
           progressText.innerText = `Selesai! Berhasil mengoreksi ${successCount} tugas dengan AI.`;
+
+          // Re-render tampilan tabel Rekap Nilai dan Input Nilai agar nilai baru langsung muncul
+          if (typeof renderRekapAdmin === 'function') renderRekapAdmin();
+          if (typeof renderTableNilai === 'function') renderTableNilai();
+
           setTimeout(() => {
             loadAllData();
           }, 1000);
