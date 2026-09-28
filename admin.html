@@ -5914,6 +5914,12 @@
 
         return {
           fullText: fullText.trim(),
+          imageCount: 0,
+          mediaImageCount: 0,
+          isCropped: false,
+          isRotated: false,
+          imageRotationDeg: 0,
+          imageDimensions: [],
           boldPhrases: boldPhrases.slice(0, 50),
           italicPhrases: italicPhrases.slice(0, 50),
           underlinePhrases: [],
@@ -6679,11 +6685,13 @@ TUGAS ANDA:
         try {
           let docxDetails = null;
 
-          if (fileUrl.includes("drive.google.com") || fileUrl.includes("docs.google.com") || fileUrl.toLowerCase().includes(".docx") || fileUrl.includes("google")) {
+          if (fileUrl.includes("drive.google.com") || fileUrl.includes("docs.google.com") || fileUrl.toLowerCase().includes(".docx") || fileUrl.toLowerCase().includes(".pdf") || fileUrl.includes("google")) {
             let fileMatch = fileUrl.match(/[-\w]{25,}/);
             let downloadUrls = [];
             if (fileMatch) {
               let fId = fileMatch[0];
+              // Prioritaskan drive.usercontent.google.com (mendukung CORS wildcard * untuk PDF dan DOCX)
+              downloadUrls.push(`https://drive.usercontent.google.com/download?id=${fId}&export=download`);
               downloadUrls.push(`https://docs.google.com/document/d/${fId}/export?format=docx`);
               downloadUrls.push(`https://drive.google.com/uc?export=download&id=${fId}`);
             }
@@ -6694,7 +6702,12 @@ TUGAS ANDA:
                 let fRes = await fetch(dUrl);
                 if (fRes.ok) {
                   let ab = await fRes.arrayBuffer();
+                  // 1. Coba parse sebagai DOCX
                   docxDetails = await parseDocxFormattingDetails(ab);
+                  // 2. Jika gagal atau bukan docx (misal Tugas Editor PDF), parse sebagai PDF!
+                  if (!docxDetails || !docxDetails.fullText) {
+                    docxDetails = await parsePdfFormattingDetails(ab);
+                  }
                   if (docxDetails && docxDetails.fullText) break;
                 }
               } catch(fe) {}
