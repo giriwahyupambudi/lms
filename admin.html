@@ -1136,10 +1136,20 @@
          Object.defineProperty(obj, '_norm', { value: {}, enumerable: false });
          for (const key in obj) {
             if (key === '_norm' || key === 'rowNumber') continue;
-            obj._norm[key.toLowerCase().replace(/[^a-z0-9]/g, '')] = obj[key];
+            const cleanKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const val = obj[key];
+            const valStr = (val !== undefined && val !== null) ? val.toString().trim() : "";
+            // Jangan menimpa nilai yang sudah terisi dengan nilai kosong/blank
+            if (valStr !== "" || obj._norm[cleanKey] === undefined) {
+               obj._norm[cleanKey] = val;
+            }
          }
       }
       for (const p of possibleKeys) {
+        if (obj[p] !== undefined && obj[p] !== null) {
+          let str = obj[p].toString().trim();
+          if (str !== "") return obj[p];
+        }
         const pNorm = p.toLowerCase().replace(/[^a-z0-9]/g, '');
         if (obj._norm[pNorm] !== undefined && obj._norm[pNorm] !== null) {
           let str = obj._norm[pNorm].toString().trim();
