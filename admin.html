@@ -6167,7 +6167,7 @@
       <button class="icon-btn" onclick="closeModalKoreksiAI()"><i data-lucide="x"></i></button>
     </div>
 
-    <!-- Pilihan Kelas, Materi, & Upload File Master di Atas Modal -->
+    <!-- Pilihan Kelas, Materi, & Mode Koreksi di Atas Modal -->
     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:16px;">
       <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <div style="flex:1; min-width:140px;">
@@ -6180,14 +6180,48 @@
         </div>
       </div>
 
-      <!-- Upload File Master Guru (Selalu Terlihat) -->
-      <div style="margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1;">
+      <!-- Mode Koreksi AI (2 Mode) -->
+      <div style="margin-top:14px; padding-top:12px; border-top:1px solid #e2e8f0;">
+        <label style="font-weight:700; font-size:0.85rem; color:#1e293b; display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+          <i data-lucide="sliders" style="color:var(--primary); width:16px; height:16px;"></i> Pilih Mode Koreksi AI:
+        </label>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:10px;">
+          <label id="lblModeAiSoal" style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-radius:10px; border:2px solid var(--primary); background:#eff6ff; cursor:pointer; transition:all 0.2s;">
+            <input type="radio" name="koreksiAiMode" id="modeAiSoal" value="soal" checked onchange="onKoreksiAiModeChanged()" style="margin-top:3px; accent-color:var(--primary);">
+            <div>
+              <div style="font-weight:700; font-size:0.85rem; color:#1e40af;">Mode 1: Jawaban Soal / Uraian Teori</div>
+              <div style="font-size:0.75rem; color:#3b82f6; margin-top:2px;">Fokus: Konsep ilmiah, kelengkapan runtutan nalar & logika jawaban. Mengabaikan format Word/font size/italic.</div>
+            </div>
+          </label>
+          <label id="lblModeAiPraktik" style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-radius:10px; border:1px solid #cbd5e1; background:#fff; cursor:pointer; transition:all 0.2s;">
+            <input type="radio" name="koreksiAiMode" id="modeAiPraktik" value="praktik" onchange="onKoreksiAiModeChanged()" style="margin-top:3px; accent-color:var(--primary);">
+            <div>
+              <div style="font-weight:700; font-size:0.85rem; color:#334155;">Mode 2: Praktik Pengetikan Dokumen</div>
+              <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">Fokus: Margin (cm), spasi baris (line spacing), kertas, perataan, letak gambar & file master.</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Container Soal Guru (Untuk Mode 1) -->
+      <div id="containerSoalGuru" style="margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1;">
         <label style="font-weight:600; font-size:0.85rem; color:var(--primary); display:flex; align-items:center; gap:6px;">
-          <i data-lucide="file-check"></i> Upload File Master / Kunci Jawaban (.docx / .pdf Guru) - Opsional
+          <i data-lucide="help-circle" style="width:16px; height:16px;"></i> Naskah Soal / Pertanyaan yang Diberikan Guru (Wajib untuk Mode 1)
+        </label>
+        <textarea id="soalTugasAI" class="form-control" rows="3" style="margin-top:6px; font-size:0.84rem; line-height:1.4; background:#fff;" placeholder="Tuliskan atau tempelkan naskah pertanyaan / soal esai yang harus dijawab siswa di sini..."></textarea>
+        <small style="color:var(--text-muted); font-size:0.78rem; display:block; margin-top:4px;">
+          AI akan menguji kebenaran isi jawaban siswa secara objektif terhadap pertanyaan di atas, tanpa mempermasalahkan format font atau ketikan.
+        </small>
+      </div>
+
+      <!-- Upload File Master Guru (Untuk Mode 2) -->
+      <div id="containerMasterFileGuru" style="margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1; display:none;">
+        <label style="font-weight:600; font-size:0.85rem; color:var(--primary); display:flex; align-items:center; gap:6px;">
+          <i data-lucide="file-check" style="width:16px; height:16px;"></i> Upload File Master / Kunci Dokumen (.docx / .pdf Guru)
         </label>
         <input type="file" id="masterDocxFileInput" class="form-control" accept=".docx,.pdf" onchange="onMasterFileSelected(this)" style="margin-top:6px; background:#fff;">
         <small id="masterFileStatusText" style="color:var(--text-muted); font-size:0.78rem; display:block; margin-top:4px; font-weight:500;">
-          Jika diunggah, AI akan membandingkan pengetikan siswa 1-ke-1 dengan dokumen contoh (.docx / .pdf) milik Guru ini.
+          AI akan membandingkan pengetikan siswa (margin, spasi, font, letak gambar) 1-ke-1 dengan dokumen acuan Guru ini.
         </small>
       </div>
 
@@ -6315,7 +6349,12 @@
           underlinePhrases: [],
           fonts: ["PDF Export Font"],
           fontSizes: ["PDF Font Size"],
-          alignments: ["Standard"]
+          alignments: ["Standard"],
+          lineSpacings: ["Standar PDF"],
+          pageMargins: "Standar PDF (Terekspor dari dokumen asli)",
+          paperSize: "PDF Standar",
+          firstLineIndents: [],
+          imagePlacement: "Standar PDF"
         };
       } catch (e) {
         console.error("Parsing PDF Error:", e);
@@ -6407,6 +6446,81 @@
       lucide.createIcons();
     }
 
+    function getKoreksiAiMode() {
+      const r = document.querySelector('input[name="koreksiAiMode"]:checked');
+      return r ? r.value : 'soal';
+    }
+
+    function setKoreksiAiMode(mode) {
+      const rSoal = document.getElementById('modeAiSoal');
+      const rPraktik = document.getElementById('modeAiPraktik');
+      if (mode === 'praktik') {
+        if (rPraktik) rPraktik.checked = true;
+      } else {
+        if (rSoal) rSoal.checked = true;
+      }
+      onKoreksiAiModeChanged(false);
+    }
+
+    function onKoreksiAiModeChanged(autoUpdatePrompt = true) {
+      const mode = getKoreksiAiMode();
+      const lblSoal = document.getElementById('lblModeAiSoal');
+      const lblPraktik = document.getElementById('lblModeAiPraktik');
+      const cntSoal = document.getElementById('containerSoalGuru');
+      const cntMaster = document.getElementById('containerMasterFileGuru');
+      const promptTa = document.getElementById('instruksiTugasAI');
+
+      const defaultSoalPrompt = `1. Ketepatan konsep, prinsip, dan validitas argumen yang digunakan siswa dalam menjawab soal (mengingat tidak ada kunci jawaban mutlak, penilaian didasarkan pada kebenaran ilmiah/akademis jawaban).
+2. Kelengkapan langkah pengerjaan, runtutan proses penalaran, dan logika pemecahan masalah (khususnya untuk soal uraian/esai).
+3. Kejelasan, struktur, dan kerapian penyampaian jawaban agar mudah dipahami.
+(PENTING: JANGAN menilai atau mempermasalahkan format pengetikan Word seperti font size, italic, atau bold. Fokus pada esensi jawaban).`;
+
+      const defaultPraktikPrompt = `1. Evaluasi kepatuhan tata letak dokumen (Margin halaman, Spasi Baris/Line Spacing, Ukuran Kertas, dan Perataan Teks Justify/Left).
+2. Periksa keberadaan, tata letak (In-Line/Wrap Text), rotasi, dan pemotongan (crop) gambar sesuai File Master / instruksi.
+3. Kepatuhan format pengetikan: ketepatan jenis font, ukuran huruf, cetak tebal (Bold), cetak miring (Italic), dan garis bawah (Underline).
+4. Kelengkapan dan kesesuaian naskah dokumen yang diketik terhadap File Master Guru.`;
+
+      if (mode === 'praktik') {
+        if (lblPraktik) {
+          lblPraktik.style.border = "2px solid var(--primary)";
+          lblPraktik.style.background = "#eff6ff";
+        }
+        if (lblSoal) {
+          lblSoal.style.border = "1px solid #cbd5e1";
+          lblSoal.style.background = "#fff";
+        }
+        if (cntSoal) cntSoal.style.display = 'none';
+        if (cntMaster) cntMaster.style.display = 'block';
+
+        if (autoUpdatePrompt && promptTa) {
+          let cur = promptTa.value.trim();
+          if (!cur || cur.includes("Ketepatan konsep") || cur.includes("Evaluasi pekerjaan pengetikan")) {
+            promptTa.value = defaultPraktikPrompt;
+          }
+        }
+      } else {
+        // Mode Soal
+        if (lblSoal) {
+          lblSoal.style.border = "2px solid var(--primary)";
+          lblSoal.style.background = "#eff6ff";
+        }
+        if (lblPraktik) {
+          lblPraktik.style.border = "1px solid #cbd5e1";
+          lblPraktik.style.background = "#fff";
+        }
+        if (cntSoal) cntSoal.style.display = 'block';
+        if (cntMaster) cntMaster.style.display = 'none';
+
+        if (autoUpdatePrompt && promptTa) {
+          let cur = promptTa.value.trim();
+          if (!cur || cur.includes("Margin halaman") || cur.includes("Evaluasi pekerjaan pengetikan")) {
+            promptTa.value = defaultSoalPrompt;
+          }
+        }
+      }
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
     function onMateriAiSelectionChanged() {
       const selMateri = document.getElementById('modalMateriKoreksiAI').value;
       loadMateriAiPromptAndChat(selMateri);
@@ -6429,6 +6543,39 @@
         }
       }
 
+      // Cari objek materi target dari dataMateri
+      let targetMateriObj = (Array.isArray(dataMateri) ? dataMateri : []).find(m => {
+        let mid = norm(getVal(m, ['idmateri', 'id_materi', 'materiid']));
+        let mJudul = norm(getVal(m, ['judul', 'materi']));
+        let curNorm = norm(materiKey);
+        return (mid && mid === curNorm) || (mJudul && mJudul === curNorm);
+      });
+
+      // Tentukan Mode Koreksi: Dari savedData, atau deteksi otomatis
+      let initialMode = 'soal';
+      if (savedData && savedData.koreksiMode) {
+        initialMode = savedData.koreksiMode;
+      } else if (targetMateriObj) {
+        let mType = (getVal(targetMateriObj, ['tipe', 'kategori']) || "").toLowerCase();
+        let mTitle = (getVal(targetMateriObj, ['judul', 'materi']) || "").toLowerCase();
+        if (mType.includes("praktik") || mTitle.includes("praktik") || mTitle.includes("ketik") || mTitle.includes("word") || mTitle.includes("dokumen")) {
+          initialMode = 'praktik';
+        }
+      }
+      setKoreksiAiMode(initialMode);
+
+      // Isi Naskah Soal Guru (untuk Mode 1)
+      const soalInp = document.getElementById('soalTugasAI');
+      if (soalInp) {
+        if (savedData && savedData.soalText !== undefined) {
+          soalInp.value = savedData.soalText;
+        } else if (targetMateriObj) {
+          soalInp.value = getVal(targetMateriObj, ['deskripsi', 'keterangan']) || "";
+        } else {
+          soalInp.value = "";
+        }
+      }
+
       const promptTa = document.getElementById('instruksiTugasAI');
       const statusEl = document.getElementById('masterFileStatusText');
 
@@ -6444,7 +6591,7 @@
         masterDocxData = null;
         masterFileName = "";
         if (statusEl) {
-          statusEl.innerText = "Jika diunggah, AI akan membandingkan pengetikan siswa 1-ke-1 dengan dokumen contoh (.docx / .pdf) milik Guru ini.";
+          statusEl.innerText = "AI akan membandingkan pengetikan siswa (margin, spasi, font, letak gambar) 1-ke-1 dengan dokumen acuan Guru ini.";
           statusEl.style.color = "var(--text-muted)";
         }
       }
@@ -6453,14 +6600,25 @@
         promptTa.value = savedData.promptText;
         currentMateriAiChat = savedData.chatHistory || [];
       } else {
-        promptTa.value = `1. Evaluasi pekerjaan pengetikan/tugas siswa secara menyeluruh.
-2. Periksa kerapian teks, ejaan, tata bahasa, dan kelengkapan materi.
-3. Bandingkan dengan File Master Guru (jika ada).
-4. Berikan nilai akhir (0 - 100) dan catatan umpan balik yang spesifik.`;
+        if (initialMode === 'praktik') {
+          promptTa.value = `1. Evaluasi kepatuhan tata letak dokumen (Margin halaman, Spasi Baris/Line Spacing, Ukuran Kertas, dan Perataan Teks Justify/Left).
+2. Periksa keberadaan, tata letak (In-Line/Wrap Text), rotasi, dan pemotongan (crop) gambar sesuai File Master / instruksi.
+3. Kepatuhan format pengetikan: ketepatan jenis font, ukuran huruf, cetak tebal (Bold), cetak miring (Italic), dan garis bawah (Underline).
+4. Kelengkapan dan kesesuaian naskah dokumen yang diketik terhadap File Master Guru.`;
+        } else {
+          promptTa.value = `1. Ketepatan konsep, prinsip, dan validitas argumen yang digunakan siswa dalam menjawab soal (mengingat tidak ada kunci jawaban mutlak, penilaian didasarkan pada kebenaran ilmiah/akademis jawaban).
+2. Kelengkapan langkah pengerjaan, runtutan proses penalaran, dan logika pemecahan masalah (khususnya untuk soal uraian/esai).
+3. Kejelasan, struktur, dan kerapian penyampaian jawaban agar mudah dipahami.
+(PENTING: JANGAN menilai format pengetikan Word seperti font size, italic, atau bold. Fokus pada esensi jawaban).`;
+        }
 
         let namaMateriDisplay = materiKey || "Tugas Ini";
+        let defaultGreeting = initialMode === 'soal'
+          ? `Halo Pak/Bu Guru! Saya siap membantu mengoreksi jawaban soal/esai siswa untuk **${namaMateriDisplay}**.\n\nFokus penilaian pada kebenaran konsep akademis, kelengkapan runtutan langkah berpikir, dan kejelasan logika jawaban terhadap soal Anda (tanpa mempermasalahkan format pengetikan Word/font).`
+          : `Halo Pak/Bu Guru! Saya siap membantu mengoreksi praktik pengetikan dokumen untuk **${namaMateriDisplay}**.\n\nFokus penilaian pada kepatuhan tata letak dokumen (margin halaman, spasi baris/line spacing, kertas, perataan, letak gambar) serta perbandingan dengan File Master.`;
+
         currentMateriAiChat = [
-          { sender: 'ai', text: `Halo Pak/Bu Guru! Saya siap membantu menyusun kriteria penilaian khusus untuk **${namaMateriDisplay}**.\n\nSilakan sampaikan logika atau aturan penilaian yang Anda inginkan (misal: penalti untuk kesalahan ejaan, poin tambahan, atau syarat khusus di paragraf tertentu).` }
+          { sender: 'ai', text: defaultGreeting }
         ];
       }
 
@@ -6512,8 +6670,15 @@
       renderAiChatBubbles();
 
       let currentPrompt = document.getElementById('instruksiTugasAI').value;
+      let modeName = getKoreksiAiMode() === 'soal' ? "Mode 1 (Evaluasi Jawaban Soal / Esai Teori)" : "Mode 2 (Evaluasi Praktik Pengetikan & Format Dokumen)";
+      let modeGuidance = getKoreksiAiMode() === 'soal'
+        ? "- Fokus diskusi: Ketepatan konsep, kelengkapan alur penalaran, dan kejelasan logika jawaban. DILARANG menilai format dokumen Word (font/italic/bold).\n- Naskah Soal Guru: " + (document.getElementById('soalTugasAI') ? document.getElementById('soalTugasAI').value.trim() : "-")
+        : "- Fokus diskusi: Kepatuhan tata letak dokumen (margin halaman, spasi baris/line spacing, ukuran kertas, perataan teks, letak gambar, tipografi).\n- File Master Guru: " + (masterFileName || "Tidak ada");
 
       let systemDiscussionPrompt = `Anda adalah asisten AI interaktif untuk Guru LMS yang bertugas menyelaraskan kriteria penilaian tugas untuk materi "${selMateri}".
+MODE AKTIF: ${modeName}
+PANDUAN MODE:
+${modeGuidance}
 
 KRITERIA SAAT INI:
 ${currentPrompt}
@@ -6523,7 +6688,7 @@ PESAN / INSTRUKSI BARU DARI GURU:
 
 TUGAS ANDA:
 1. Jawab pesan Guru secara ramah, profesional, dan edukatif dalam bahasa Indonesia.
-2. Jelaskan bagaimana instruksi baru Guru tersebut memperbarui kriteria penilaian.
+2. Jelaskan bagaimana instruksi baru Guru tersebut memperbarui kriteria penilaian sesuai mode aktif.
 3. Sertakan draf KRITERIA AKHIR yang sudah diperbarui di bagian bawah jawaban Anda dengan format persis:
 ===KRITERIA_AKHIR===
 [Tuliskan daftar kriteria akhir di sini]
@@ -6561,7 +6726,12 @@ TUGAS ANDA:
       const storageKey = `AI_MATERI_DATA_${normM}`;
 
       const promptText = document.getElementById('instruksiTugasAI').value;
+      const soalVal = document.getElementById('soalTugasAI') ? document.getElementById('soalTugasAI').value : '';
+      const modeVal = getKoreksiAiMode();
+
       const dataToSave = {
+        koreksiMode: modeVal,
+        soalText: soalVal,
         promptText: promptText,
         chatHistory: currentMateriAiChat,
         masterDocxData: masterDocxData,
@@ -6587,7 +6757,7 @@ TUGAS ANDA:
         })
       });
 
-      if (showAlert) alert(`✅ Kriteria AI & Riwayat Diskusi untuk materi "${selMateri}" berhasil disimpan ke database LMS!`);
+      if (showAlert) alert(`✅ Kriteria AI, Mode (${modeVal === 'soal' ? 'Soal/Esai' : 'Praktik'}), & Naskah Tugas untuk materi "${selMateri}" berhasil disimpan ke database!`);
     }
 
     function openModalKoreksiAI() {
@@ -6685,12 +6855,52 @@ TUGAS ANDA:
         let fonts = new Set();
         let fontSizes = new Set();
         let alignments = new Set();
+        let lineSpacings = new Set();
+        let firstLineIndents = new Set();
 
         const paragraphs = xmlDoc.getElementsByTagName("w:p");
         for (let p of paragraphs) {
-          const jc = p.getElementsByTagName("w:jc")[0];
-          if (jc) {
-            alignments.add(jc.getAttribute("w:val") || "left");
+          const pPr = p.getElementsByTagName("w:pPr")[0];
+          if (pPr) {
+            const jc = pPr.getElementsByTagName("w:jc")[0];
+            if (jc) {
+              let jcVal = jc.getAttribute("w:val") || "left";
+              if (jcVal === "both") alignments.add("Justify (Rata Kiri-Kanan)");
+              else if (jcVal === "center") alignments.add("Center (Rata Tengah)");
+              else if (jcVal === "right") alignments.add("Right (Rata Kanan)");
+              else alignments.add("Left (Rata Kiri)");
+            }
+
+            const sp = pPr.getElementsByTagName("w:spacing")[0];
+            if (sp) {
+              let lineVal = sp.getAttribute("w:line");
+              let lineRule = sp.getAttribute("w:lineRule") || "auto";
+              if (lineVal) {
+                let num = parseInt(lineVal, 10);
+                if (!isNaN(num) && num > 0) {
+                  if (lineRule === "auto" || !lineRule) {
+                    if (Math.abs(num - 240) <= 20) lineSpacings.add("1.0 (Single)");
+                    else if (Math.abs(num - 276) <= 20) lineSpacings.add("1.15");
+                    else if (Math.abs(num - 360) <= 30) lineSpacings.add("1.5 lines");
+                    else if (Math.abs(num - 480) <= 30) lineSpacings.add("2.0 (Double)");
+                    else lineSpacings.add((num / 240).toFixed(2) + " lines");
+                  } else {
+                    lineSpacings.add(`${(num / 20).toFixed(0)}pt (${lineRule})`);
+                  }
+                }
+              }
+            }
+
+            const ind = pPr.getElementsByTagName("w:ind")[0];
+            if (ind) {
+              let fl = ind.getAttribute("w:firstLine");
+              if (fl) {
+                let flNum = parseInt(fl, 10);
+                if (!isNaN(flNum) && flNum > 0) {
+                  firstLineIndents.add((flNum / 567.0).toFixed(1) + " cm");
+                }
+              }
+            }
           }
 
           const runs = p.getElementsByTagName("w:r");
@@ -6726,6 +6936,45 @@ TUGAS ANDA:
             }
           }
           fullText += "\n";
+        }
+
+        // Ekstraksi Margin Halaman & Ukuran Kertas dari Section Properties
+        let pageMarginsText = "Standar (Atas: 2.5cm, Bawah: 2.5cm, Kiri: 2.5cm, Kanan: 2.5cm)";
+        const pgMarTags = xmlDoc.getElementsByTagName("w:pgMar");
+        if (pgMarTags.length > 0) {
+          let pm = pgMarTags[pgMarTags.length - 1];
+          let top = pm.getAttribute("w:top");
+          let bottom = pm.getAttribute("w:bottom");
+          let left = pm.getAttribute("w:left");
+          let right = pm.getAttribute("w:right");
+          const toCm = (val) => val ? (parseInt(val, 10) / 567.0).toFixed(1) : "?";
+          if (top || bottom || left || right) {
+            pageMarginsText = `Atas: ${toCm(top)} cm, Bawah: ${toCm(bottom)} cm, Kiri: ${toCm(left)} cm, Kanan: ${toCm(right)} cm`;
+          }
+        }
+
+        let paperSizeText = "A4 (Standar)";
+        const pgSzTags = xmlDoc.getElementsByTagName("w:pgSz");
+        if (pgSzTags.length > 0) {
+          let ps = pgSzTags[pgSzTags.length - 1];
+          let wVal = parseInt(ps.getAttribute("w:w"), 10);
+          let hVal = parseInt(ps.getAttribute("w:h"), 10);
+          let orient = ps.getAttribute("w:orient") || "portrait";
+          if (!isNaN(wVal) && !isNaN(hVal)) {
+            let wTwips = orient === "landscape" ? Math.max(wVal, hVal) : Math.min(wVal, hVal);
+            let hTwips = orient === "landscape" ? Math.min(wVal, hVal) : Math.max(wVal, hVal);
+            if (Math.abs(wTwips - 11906) < 400 && Math.abs(hTwips - 16838) < 400) {
+              paperSizeText = `A4 (${(wTwips/567).toFixed(1)} x ${(hTwips/567).toFixed(1)} cm, ${orient})`;
+            } else if (Math.abs(wTwips - 12240) < 400 && Math.abs(hTwips - 15840) < 400) {
+              paperSizeText = `Letter (${(wTwips/567).toFixed(1)} x ${(hTwips/567).toFixed(1)} cm, ${orient})`;
+            } else if (Math.abs(wTwips - 12240) < 400 && Math.abs(hTwips - 18720) < 600) {
+              paperSizeText = `F4 / Folio (${(wTwips/567).toFixed(1)} x ${(hTwips/567).toFixed(1)} cm, ${orient})`;
+            } else if (Math.abs(wTwips - 12240) < 400 && Math.abs(hTwips - 20160) < 500) {
+              paperSizeText = `Legal (${(wTwips/567).toFixed(1)} x ${(hTwips/567).toFixed(1)} cm, ${orient})`;
+            } else {
+              paperSizeText = `Kustom (${(wTwips/567).toFixed(1)} x ${(hTwips/567).toFixed(1)} cm, ${orient})`;
+            }
+          }
         }
 
         // Deteksi Gambar/Media dalam dokumen Word (.docx) secara akurat
@@ -6790,6 +7039,20 @@ TUGAS ANDA:
           }
         } catch(eImgMeta) {}
 
+        // Deteksi Tata Letak Gambar (Inline vs Anchor / Floating Wrap Text)
+        let inlineImgs = xmlDoc.getElementsByTagName("wp:inline").length;
+        let anchorImgs = xmlDoc.getElementsByTagName("wp:anchor").length;
+        let imagePlacementText = "Tidak ada gambar";
+        if (inlineImgs > 0 && anchorImgs === 0) {
+          imagePlacementText = `In Line with Text (Sebaris dengan teks - ${inlineImgs} elemen)`;
+        } else if (anchorImgs > 0 && inlineImgs === 0) {
+          imagePlacementText = `Floating / Wrap Text (Square/Tight/Behind/Front - ${anchorImgs} elemen)`;
+        } else if (inlineImgs > 0 && anchorImgs > 0) {
+          imagePlacementText = `Campuran (${inlineImgs} In-Line, ${anchorImgs} Floating/Wrap Text)`;
+        } else if (totalImageCount > 0) {
+          imagePlacementText = `Terdeteksi (${totalImageCount} gambar)`;
+        }
+
         return {
           fullText: fullText.trim(),
           imageCount: totalImageCount,
@@ -6803,7 +7066,12 @@ TUGAS ANDA:
           underlinePhrases: underlinePhrases.slice(0, 35),
           fonts: Array.from(fonts),
           fontSizes: Array.from(fontSizes),
-          alignments: Array.from(alignments)
+          alignments: Array.from(alignments),
+          lineSpacings: Array.from(lineSpacings),
+          pageMargins: pageMarginsText,
+          paperSize: paperSizeText,
+          firstLineIndents: Array.from(firstLineIndents),
+          imagePlacement: imagePlacementText
         };
       } catch (e) {
         console.error("Parsing docx error:", e);
@@ -7135,6 +7403,9 @@ TUGAS ANDA:
             t._docxDetails = docxDetails;
           }
 
+          let koreksiMode = getKoreksiAiMode();
+          let soalGuru = document.getElementById('soalTugasAI') ? document.getElementById('soalTugasAI').value.trim() : "";
+
           let existingPeerTexts = [];
           dataLogTugas.forEach(peerTask => {
             let peerUser = getVal(peerTask, ['username', 'nisn']);
@@ -7146,80 +7417,152 @@ TUGAS ANDA:
             let isSameMateri = !selMateri || peerMat === selMNorm || peerMid === selMNorm || peerMat === norm(idMateriVal) || peerMid === norm(idMateriVal);
 
             if (norm(peerUser) !== norm(usernameSiswa) && isSameMateri && peerTask._parsedText) {
-              let pDet = peerTask._docxDetails;
-              let metaStr = pDet ? ` [Metadata Format: Bold=${pDet.boldPhrases.length}, Italic=${pDet.italicPhrases.length}, Font=${pDet.fonts.join(",") || 'Std'}]` : "";
-              existingPeerTexts.push(`- Siswa: ${peerName} (${peerKelas})${metaStr} -> Teks: "${peerTask._parsedText.substring(0, 400)}"`);
+              if (koreksiMode === 'soal') {
+                existingPeerTexts.push(`- Siswa: ${peerName} (${peerKelas}) -> Cuplikan Jawaban: "${peerTask._parsedText.substring(0, 300)}"`);
+              } else {
+                let pDet = peerTask._docxDetails;
+                let metaStr = pDet ? ` [Margin: ${pDet.pageMargins || 'Std'}, Spasi: ${pDet.lineSpacings ? pDet.lineSpacings.join('/') : 'Std'}, Font: ${pDet.fonts ? pDet.fonts.join('/') : 'Std'}]` : "";
+                existingPeerTexts.push(`- Siswa: ${peerName} (${peerKelas})${metaStr} -> Teks: "${peerTask._parsedText.substring(0, 300)}"`);
+              }
             }
           });
 
-          let peerComparisonText = existingPeerTexts.length > 0 ? `
-DAFTAR HASIL PENGERJAAN & METADATA SISWA LAIN PADA MATERI INI (UNTUK PEMANDINGAN PLAGIARISME):
+        let peerComparisonText = existingPeerTexts.length > 0 ? `
+DAFTAR HASIL PENGERJAAN & TEKS SISWA LAIN PADA MATERI INI (UNTUK PEMBANDING PLAGIARISME / COPAS):
 ${existingPeerTexts.slice(0, 10).join("\n")}
 ` : "";
 
+        let promptText = "";
+
+        if (koreksiMode === 'soal') {
+          // ==========================================
+          // MODE 1: KOREKSI JAWABAN SOAL / URAIAN TEORI
+          // ==========================================
+          let studentAnswerText = "";
+          if (docxDetails && docxDetails.fullText && docxDetails.fullText.length >= 10) {
+            studentAnswerText = `"${docxDetails.fullText.substring(0, 3500)}"`;
+          } else if (studentInlineData) {
+            studentAnswerText = `[Naskah jawaban siswa terlampir langsung sebagai dokumen PDF pada pesan ini. BACA, ANALISIS, dan EVALUASI seluruh isi naskah jawaban siswa dari file PDF tersebut!]`;
+          } else {
+            studentAnswerText = `[File berada di tautan Google Drive: ${fileUrl}]`;
+          }
+
+          promptText = `Anda bertindak sebagai Guru penilai tugas / ujian esai yang objektif, akademis, dan adil untuk siswa bernama ${namaSiswa}.
+Tugas Anda adalah mengevaluasi kebenaran konsep, kelengkapan alur penalaran, dan logika pemecahan masalah dari jawaban siswa terhadap NASKAH SOAL GURU berikut berdasarkan 3 KRITERIA AKADEMIS.
+
+NASKAH SOAL / TUGAS DARI GURU:
+${soalGuru || "(Soal uraian/tugas terkait materi: " + judulMateriVal + ")"}
+
+KRITERIA EVALUASI DARI GURU:
+${instruksi}
+
+JAWABAN SISWA (${namaSiswa}):
+${studentAnswerText}
+
+${peerComparisonText}
+
+PANDUAN PENILAIAN WAJIB (MODE SOAL / ESAI TEORETIS):
+1. FOKUS MURNI PADA KONTEN & LOGIKA PENALARAN:
+   - Evaluasi ketepatan konsep ilmiah/akademis yang digunakan siswa.
+   - Evaluasi kelengkapan langkah pengerjaan, runtutan proses berpikir, dan logika pemecahan masalah.
+   - Evaluasi kejelasan struktur dan kerapian penyampaian gagasan.
+2. DILARANG KERAS MENGOMENTARI FORMAT DOKUMEN / TIPOGRAFI WORD:
+   - JANGAN PERNAH mengomentari jenis font (misal Calibri, Times New Roman), ukuran huruf (font size), cetak tebal (bold), cetak miring (italic), garis bawah, spasi baris, atau margin halaman!
+   - Tugas ini menguji pemahaman ilmu/materi siswa, BUKAN keterampilan pengetikan Microsoft Word.
+3. "catatan" (UNTUK SISWA): Tuliskan evaluasi secara LUGAS, OBJEKTIF, dan KONSTRUKTIF yang menunjukkan bagian konsep mana yang sudah tepat dan bagian mana yang kurang lengkap atau belum tepat. DILARANG menggunakan kata-kata kasar/menghakimi ("salah", "gagal", "buruk"). DILARANG basa-basi/sapaan nama siswa. DILARANG menggunakan karakter em dash (—).
+4. "catatan_guru" (KHUSUS GURU): Bandingkan jawaban siswa dengan daftar jawaban siswa lain di atas untuk menganalisis orisinalitas jawaban (apakah ada indikasi plagiasi/copas antar siswa).
+
+Jawab HANYA format JSON murni:
+{
+  "nilai": 85,
+  "catatan": "Penjelasan konsep dan definisi sudah tepat serta runtut. Namun bagian analisis alasan dan langkah penyelesaian perlu diperinci agar argumen lebih kuat.",
+  "catatan_guru": "✅ Mandiri"
+}`;
+        } else {
+          // ==========================================
+          // MODE 2: KOREKSI PRAKTIK PENGETIKAN & DOKUMEN
+          // ==========================================
           let formatInfoText = "";
-          if (docxDetails && docxDetails.fullText && docxDetails.fullText.length >= 30) {
+          if (docxDetails && docxDetails.fullText && docxDetails.fullText.length >= 20) {
             formatInfoText = `
-- Detail & Manipulasi Gambar Terdeteksi:
-  * Jumlah Gambar: ${docxDetails.imageCount > 0 ? docxDetails.imageCount + " gambar" : "0 gambar (TIDAK ADA GAMBAR)"}
-  * Status Crop (Pemotongan Gambar di Word): ${docxDetails.isCropped ? "BERHASIL (Siswa melakukan Crop gambar)" : "TIDAK / Belum di-crop"}
-  * Status Rotate (Rotasi Gambar di Word): ${docxDetails.isRotated ? `BERHASIL (Gambar diputar ${docxDetails.imageRotationDeg}°)` : "TIDAK / 0°"}
+- Pengaturan Halaman:
+  * Margin Halaman: ${docxDetails.pageMargins || "Tidak terdeteksi"}
+  * Ukuran Kertas: ${docxDetails.paperSize || "Standar"}
+- Pengaturan Paragraf & Teks:
+  * Spasi Baris (Line Spacing): ${docxDetails.lineSpacings && docxDetails.lineSpacings.length ? docxDetails.lineSpacings.join(", ") : "1.0 (Single)"}
+  * Perataan Paragraf (Alignment): ${docxDetails.alignments && docxDetails.alignments.length ? docxDetails.alignments.join(", ") : "Standar"}
+  * Indentasi Awal Paragraf (First Line Indent): ${docxDetails.firstLineIndents && docxDetails.firstLineIndents.length ? docxDetails.firstLineIndents.join(", ") : "Tidak ada indent"}
+- Tipografi & Huruf:
+  * Jenis Font: ${docxDetails.fonts.join(", ") || "Standar"}
+  * Ukuran Font: ${docxDetails.fontSizes.join(", ") || "Standar"}
+  * Frasa CETAK TEBAL (Bold): ${docxDetails.boldPhrases.length ? docxDetails.boldPhrases.join(", ") : "(Tidak ada)"}
+  * Frasa CETAK MIRING (Italic): ${docxDetails.italicPhrases.length ? docxDetails.italicPhrases.join(", ") : "(Tidak ada)"}
+  * Frasa GARIS BAWAH (Underline): ${docxDetails.underlinePhrases.length ? docxDetails.underlinePhrases.join(", ") : "(Tidak ada)"}
+- Elemen Gambar / Media:
+  * Jumlah Gambar Terdeteksi: ${docxDetails.imageCount > 0 ? docxDetails.imageCount + " gambar" : "0 gambar (TIDAK ADA GAMBAR)"}
+  * Tata Letak Gambar (Wrap Text): ${docxDetails.imagePlacement || "Standar"}
+  * Status Crop Gambar: ${docxDetails.isCropped ? "BERHASIL (Siswa melakukan Crop gambar)" : "TIDAK / Belum di-crop"}
+  * Status Rotasi Gambar: ${docxDetails.isRotated ? `BERHASIL (Gambar diputar ${docxDetails.imageRotationDeg}°)` : "TIDAK / 0°"}
   * Dimensi/Ukuran Gambar (Resize): ${docxDetails.imageDimensions.length ? docxDetails.imageDimensions.join(", ") : "Standar"}
-- Frasa CETAK TEBAL (Bold): ${docxDetails.boldPhrases.length ? docxDetails.boldPhrases.join(", ") : "(Tidak ada)"}
-- Frasa CETAK MIRING (Italic): ${docxDetails.italicPhrases.length ? docxDetails.italicPhrases.join(", ") : "(Tidak ada)"}
-- Frasa GARIS BAWAH (Underline): ${docxDetails.underlinePhrases.length ? docxDetails.underlinePhrases.join(", ") : "(Tidak ada)"}
-- Jenis Font: ${docxDetails.fonts.join(", ") || "Standar"}
-- Ukuran Font: ${docxDetails.fontSizes.join(", ") || "Standar"}
-- Teks Dokumen Siswa: ${docxDetails.fullText.substring(0, 2000)}
+- Naskah Dokumen Siswa:
+"${docxDetails.fullText.substring(0, 2000)}"
 `;
           } else if (studentInlineData) {
             formatInfoText = `
 - DOKUMEN HASIL PENGERJAAN SISWA TERLAMPIR LANGSUNG SEBAGAI ATTACHMENT PDF MULTIMODAL PADA PESAN INI.
-- BACA, IDENTIFIKASI, dan EVALUASI seluruh isi naskah jawaban serta teks yang diketik siswa (${namaSiswa}) langsung dari gambar/halaman PDF yang terlampir tersebut!
+- BACA, IDENTIFIKASI, dan EVALUASI seluruh isi naskah serta tata letak dokumen yang dikerjakan siswa (${namaSiswa}) langsung dari gambar/halaman PDF yang terlampir tersebut!
 `;
           } else {
             formatInfoText = `Catatan: File disimpan di Drive (${fileUrl}). Evaluasi kepatuhan berdasarkan instruksi Guru.`;
           }
 
           let masterInfoText = masterDocxData ? `
-DOKUMEN MASTER GURU / KUNCI JAWABAN (ACUAN):
-- Jumlah Gambar Master: ${masterDocxData.imageCount || 0} gambar terdeteksi
-- Master Gambar: Crop=${masterDocxData.isCropped ? "Ya" : "Tidak"}, Rotate=${masterDocxData.isRotated ? masterDocxData.imageRotationDeg + "°" : "0°"}, Ukuran=${masterDocxData.imageDimensions.join(", ") || "Standar"}
-- Teks Dokumen Master: ${masterDocxData.fullText.substring(0, 2000)}
-- Detail Format Master (Bold/Italic/Underline/Font):
-  * Bold: ${masterDocxData.boldPhrases.length ? masterDocxData.boldPhrases.join(", ") : "(Tidak ada)"}
-  * Italic: ${masterDocxData.italicPhrases.length ? masterDocxData.italicPhrases.join(", ") : "(Tidak ada)"}
-  * Underline: ${masterDocxData.underlinePhrases.length ? masterDocxData.underlinePhrases.join(", ") : "(Tidak ada)"}
+DOKUMEN MASTER GURU / ACUAN PENGETIKAN:
+- Pengaturan Halaman Master:
+  * Margin Halaman: ${masterDocxData.pageMargins || "Standar"}
+  * Ukuran Kertas: ${masterDocxData.paperSize || "Standar"}
+- Pengaturan Paragraf Master:
+  * Spasi Baris: ${masterDocxData.lineSpacings && masterDocxData.lineSpacings.length ? masterDocxData.lineSpacings.join(", ") : "Standar"}
+  * Perataan: ${masterDocxData.alignments && masterDocxData.alignments.length ? masterDocxData.alignments.join(", ") : "Standar"}
+  * Indentasi Awal: ${masterDocxData.firstLineIndents && masterDocxData.firstLineIndents.length ? masterDocxData.firstLineIndents.join(", ") : "Tidak ada indent"}
+- Gambar Master: ${masterDocxData.imageCount || 0} gambar (Letak: ${masterDocxData.imagePlacement || "Standar"}, Crop: ${masterDocxData.isCropped ? "Ya" : "Tidak"}, Rotate: ${masterDocxData.isRotated ? masterDocxData.imageRotationDeg + "°" : "0°"}, Ukuran: ${masterDocxData.imageDimensions && masterDocxData.imageDimensions.length ? masterDocxData.imageDimensions.join(", ") : "Standar"})
+- Format Font Master:
+  * Bold: ${masterDocxData.boldPhrases && masterDocxData.boldPhrases.length ? masterDocxData.boldPhrases.join(", ") : "(Tidak ada)"}
+  * Italic: ${masterDocxData.italicPhrases && masterDocxData.italicPhrases.length ? masterDocxData.italicPhrases.join(", ") : "(Tidak ada)"}
+  * Underline: ${masterDocxData.underlinePhrases && masterDocxData.underlinePhrases.length ? masterDocxData.underlinePhrases.join(", ") : "(Tidak ada)"}
+- Naskah Dokumen Master:
+"${masterDocxData.fullText ? masterDocxData.fullText.substring(0, 2000) : ''}"
 ` : "";
 
-          let promptText = `Anda bertindak sebagai Guru penilai tugas yang objektif, lugas, dan tegas untuk siswa (${namaSiswa}).
-Tugas Anda adalah menilai dan menyebutkan fakta kesalahan nyata hasil pengerjaan siswa berdasarkan PROMPT & ATURAN GURU berikut.
+          promptText = `Anda bertindak sebagai Guru penilai praktik pengetikan dokumen (Microsoft Word / Pengolah Kata) yang cermat, teliti, dan adil untuk siswa bernama ${namaSiswa}.
+Tugas Anda adalah menilai kepatuhan tata letak dokumen (layout), pengaturan halaman, kerapian pengetikan, dan manipulasi elemen visual siswa berdasarkan ATURAN FORMAT GURU dan DOKUMEN MASTER ACUAN.
 
-ATURAN & PROMPT EVALUASI DARI GURU:
+ATURAN & INSTRUKSI PENGETIKAN DARI GURU:
 ${instruksi}
 
 ${masterInfoText}
 
-KONTEN & METADATA TERDETEKSI PADA DOKUMEN SISWA (${namaSiswa}):
+HASIL PEMERIKSAAN SISTEM TERHADAP DOKUMEN SISWA (${namaSiswa}):
 ${formatInfoText}
 
 ${peerComparisonText}
 
-PETUNJUK EVALUASI:
-1. PENTING (ATURAN GAMBAR & BOBOT 60%): Cek "- Jumlah Gambar/Grafik Terdeteksi dalam Dokumen". Jika terdeteksi >= 1 gambar, SYARAT KEBERADAAN GAMBAR SUDAH TERPENUHI 100%. DILARANG MENGANGGAP SISWA KEKURANGAN/KELEBIHAN GAMBAR HANYA KARENA INTERNAL ELEMEN SHAPE/DRAWING DOKUMEN WORD! Berikan poin maksimal/proporsional tinggi pada Bobot Gambar (60%) jika gambar sudah terbukti ada di dalam dokumen.
-2. "catatan" (UNTUK SISWA): Tuliskan evaluasi secara LUGAS, OBJEKTIF, dan KONSTRUKTIF yang menunjukkan bagian yang perlu diperbaiki. DILARANG menggunakan kata-kata yang menjatuhkan atau menghakimi (seperti "salah", "gagal", "tidak paham", "buruk"). DILARANG basa-basi/pujian kosong, dan DILARANG sapaan nama. Gunakan kalimat perbaikan yang netral, solutif, dan membangun (contoh: "Belum mencantumkan...", "Perlu menyempurnakan..."). DILARANG pakai karakter — (em dash) atau tanda baca khusus yang terkesan AI.
-
-3. "catatan_guru" (KHUSUS GURU): Bandingkan dokumen ${namaSiswa} (Teks & Metadata Format) dengan daftar siswa lain di atas:
-   - Jika TEKS & METADATA FORMAT (Bold/Italic/Font) PERSIS SAMA 100%: "⚠️ FILE DUPLIKAT GANTI NAMA (Metadata Format & Teks 100% Identik): persis file milik [Nama] ([Kelas])".
+PETUNJUK EVALUASI PRAKTIK:
+1. Periksa kepatuhan teknis pengetikan: bandingkan margin halaman (cm), spasi baris (line spacing), ukuran kertas, perataan paragraf, dan elemen gambar terhadap File Master / instruksi guru.
+2. PENTING (ATURAN GAMBAR): Jika terdeteksi >= 1 gambar, syarat keberadaan gambar terpenuhi. Nilai kesesuaian letak gambar (wrap text), pemotongan (crop), dan rotasi.
+3. "catatan" (UNTUK SISWA): Tuliskan evaluasi secara LUGAS, OBJEKTIF, dan KONSTRUKTIF menyebutkan parameter teknis pengetikan mana yang sudah sesuai dan mana yang perlu diperbaiki (contoh: "Margin kiri dan atas sudah sesuai 4 cm, namun spasi baris masih 1.0 (ketentuan 1.5). Letak gambar sudah rapi."). DILARANG basa-basi/sapaan nama. DILARANG karakter em dash (—).
+4. "catatan_guru" (KHUSUS GURU): Bandingkan dokumen siswa dengan siswa lain untuk mendeteksi kesamaan file / duplikasi tugas:
+   - Jika TEKS & METADATA FORMAT PERSIS SAMA 100%: "⚠️ FILE DUPLIKAT GANTI NAMA: persis file milik [Nama] ([Kelas])".
    - Jika ISI TEKS >70% MIRIP: "⚠️ COPY-PASTE TEKS ([%]% Mirip): dari file milik [Nama] ([Kelas])".
    - Jika mandiri: "✅ Mandiri".
 
 Jawab HANYA format JSON murni:
 {
-  "nilai": 85,
-  "catatan": "Format judul belum menggunakan Tebal (Bold) dan istilah asing 'software' belum dimiringkan (Italic). Perlu menebalkan judul utama dan memiringkan istilah bahasa asing.",
+  "nilai": 88,
+  "catatan": "Margin halaman dan perataan teks sudah sesuai ketentuan. Namun pengaturan spasi baris masih 1.0 (seharusnya 1.5) dan posisi gambar perlu diselaraskan dengan teks.",
   "catatan_guru": "✅ Mandiri"
 }`;
+        }
 
           let rawResp = await callGeminiAPI(apiKey, promptText, (msg) => {
             logEl.innerText += `${msg}\n`;
@@ -7235,6 +7578,8 @@ Jawab HANYA format JSON murni:
           let finalScore = Math.min(100, Math.max(0, parseInt(parsedEval.nilai || 80, 10)));
           let finalNote = parsedEval.catatan || "Telah dievaluasi AI.";
           let teacherNote = parsedEval.catatan_guru || "Evaluasi AI selesai.";
+
+          let finalTipeVal = koreksiMode === 'soal' ? 'Tugas' : 'Praktik';
 
           let existingNilaiRow = dataNilai.find(n => {
             let nUser = norm(getVal(n, ['username', 'nisn']));
@@ -7256,7 +7601,7 @@ Jawab HANYA format JSON murni:
               "ID Materi": idMateriVal,
               id_materi: idMateriVal,
               judul: judulMateriVal,
-              tipe: "Praktik",
+              tipe: finalTipeVal,
               nilai: finalScore,
               keterangan: finalNote,
               catatan_guru: teacherNote
@@ -7287,7 +7632,7 @@ Jawab HANYA format JSON murni:
             id_materi: idMateriVal,
             "ID Materi": idMateriVal,
             judul: judulMateriVal,
-            tipe: "Praktik",
+            tipe: finalTipeVal,
             nilai: finalScore,
             skor: finalScore,
             keterangan: finalNote,
