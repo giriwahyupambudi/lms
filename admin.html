@@ -3640,6 +3640,39 @@
       return widths;
     }
 
+    function isDurationString(s) {
+      if (!s || s === '-' || s === '') return false;
+      let str = s.toString().replace(/^'/, '').trim();
+      if (str.includes("1899-12-29") || str.includes("Z") || str.includes("T") || str.includes("/") || str.includes(" ") || (str.includes("-") && str.length > 5)) {
+        return false;
+      }
+      if (/^\d{1,3}:\d{2}(:\d{2})?$/.test(str)) return true;
+      let num = Number(str);
+      if (!isNaN(num) && num > 0 && num < 300) return true;
+      return false;
+    }
+
+    function parseDurationToMinutes(durStr) {
+      if (!durStr) return 0;
+      let str = durStr.toString().replace(/^'/, '').trim();
+      if (!isDurationString(str)) return 0;
+      const parts = str.split(':');
+      if (parts.length === 2) {
+        let m = parseInt(parts[0], 10) || 0;
+        let s = parseInt(parts[1], 10) || 0;
+        return Math.round(m + s / 60);
+      }
+      if (parts.length === 3) {
+        let h = parseInt(parts[0], 10) || 0;
+        let m = parseInt(parts[1], 10) || 0;
+        let s = parseInt(parts[2], 10) || 0;
+        return Math.round(h * 60 + m + s / 60);
+      }
+      let num = parseFloat(str);
+      if (!isNaN(num) && num > 0) return Math.round(num);
+      return 0;
+    }
+
     function buildRekapIndexMaps() {
       const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
 
@@ -3674,7 +3707,8 @@
         }
 
         let timeVal = (getVal(n, ['timestamp', 'waktusubmit', 'tanggal', 'waktu']) || "").toString().trim();
-        let durasiVal = (getVal(n, ['waktu', 'durasi']) || "").toString().trim();
+        let rawDur = (getVal(n, ['durasi', 'waktuaktif', 'waktu']) || "").toString().trim();
+        let durasiVal = isDurationString(rawDur) ? rawDur : "";
         let record = { score, time: timeVal, durasi: durasiVal, raw: n };
 
         let keys = [];
@@ -3830,13 +3864,13 @@
       const rowDetail4 = ['No', 'NISN', 'Nama Siswa', 'Kelas'];
       materials.forEach(m => {
         const j = (getVal(m, ['judul', 'materi']) || 'Materi').toString().trim();
-        rowDetail4.push(j, '', '');
+        rowDetail4.push(j, '', '', '');
       });
-      rowDetail4.push('Total Nilai', 'Rata-rata');
+      rowDetail4.push('Total Nilai Akhir', 'Rata-rata Nilai Akhir');
 
       const rowDetail5 = ['', '', '', ''];
       materials.forEach(() => {
-        rowDetail5.push('Nilai', 'Waktu Submit', 'Urutan Maju');
+        rowDetail5.push('Nilai Murni', 'Urutan Maju', 'Durasi', 'Nilai Akhir');
       });
       rowDetail5.push('', '');
 
@@ -3855,10 +3889,10 @@
         { s: { r: 3, c: 3 }, e: { r: 4, c: 3 } }
       ];
       materials.forEach((m, idx) => {
-        const cStart = 4 + idx * 3;
-        mergesDetail.push({ s: { r: 3, c: cStart }, e: { r: 3, c: cStart + 2 } });
+        const cStart = 4 + idx * 4;
+        mergesDetail.push({ s: { r: 3, c: cStart }, e: { r: 3, c: cStart + 3 } });
       });
-      const cTot = 4 + materials.length * 3;
+      const cTot = 4 + materials.length * 4;
       mergesDetail.push({ s: { r: 3, c: cTot }, e: { r: 4, c: cTot } });
       mergesDetail.push({ s: { r: 3, c: cTot + 1 }, e: { r: 4, c: cTot + 1 } });
 
@@ -3867,7 +3901,7 @@
         [`REKAPITULASI MATRIKS NILAI SISWA - KELAS ${selKelas.toUpperCase()}`],
         [`Waktu Unduh: ${nowStr}`],
         [],
-        ['No', 'NISN', 'Nama Siswa', ...materials.map(m => getVal(m, ['judul', 'materi']) || 'Materi'), 'Total', 'Rata-rata']
+        ['No', 'NISN', 'Nama Siswa', ...materials.map(m => getVal(m, ['judul', 'materi']) || 'Materi'), 'Total Nilai Akhir', 'Rata-rata Nilai Akhir']
       ];
 
       // Sheet 3: Matriks Urutan & Durasi
@@ -4007,55 +4041,64 @@
           let uOrder = urutanMap.get(`${midNorm}_${username}`) || urutanMap.get(`${mJudul}_${username}`) ||
                        urutanMap.get(`${midNorm}_${sNamaNorm}`) || urutanMap.get(`${mJudul}_${sNamaNorm}`);
 
-          let durVal = (rec && rec.durasi && rec.durasi !== '-') ? rec.durasi : '';
+          let durVal = (rec && rec.durasi && isDurationString(rec.durasi)) ? rec.durasi.toString().replace(/^'/, '').trim() : '';
+          let durasiMenit = durVal ? parseDurationToMinutes(durVal) : 0;
+          let durasiStr = durVal || '-';
+
           let urutanText = '-';
           if (uOrder) {
             urutanText = `Maju #${uOrder}` + (durVal ? ` (${durVal})` : '');
           }
 
-          let scoreVal = '-';
-          let timeVal = '-';
+          let scoreMurniVal = '-';
+          let scoreAkhirVal = '-';
           let urutanVal = '-';
 
           if (tipe === "materi") {
-            rowNilai.push('✓');
+            rowNilai.push(100);
             rowUrutan.push('Selesai');
-            scoreVal = 100;
-            timeVal = 'Selesai';
+            scoreMurniVal = 100;
+            scoreAkhirVal = 100;
             urutanVal = '-';
-          } else if (rec !== undefined) {
-            totalScore += rec.score;
+            totalScore += 100;
             countScored++;
-            rowNilai.push(rec.score);
-            rowUrutan.push(urutanText);
+          } else if (rec !== undefined) {
+            let baseScore = typeof rec.score === 'number' ? rec.score : (parseInt(rec.score, 10) || 0);
+            let uNum = (typeof uOrder === 'number' && uOrder > 0) ? uOrder : 0;
+            let finalScore = Math.max(0, baseScore - uNum - durasiMenit);
 
-            scoreVal = rec.score;
-            timeVal = rec.time || (upload ? (upload.waktu || upload.timestamp || '-') : '-');
+            scoreMurniVal = baseScore;
+            scoreAkhirVal = finalScore;
             urutanVal = uOrder ? ('#' + uOrder) : '-';
+
+            totalScore += finalScore;
+            countScored++;
+            rowNilai.push(finalScore);
+            rowUrutan.push(urutanText);
 
             rawLogs.push({
               urutan: uOrder || '-',
-              time: timeVal,
+              time: rec.time || (upload ? (upload.waktu || upload.timestamp || '-') : '-'),
               username: rawUsername,
               nama: nama,
               kelas: selKelas,
               materi: mJudulRaw,
               tipe: tipe.toUpperCase(),
-              nilai: rec.score,
-              durasi: rec.durasi || '-',
+              nilai: finalScore,
+              durasi: durasiStr,
               keterangan: rec.raw ? (getVal(rec.raw, ['keterangan', 'catatan']) || '-') : '-'
             });
           } else if (upload) {
             rowNilai.push('Terkirim');
             rowUrutan.push(urutanText !== '-' ? urutanText : 'Terkirim');
 
-            scoreVal = 'Terkirim';
-            timeVal = upload.waktu || upload.timestamp || '-';
+            scoreMurniVal = 'Terkirim';
+            scoreAkhirVal = 'Terkirim';
             urutanVal = uOrder ? ('#' + uOrder) : 'Terkirim';
 
             rawLogs.push({
               urutan: uOrder || '-',
-              time: timeVal,
+              time: upload.waktu || upload.timestamp || '-',
               username: rawUsername,
               nama: nama,
               kelas: selKelas,
@@ -4070,9 +4113,10 @@
             rowUrutan.push('-');
           }
 
-          rowDetail.push(scoreVal);
-          rowDetail.push(timeVal);
+          rowDetail.push(scoreMurniVal);
           rowDetail.push(urutanVal);
+          rowDetail.push(durasiStr);
+          rowDetail.push(scoreAkhirVal);
         });
 
         const avg = countScored > 0 ? Math.round(totalScore / countScored) : 0;
@@ -4462,20 +4506,37 @@
         [`REKAP NILAI & URUTAN MAJU - ${judulMateriStr.toUpperCase()}`],
         [`Kelas: ${selKelas.toUpperCase()} | Waktu Unduh: ${nowStr}`],
         [],
-        ['No', 'Nama Siswa', 'Kelas', 'Judul Materi', 'Nilai', 'Waktu Submit', 'Urutan Maju / Urutan Submit', 'NISN', 'Durasi', 'Status', 'Keterangan']
+        ['No', 'Nama Siswa', 'Kelas', 'Judul Materi', 'Nilai Murni', 'Urutan Maju', 'Durasi', 'Nilai Akhir', 'NISN', 'Status', 'Keterangan']
       ];
 
       mappedStudents.forEach((st, idx) => {
+        let durVal = (st.durasi && isDurationString(st.durasi)) ? st.durasi.toString().replace(/^'/, '').trim() : '';
+        let durasiMenit = durVal ? parseDurationToMinutes(durVal) : 0;
+        let durasiStr = durVal || '-';
+
+        let scoreMurni = (st.nilai !== undefined && st.nilai !== null && st.nilai !== '') ? st.nilai : '-';
+        let scoreAkhir = '-';
+        if (typeof scoreMurni === 'number') {
+          let uNum = (typeof st.urutan === 'number' && st.urutan < 999999) ? st.urutan : 0;
+          scoreAkhir = Math.max(0, scoreMurni - uNum - durasiMenit);
+        } else if (typeof scoreMurni === 'string' && !isNaN(parseInt(scoreMurni, 10))) {
+          let base = parseInt(scoreMurni, 10);
+          let uNum = (typeof st.urutan === 'number' && st.urutan < 999999) ? st.urutan : 0;
+          scoreAkhir = Math.max(0, base - uNum - durasiMenit);
+        } else {
+          scoreAkhir = scoreMurni;
+        }
+
         aoa.push([
           idx + 1,
           st.nama,
           selKelas,
           judulMateriStr,
-          st.nilai,
-          st.waktuSubmit,
+          scoreMurni,
           st.urutanLabel,
+          durasiStr,
+          scoreAkhir,
           st.username,
-          st.durasi,
           st.status,
           st.keterangan
         ]);
@@ -4572,14 +4633,14 @@
         const row4 = ['No', 'NISN', 'Nama Siswa', 'Kelas'];
         materialsForTingkat.forEach(m => {
           const j = (getVal(m, ['judul', 'materi']) || 'Materi').toString().trim();
-          row4.push(j, '', '');
+          row4.push(j, '', '', '');
         });
-        row4.push('Total Nilai', 'Rata-rata');
+        row4.push('Total Nilai Akhir', 'Rata-rata Nilai Akhir');
 
-        // Row 5: Sub-header Nilai, Waktu Submit, Urutan Maju
+        // Row 5: Sub-header Nilai Murni, Urutan Maju, Durasi, Nilai Akhir
         const row5 = ['', '', '', ''];
         materialsForTingkat.forEach(() => {
-          row5.push('Nilai', 'Waktu Submit', 'Urutan Maju');
+          row5.push('Nilai Murni', 'Urutan Maju', 'Durasi', 'Nilai Akhir');
         });
         row5.push('', '');
 
@@ -4598,19 +4659,19 @@
           { s: { r: 3, c: 3 }, e: { r: 4, c: 3 } }
         ];
         materialsForTingkat.forEach((m, idx) => {
-          const cStart = 4 + idx * 3;
-          merges.push({ s: { r: 3, c: cStart }, e: { r: 3, c: cStart + 2 } });
+          const cStart = 4 + idx * 4;
+          merges.push({ s: { r: 3, c: cStart }, e: { r: 3, c: cStart + 3 } });
         });
-        const cTotal = 4 + materialsForTingkat.length * 3;
+        const cTotal = 4 + materialsForTingkat.length * 4;
         merges.push({ s: { r: 3, c: cTotal }, e: { r: 4, c: cTotal } });
         merges.push({ s: { r: 3, c: cTotal + 1 }, e: { r: 4, c: cTotal + 1 } });
 
-        // Matriks ringkas khusus nilai (1 kolom per materi)
+        // Matriks ringkas khusus nilai akhir (1 kolom per materi)
         const matriksNilaiAoa = [
           [`REKAPITULASI MATRIKS NILAI SISWA - TINGKAT ${tingkat}`],
           [`Waktu Unduh: ${nowStr} | Kelas: ${classesInTingkat.join(', ')}`],
           [],
-          ['No', 'NISN', 'Nama Siswa', 'Kelas', ...materialsForTingkat.map(m => getVal(m, ['judul', 'materi']) || 'Materi'), 'Total', 'Rata-rata']
+          ['No', 'NISN', 'Nama Siswa', 'Kelas', ...materialsForTingkat.map(m => getVal(m, ['judul', 'materi']) || 'Materi'), 'Total Nilai Akhir', 'Rata-rata Nilai Akhir']
         ];
 
         // Hitung urutan per kelas
@@ -4666,31 +4727,42 @@
               let uOrder = uMap ? (uMap.get(`${midNorm}_${username}`) || uMap.get(`${mJudul}_${username}`) ||
                                    uMap.get(`${midNorm}_${sNamaNorm}`) || uMap.get(`${mJudul}_${sNamaNorm}`)) : undefined;
 
-              let scoreVal = '-';
-              let timeVal = '-';
+              let durVal = (rec && rec.durasi && isDurationString(rec.durasi)) ? rec.durasi.toString().replace(/^'/, '').trim() : '';
+              let durasiMenit = durVal ? parseDurationToMinutes(durVal) : 0;
+              let durasiStr = durVal || '-';
+
+              let scoreMurniVal = '-';
+              let scoreAkhirVal = '-';
               let urutanVal = '-';
 
               if (tipe === 'materi') {
-                scoreVal = 100;
-                timeVal = 'Selesai';
+                scoreMurniVal = 100;
+                scoreAkhirVal = 100;
                 urutanVal = '-';
+                totalScore += 100;
+                countScored++;
               } else if (rec !== undefined) {
-                scoreVal = rec.score;
-                timeVal = rec.time || (upload ? (upload.waktu || upload.timestamp || '-') : '-');
+                let baseScore = typeof rec.score === 'number' ? rec.score : (parseInt(rec.score, 10) || 0);
+                let uNum = (typeof uOrder === 'number' && uOrder > 0) ? uOrder : 0;
+                let finalScore = Math.max(0, baseScore - uNum - durasiMenit);
+
+                scoreMurniVal = baseScore;
+                scoreAkhirVal = finalScore;
                 urutanVal = uOrder ? ('#' + uOrder) : '-';
-                totalScore += rec.score;
+                totalScore += finalScore;
                 countScored++;
               } else if (upload) {
-                scoreVal = 'Terkirim';
-                timeVal = upload.waktu || upload.timestamp || '-';
+                scoreMurniVal = 'Terkirim';
+                scoreAkhirVal = 'Terkirim';
                 urutanVal = uOrder ? ('#' + uOrder) : 'Terkirim';
               }
 
-              studentRow.push(scoreVal);
-              studentRow.push(timeVal);
+              studentRow.push(scoreMurniVal);
               studentRow.push(urutanVal);
+              studentRow.push(durasiStr);
+              studentRow.push(scoreAkhirVal);
 
-              compactRow.push(scoreVal);
+              compactRow.push(scoreAkhirVal);
             });
 
             const avg = countScored > 0 ? Math.round(totalScore / countScored) : 0;
