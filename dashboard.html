@@ -1008,6 +1008,7 @@
     let allLogTugasMentah = [];
     let allGuruMentah = [];
     let allAbsenMentah = [];
+    let allUserMentah = [];
 
     function getTingkat(obj) {
       let t = (obj.tingkat || obj.Tingkat || "").toString().trim().toUpperCase();
@@ -1030,6 +1031,252 @@
       }
       return undefined;
     };
+
+    function parseDateTimestamp(dateVal) {
+      if (!dateVal) return 0;
+      if (typeof dateVal === 'number') return dateVal;
+      let str = dateVal.toString().trim();
+      if (!str || str === "-") return 0;
+
+      let d = new Date(str);
+      if (!isNaN(d.getTime())) return d.getTime();
+
+      try {
+        let parts = str.split(/[\s,]+/);
+        if (parts.length >= 1) {
+          let dateParts = parts[0].split(/[\/-]/);
+          let timeParts = (parts[1] || "00:00:00").split(/[:\.]/);
+          if (dateParts.length >= 3) {
+            let day = parseInt(dateParts[0], 10);
+            let month = parseInt(dateParts[1], 10) - 1;
+            let year = parseInt(dateParts[2], 10);
+            let hour = parseInt(timeParts[0] || 0, 10);
+            let minute = parseInt(timeParts[1] || 0, 10);
+            let second = parseInt(timeParts[2] || 0, 10);
+            let dt = new Date(year, month, day, hour, minute, second);
+            if (!isNaN(dt.getTime())) return dt.getTime();
+          }
+        }
+      } catch(e) {}
+
+      return 0;
+    }
+
+    function isDurationString(s) {
+      if (!s || s === '-' || s === '') return false;
+      let str = s.toString().replace(/^'/, '').trim();
+      if (str.includes("1899-12-29") || str.includes("Z") || str.includes("T") || str.includes("/") || str.includes(" ") || (str.includes("-") && str.length > 5)) {
+        return false;
+      }
+      if (/^\d{1,3}:\d{2}(:\d{2})?$/.test(str)) return true;
+      let num = Number(str);
+      if (!isNaN(num) && num > 0 && num < 300) return true;
+      return false;
+    }
+
+    function parseDurationToMinutes(durStr) {
+      if (!durStr) return 0;
+      let str = durStr.toString().replace(/^'/, '').trim();
+      if (!isDurationString(str)) return 0;
+      const parts = str.split(':');
+      if (parts.length === 2) {
+        let m = parseInt(parts[0], 10) || 0;
+        let s = parseInt(parts[1], 10) || 0;
+        return Math.round(m + s / 60);
+      }
+      if (parts.length === 3) {
+        let h = parseInt(parts[0], 10) || 0;
+        let m = parseInt(parts[1], 10) || 0;
+        let s = parseInt(parts[2], 10) || 0;
+        return Math.round(h * 60 + m + s / 60);
+      }
+      let num = parseFloat(str);
+      if (!isNaN(num) && num > 0) return Math.round(num);
+      return 0;
+    }
+
+    function showModalRincianNilaiSiswa(data) {
+      if (!data) return;
+      const modal = document.getElementById('modalRincianNilaiSiswa');
+      const content = document.getElementById('modalRincianNilaiContent');
+      if (!modal || !content) return;
+
+      let uNum = (typeof data.urutan === 'number' && data.urutan > 0) ? data.urutan : 0;
+      let uText = uNum > 0 ? `#${uNum} <span style="color:#ef4444; font-weight:700;">(-${uNum} poin)</span>` : '<span style="color:#64748b;">- (0 poin)</span>';
+      
+      let dMin = (typeof data.durasiMenit === 'number' && data.durasiMenit > 0) ? data.durasiMenit : 0;
+      let dText = (data.durasi && data.durasi !== '-') ? `${data.durasi} <span style="color:#ef4444; font-weight:700;">(-${dMin} poin)</span>` : '<span style="color:#64748b;">- (0 poin)</span>';
+      
+      let murniText = data.murni !== undefined && data.murni !== null ? data.murni : '-';
+      let akhirText = data.akhir !== undefined && data.akhir !== null ? data.akhir : '-';
+
+      content.innerHTML = `
+        <div style="margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
+          <h4 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #1e293b;">${data.materi || 'Materi'}</h4>
+          <div style="font-size: 0.8rem; color: #64748b; margin-top: 4px;">
+            <span>Mata Pelajaran: <strong>${data.mapel || 'Umum'}</strong></span> | <span>Tipe: <strong>${data.tipe || 'Evaluasi'}</strong></span>
+          </div>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 0.85rem; color: #475569; display: flex; align-items: center; gap: 6px;">
+              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #3b82f6;"></span>
+              Nilai Murni (Awal)
+            </span>
+            <span style="font-size: 1.1rem; font-weight: 700; color: #1e293b;">${murniText}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 0.85rem; color: #475569; display: flex; align-items: center; gap: 6px;">
+              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f59e0b;"></span>
+              Urutan Maju di Kelas
+            </span>
+            <span style="font-size: 0.9rem; font-weight: 600; color: #d97706;">${uText}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="font-size: 0.85rem; color: #475569; display: flex; align-items: center; gap: 6px;">
+              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #8b5cf6;"></span>
+              Durasi Mengerjakan
+            </span>
+            <span style="font-size: 0.9rem; font-weight: 600; color: #7c3aed;">${dText}</span>
+          </div>
+          
+          <div style="border-top: 1px dashed #cbd5e1; padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 1rem; font-weight: 700; color: #0f172a;">🏆 Nilai Akhir Anda</span>
+            <span style="font-size: 1.5rem; font-weight: 800; color: #16a34a;">${akhirText}</span>
+          </div>
+        </div>
+
+        <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 0.8rem; color: #1e40af; line-height: 1.4;">
+          <strong>Formula Perhitungan:</strong><br>
+          Nilai Akhir = Nilai Murni (${murniText}) - Urutan (${uNum}) - Durasi (${dMin} mnt) = <strong>${akhirText}</strong>
+          ${data.keterangan && data.keterangan !== '-' ? `<div style="margin-top:6px; color:#334155; font-size:0.75rem;"><strong>Catatan Guru:</strong> ${data.keterangan}</div>` : ''}
+        </div>
+      `;
+
+      modal.style.display = 'flex';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function computeUrutanMapForClass(cls, students, materials, allNilai, allLogTugas) {
+      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      const urutanMap = new Map();
+
+      const clsNorm = norm(cls);
+      const clsStudents = (Array.isArray(students) ? students : []).filter(u => {
+        let r = (getVal(u, ['role', 'peran']) || "").toString().toLowerCase().trim();
+        if (r === "admin" || r === "guru") return false;
+        let k = norm(getVal(u, ['kelas', 'tingkat', 'rombel']));
+        return k === clsNorm || k.includes(clsNorm) || clsNorm.includes(k);
+      });
+
+      let logTugasMap = new Map();
+      (Array.isArray(allLogTugas) ? allLogTugas : []).forEach(t => {
+        let u = norm(getVal(t, ['username', 'nisn']));
+        let namaNorm = norm(getVal(t, ['nama', 'namasiswa', 'namalengkap']));
+        let mid = norm(getVal(t, ['id_materi', 'idmateri', 'materi']));
+        let mJudul = norm(getVal(t, ['materi', 'judul']));
+        if (u) {
+          if (mid) logTugasMap.set(`${u}_${mid}`, t);
+          if (mJudul) logTugasMap.set(`${u}_${mJudul}`, t);
+        }
+        if (namaNorm) {
+          if (mid) logTugasMap.set(`${namaNorm}_${mid}`, t);
+          if (mJudul) logTugasMap.set(`${namaNorm}_${mJudul}`, t);
+        }
+      });
+
+      let nilaiMap = new Map();
+      (Array.isArray(allNilai) ? allNilai : []).forEach(n => {
+        let u = norm(getVal(n, ['username', 'nisn']));
+        let namaNorm = norm(getVal(n, ['nama', 'namasiswa', 'namalengkap']));
+        let mid = norm(getVal(n, ['id_materi', 'idmateri', 'modul']));
+        let mJudul = norm(getVal(n, ['judul', 'materi', 'judul_materi']));
+
+        let scoreRaw = getVal(n, ['nilai', 'skor']);
+        let score = parseInt(scoreRaw, 10);
+        if (isNaN(score)) score = 0;
+
+        let timeVal = (getVal(n, ['timestamp', 'waktusubmit', 'tanggal', 'waktu']) || "").toString().trim();
+        let rawDur = (getVal(n, ['durasi', 'waktuaktif', 'waktu']) || "").toString().trim();
+        let durasiVal = isDurationString(rawDur) ? rawDur : "";
+        let record = { score, time: timeVal, durasi: durasiVal, raw: n };
+
+        let keys = [];
+        if (u && mid) keys.push(`${u}_${mid}`);
+        if (u && mJudul) keys.push(`${u}_${mJudul}`);
+        if (namaNorm && mid) keys.push(`${namaNorm}_${mid}`);
+        if (namaNorm && mJudul) keys.push(`${namaNorm}_${mJudul}`);
+
+        keys.forEach(k => {
+          if (!nilaiMap.has(k)) {
+            nilaiMap.set(k, record);
+          } else {
+            let existing = nilaiMap.get(k);
+            if (score > existing.score) {
+              nilaiMap.set(k, record);
+            }
+          }
+        });
+      });
+
+      (Array.isArray(materials) ? materials : []).forEach((m, mIdx) => {
+        const mid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (mIdx + 1)).toString().trim();
+        const midNorm = norm(mid);
+        const mJudulRaw = (getVal(m, ['judul', 'materi']) || "Materi").toString().trim();
+        const mJudul = norm(mJudulRaw);
+
+        let candidates = [];
+
+        clsStudents.forEach(s => {
+          const rawUsername = (getVal(s, ['username', 'nisn']) || "").toString().trim();
+          const uNorm = norm(rawUsername);
+          const sNamaRaw = (getVal(s, ['nama', 'namalengkap', 'namasiswa']) || "").toString().trim();
+          const sNamaNorm = norm(sNamaRaw);
+
+          let upload = logTugasMap.get(`${uNorm}_${midNorm}`) || 
+                       logTugasMap.get(`${uNorm}_${mJudul}`) ||
+                       logTugasMap.get(`${sNamaNorm}_${midNorm}`) ||
+                       logTugasMap.get(`${sNamaNorm}_${mJudul}`);
+
+          let rec = nilaiMap.get(`${uNorm}_${midNorm}`) ||
+                    nilaiMap.get(`${uNorm}_${mJudul}`) ||
+                    nilaiMap.get(`${sNamaNorm}_${midNorm}`) ||
+                    nilaiMap.get(`${sNamaNorm}_${mJudul}`);
+
+          if (rec || upload) {
+            let rawTime = (rec && rec.time) ? rec.time : (upload ? (getVal(upload, ['waktu', 'timestamp', 'tanggal']) || "") : "");
+            if (!rawTime && rec && rec.raw) {
+              rawTime = getVal(rec.raw, ['timestamp', 'waktu', 'waktusubmit', 'tanggal']) || "";
+            }
+            let pTime = parseDateTimestamp(rawTime);
+            candidates.push({
+              rawUsername,
+              uNorm,
+              sNamaNorm,
+              rawTime: rawTime || "",
+              pTime: pTime > 0 ? pTime : Number.MAX_SAFE_INTEGER
+            });
+          }
+        });
+
+        candidates.sort((a, b) => {
+          if (a.pTime !== b.pTime) return a.pTime - b.pTime;
+          return (a.rawTime || "").localeCompare(b.rawTime || "");
+        });
+
+        candidates.forEach((c, idx) => {
+          let order = idx + 1;
+          let mKeys = [midNorm, mJudul].filter(Boolean);
+          mKeys.forEach(mk => {
+            if (c.uNorm) urutanMap.set(`${mk}_${c.uNorm}`, order);
+            if (c.sNamaNorm) urutanMap.set(`${mk}_${c.sNamaNorm}`, order);
+          });
+        });
+      });
+
+      return urutanMap;
+    }
 
     document.getElementById("welcomeText").innerText = "Halo, " + user.nama.split(' ')[0] + "!";
     document.getElementById("avatar-toggle").innerText = user.nama.charAt(0);
@@ -1119,6 +1366,7 @@
           allLogTugasMentah = cLogTugas ? JSON.parse(cLogTugas) : [];
           allGuruMentah = cGuru ? JSON.parse(cGuru) : [];
           allAbsenMentah = cAbsen ? JSON.parse(cAbsen) : [];
+          allUserMentah = cUser ? JSON.parse(cUser) : [];
 
           renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah, allGuruMentah);
           renderAbsenSiswa(allAbsenMentah, user);
@@ -1177,6 +1425,7 @@
         }
         if (Array.isArray(dataUser) && dataUser.length > 0) {
           localStorage.setItem("cache_user", JSON.stringify(dataUser));
+          allUserMentah = dataUser;
         }
         if (Array.isArray(dataLogTugas) && dataLogTugas.length > 0) {
           localStorage.setItem("cache_logTugas", JSON.stringify(dataLogTugas));
@@ -1327,10 +1576,20 @@
         }
 
         // Evaluasi (Kuis/Tugas) yang sudah selesai diambil dari server beserta nilai dan waktunya
+        const userListForRank = (Array.isArray(allUserMentah) && allUserMentah.length > 0)
+          ? allUserMentah
+          : (localStorage.getItem("cache_user") ? JSON.parse(localStorage.getItem("cache_user")) : []);
+        const myClassUrutanMap = computeUrutanMapForClass(myKelas, userListForRank, dataMateriFiltered, dataProgres, dataLogTugas);
+
         const quizScores = new Map();
+        const quizFinalScores = new Map();
+        const quizUrutan = new Map();
+        const quizDurasi = new Map();
         const quizTimes = new Map();
         const quizRawScores = new Map();
         const quizKeterangan = new Map();
+
+        const normStr = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
 
         userProgress.filter(p => {
           let pTipe = getVal(p, ['tipe', 'tipeevaluasi', 'jenis']);
@@ -1362,25 +1621,53 @@
             let timeStr = pWaktu ? pWaktu.toString().replace(/^'/, '').trim() : "00:00";
             if (timeStr.includes("1899-12-29") || timeStr.includes("Z")) timeStr = "00:00";
 
+            let rawDur = (getVal(p, ['durasi', 'waktuaktif']) || "").toString().replace(/^'/, '').trim();
+            if (!rawDur && isDurationString(pWaktu)) {
+              rawDur = pWaktu.toString().replace(/^'/, '').trim();
+            }
+
             const isTugas = rawVal.toLowerCase().includes("terkirim") || rawVal.includes("http");
+
+            let uOrder = myClassUrutanMap.get(`${normStr(mid)}_${normStr(user.username)}`) ||
+                         myClassUrutanMap.get(`${normStr(mid)}_${normStr(user.nama)}`);
+            let uNum = (typeof uOrder === 'number' && uOrder > 0) ? uOrder : 0;
+            let durasiMenit = parseDurationToMinutes(rawDur);
+
+            let finalScore = score;
+            if (pTipe === "materi") {
+              finalScore = 100;
+            } else if (isTugas && rawVal.toLowerCase().includes("terkirim") && !pNilai.toString().match(/\d+/)) {
+              finalScore = 0;
+            } else {
+              finalScore = Math.max(0, score - uNum - durasiMenit);
+            }
 
             // Simpan nilai tertinggi jika dikerjakan berkali-kali
             // Prioritaskan skor yang lebih besar, ATAU jika ini tugas, selalu ambil yang paling baru
             if (!quizScores.has(mid)) {
               quizScores.set(mid, score);
+              quizFinalScores.set(mid, finalScore);
+              quizUrutan.set(mid, uNum);
+              quizDurasi.set(mid, rawDur);
               quizTimes.set(mid, timeStr);
               quizRawScores.set(mid, rawVal);
             } else if (isTugas) {
               // JIKA TUGAS: Array berjalan dari data lama ke baru. Kita selalu timpa dengan yang terbaru!
               quizScores.set(mid, score);
+              quizFinalScores.set(mid, finalScore);
+              quizUrutan.set(mid, uNum);
+              quizDurasi.set(mid, rawDur);
               quizTimes.set(mid, timeStr);
               quizRawScores.set(mid, rawVal);
-            } else if (score > quizScores.get(mid)) {
+            } else if (finalScore > (quizFinalScores.get(mid) || 0)) {
               // JIKA KUIS: Ambil skor terbesar
               quizScores.set(mid, score);
+              quizFinalScores.set(mid, finalScore);
+              quizUrutan.set(mid, uNum);
+              quizDurasi.set(mid, rawDur);
               quizTimes.set(mid, timeStr);
               quizRawScores.set(mid, rawVal);
-            } else if (score === quizScores.get(mid)) {
+            } else if (finalScore === (quizFinalScores.get(mid) || 0)) {
               // JIKA SKOR KUIS SAMA: Ambil yang waktunya paling cepat (terkecil)
               if (timeStr < quizTimes.get(mid)) {
                 quizTimes.set(mid, timeStr);
@@ -1390,9 +1677,9 @@
           }
         });
 
-        // Kalkulasi Total Skor Saya
+        // Kalkulasi Total Skor Saya Berdasarkan Nilai Akhir
         let totalScore = 0;
-        quizScores.forEach(score => totalScore += score);
+        quizFinalScores.forEach(score => totalScore += score);
         document.getElementById("myScore").innerText = totalScore;
 
         // Hitung Tugas/Kuis yang BELUM ADA NILAINYA ATAU UNGGAHANNYA
@@ -1455,17 +1742,29 @@
         let upNextHTML = "";
         let upNextFound = false;
         list.innerHTML = dataMateriFiltered.map((m, i) => {
-          const mid = getVal(m, ['idmateri', 'id_materi', 'materiid']) || (i + 1).toString();
+          const mid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (i + 1)).toString();
+          const mJudulRaw = (getVal(m, ['judul', 'materi']) || ("Materi " + (i + 1))).toString().trim();
           const tipeRaw = getVal(m, ['tipeevaluasi', 'tipe', 'evaluasi', 'jenis']);
           let tipe = (tipeRaw && tipeRaw.toString().trim() !== "") ? tipeRaw.toString().trim() : (i % 2 === 0 ? "Kuis" : "Tugas");
           // Format menjadi Kuis atau Tugas atau Praktik
           tipe = tipe.charAt(0).toUpperCase() + tipe.slice(1).toLowerCase();
 
           // SKOR
-          let hasScore = quizScores.has(mid.toString());
-          let scoreValue = hasScore ? quizScores.get(mid.toString()) : null;
-          let rawScoreValue = hasScore ? quizRawScores.get(mid.toString()) : "";
-          let timeValue = hasScore ? quizTimes.get(mid.toString()) : null;
+          let hasScore = quizScores.has(mid.toString()) || quizScores.has(mJudulRaw);
+          let scoreValue = hasScore ? (quizScores.get(mid.toString()) !== undefined ? quizScores.get(mid.toString()) : quizScores.get(mJudulRaw)) : null;
+          let finalScoreValue = hasScore ? (quizFinalScores.get(mid.toString()) !== undefined ? quizFinalScores.get(mid.toString()) : quizFinalScores.get(mJudulRaw)) : null;
+          let rawScoreValue = hasScore ? (quizRawScores.get(mid.toString()) || quizRawScores.get(mJudulRaw) || "") : "";
+          let timeValue = hasScore ? (quizTimes.get(mid.toString()) || quizTimes.get(mJudulRaw)) : null;
+          let durVal = hasScore ? (quizDurasi.get(mid.toString()) || quizDurasi.get(mJudulRaw) || "") : "";
+          let uNum = hasScore ? (quizUrutan.get(mid.toString()) || quizUrutan.get(mJudulRaw) || 0) : 0;
+          if (!uNum) {
+            let uOrder = myClassUrutanMap.get(`${normStr(mid)}_${normStr(user.username)}`) ||
+                         myClassUrutanMap.get(`${normStr(mJudulRaw)}_${normStr(user.username)}`) ||
+                         myClassUrutanMap.get(`${normStr(mid)}_${normStr(user.nama)}`) ||
+                         myClassUrutanMap.get(`${normStr(mJudulRaw)}_${normStr(user.nama)}`);
+            if (typeof uOrder === 'number' && uOrder > 0) uNum = uOrder;
+          }
+          let durasiMenit = parseDurationToMinutes(durVal);
 
           // LOGIKA PENGUNCIAN:
           let prevMid = i > 0 ? i : null;
@@ -1499,18 +1798,52 @@
 
           if (hasScore && tipe.toLowerCase() === "survey") {
               sVal = "100";
+              scoreValue = 100;
+              finalScoreValue = 100;
+          } else if (hasScore && sVal !== "Terkirim" && finalScoreValue !== null) {
+              sVal = finalScoreValue.toString();
           }
-          
-          let scoreBadge = hasScore ? `<span style="font-size:0.7rem; font-weight:700; color:#059669; background:#d1fae5; padding:4px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="check-circle" style="width:14px; height:14px;"></i> Point: ${sVal}</span>` 
-            : `<span style="font-size:0.7rem; font-weight:700; color:#94a3b8; background:#f1f5f9; padding:4px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="circle" style="width:14px; height:14px;"></i> Belum Ada Point</span>`;
+
+          let ketText = (quizKeterangan.get(mid.toString()) || quizKeterangan.get(mJudulRaw) || "").toString().trim();
+          let mapelName = (m.mapel || m.Mapel || m.matapelajaran || m.MataPelajaran || "Umum").toString().trim();
+
+          let rincianObj = {
+            materi: mJudulRaw,
+            mapel: mapelName,
+            tipe: tipe,
+            murni: scoreValue !== null ? scoreValue : '-',
+            urutan: uNum,
+            durasi: durVal || '-',
+            durasiMenit: durasiMenit,
+            akhir: finalScoreValue !== null ? finalScoreValue : sVal,
+            keterangan: ketText
+          };
+          let rincianStr = encodeURIComponent(JSON.stringify(rincianObj));
+          let titleTooltip = `Nilai Akhir: ${finalScoreValue !== null ? finalScoreValue : sVal}\nNilai Murni: ${scoreValue !== null ? scoreValue : '-'}\nUrutan Maju: #${uNum} (-${uNum})\nDurasi: ${durVal || '-'} (-${durasiMenit} mnt)\nFormula: ${scoreValue !== null ? scoreValue : 0} - ${uNum} - ${durasiMenit} = ${finalScoreValue !== null ? finalScoreValue : sVal}\n(Klik untuk lihat rincian)`;
+
+          let scoreBadge = '';
+          if (hasScore) {
+            if (sVal === "Terkirim") {
+              scoreBadge = `<span style="font-size:0.7rem; font-weight:700; color:#d97706; background:#fffbeb; padding:4px 8px; border-radius:6px; border:1px solid #fde68a; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="clock" style="width:14px; height:14px;"></i> Menunggu Penilaian</span>`;
+            } else {
+              scoreBadge = `<span class="badge-nilai-akhir-siswa" onclick="showModalRincianNilaiSiswa(JSON.parse(decodeURIComponent('${rincianStr}')))" style="cursor:pointer; font-size:0.75rem; font-weight:700; color:#059669; background:#d1fae5; padding:4px 10px; border-radius:6px; border:1px solid #a7f3d0; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; transition:all 0.15s ease;" title="${titleTooltip}"><i data-lucide="award" style="width:14px; height:14px;"></i> Point Akhir: ${sVal} <i data-lucide="info" style="width:12px; height:12px; opacity:0.8;"></i></span>`;
+            }
+          } else {
+            scoreBadge = `<span style="font-size:0.7rem; font-weight:700; color:#94a3b8; background:#f1f5f9; padding:4px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="circle" style="width:14px; height:14px;"></i> Belum Ada Point</span>`;
+          }
 
           let timeBadge = '';
-          if (hasScore && timeValue) {
-            if (!isNaN(timeValue) && timeValue.toString().trim() !== "") {
-              timeBadge = `<span class="course-tag" style="background:#e0e7ff; color:#4f46e5; font-size:0.65rem; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="hash" style="width:12px; height:12px;"></i> Urutan ke-${timeValue}</span>`;
-            } else {
-              timeBadge = `<span class="course-tag" style="background:#f1f5f9; color:#64748b; font-size:0.65rem; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="clock" style="width:12px; height:12px;"></i> ${timeValue}</span>`;
+          if (hasScore && sVal !== "Terkirim") {
+            if (uNum > 0) {
+              timeBadge += `<span class="course-tag" style="background:#fef3c7; color:#b45309; font-size:0.65rem; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Urutan Maju #${uNum} di kelas"><i data-lucide="hash" style="width:12px; height:12px;"></i> #${uNum}</span>`;
             }
+            if (durVal) {
+              timeBadge += `<span class="course-tag" style="background:#f3e8ff; color:#7e22ce; font-size:0.65rem; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Durasi Pengerjaan: ${durVal} (-${durasiMenit} mnt)"><i data-lucide="clock" style="width:12px; height:12px;"></i> ${durVal}</span>`;
+            } else if (timeValue && timeValue !== "00:00") {
+              timeBadge += `<span class="course-tag" style="background:#f1f5f9; color:#64748b; font-size:0.65rem; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="clock" style="width:12px; height:12px;"></i> ${timeValue}</span>`;
+            }
+          } else if (hasScore && sVal === "Terkirim" && timeValue) {
+            timeBadge = `<span class="course-tag" style="background:#f1f5f9; color:#64748b; font-size:0.65rem; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="clock" style="width:12px; height:12px;"></i> ${timeValue}</span>`;
           } else {
             timeBadge = `<span class="course-tag" style="background:#f1f5f9; color:#cbd5e1; font-size:0.65rem; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><i data-lucide="clock" style="width:12px; height:12px;"></i> -</span>`;
           }
@@ -1855,6 +2188,19 @@
         };
 
         // 2. Gabungkan data listNilai dan logTugas (persis seperti admin.html)
+        const classUrutanMap = new Map();
+        const uniqueClasses = new Set();
+        userMap.forEach(u => {
+          if (u.kelas && u.kelas !== "Tanpa Kelas") uniqueClasses.add(u.kelas);
+        });
+
+        uniqueClasses.forEach(cls => {
+          const uMap = computeUrutanMapForClass(cls, dataUser, allMateriMentah, rawNilai, rawLogTugas);
+          for (let [k, v] of uMap.entries()) {
+            classUrutanMap.set(`${norm(cls)}_${k}`, v);
+          }
+        });
+
         let gabunganNilai = (Array.isArray(rawNilai) ? rawNilai : []).concat(Array.isArray(rawLogTugas) ? rawLogTugas : []);
 
         gabunganNilai.forEach(n => {
@@ -1884,13 +2230,42 @@
           }
           const waktuSec = parseTimeToSeconds(getVal(n, ['waktu', 'timestamp']));
 
+          // Hitung Nilai Akhir untuk peringkat
+          let userKls = norm(userObj.kelas);
+          let userUname = norm(userObj.username);
+          let userNama = norm(userObj.nama);
+          let rawMidNorm = norm(rawMid);
+          let rawJudulNorm = norm(rawJudul);
+
+          let uOrder = classUrutanMap.get(`${userKls}_${mid}_${userUname}`) ||
+                       classUrutanMap.get(`${userKls}_${mid}_${userNama}`) ||
+                       (rawMidNorm ? classUrutanMap.get(`${userKls}_${rawMidNorm}_${userUname}`) : null) ||
+                       (rawJudulNorm ? classUrutanMap.get(`${userKls}_${rawJudulNorm}_${userUname}`) : null) ||
+                       (rawMidNorm ? classUrutanMap.get(`${userKls}_${rawMidNorm}_${userNama}`) : null) ||
+                       (rawJudulNorm ? classUrutanMap.get(`${userKls}_${rawJudulNorm}_${userNama}`) : null);
+
+          let uNum = (typeof uOrder === 'number' && uOrder > 0) ? uOrder : 0;
+
+          let rawDur = (getVal(n, ['durasi', 'waktuaktif']) || "").toString().replace(/^'/, '').trim();
+          if (!rawDur && isDurationString(getVal(n, ['waktu']))) {
+            rawDur = getVal(n, ['waktu']).toString().replace(/^'/, '').trim();
+          }
+          let durasiMenit = parseDurationToMinutes(rawDur);
+
+          let finalScore = score;
+          if (pTipe && pTipe.toString().toLowerCase() === "materi") {
+            finalScore = 100;
+          } else {
+            finalScore = Math.max(0, score - uNum - durasiMenit);
+          }
+
           const existing = userObj.quizzes.get(mid);
           if (!existing) {
-            userObj.quizzes.set(mid, { score, totalWaktuSec: waktuSec });
+            userObj.quizzes.set(mid, { score: finalScore, murni: score, urutan: uNum, durasiMenit, totalWaktuSec: waktuSec });
           } else {
-            let bestScore = Math.max(score, existing.score);
+            let bestScore = Math.max(finalScore, existing.score);
             let sumTimeSec = existing.totalWaktuSec + waktuSec;
-            userObj.quizzes.set(mid, { score: bestScore, totalWaktuSec: sumTimeSec });
+            userObj.quizzes.set(mid, { score: bestScore, murni: Math.max(score, existing.murni || 0), urutan: uNum || existing.urutan, durasiMenit, totalWaktuSec: sumTimeSec });
           }
         });
 
@@ -2026,7 +2401,7 @@
           <div style="font-size:0.65rem; color:var(--text-muted); margin-top:2px; font-weight:600;">${u.kelas}</div>
         </div>
         <div class="rank-score" style="text-align:right;">
-          <div class="score-value" style="font-size:1.1rem; color:var(--primary);">${u.nilai} <span style="font-size:0.65rem; color:var(--text-muted); font-weight:600;">Point</span></div>
+          <div class="score-value" style="font-size:1.1rem; color:var(--primary);" title="Total Nilai Akhir Siswa">${u.nilai} <span style="font-size:0.65rem; color:var(--text-muted); font-weight:600;">Point Akhir</span></div>
           ${u.waktu ? `<div style="font-size:0.65rem; color:var(--text-muted); margin-top:4px; font-weight:600; display:flex; align-items:center; justify-content:flex-end; gap:4px;"><i data-lucide="clock" style="width:12px; height:12px;"></i> ${u.waktu}</div>` : ''}
         </div>
       </div>
@@ -2135,6 +2510,32 @@
       iframe.src = iframeUrl;
     }
   </script>
+
+  <!-- Modal Rincian Nilai Siswa -->
+  <div id="modalRincianNilaiSiswa"
+    style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.7); z-index:10000; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(4px);">
+    <div style="background:white; border-radius:16px; width:100%; max-width:480px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
+      <div style="padding:16px 20px; background:linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); color:white; display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin:0; font-size:1.1rem; font-weight:700; display:flex; align-items:center; gap:8px; color:white;">
+          <i data-lucide="calculator" style="width:20px; height:20px;"></i> Rincian Nilai Akhir
+        </h3>
+        <button onclick="document.getElementById('modalRincianNilaiSiswa').style.display='none'"
+          style="background:rgba(255,255,255,0.2); border:none; cursor:pointer; color:white; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; transition:background 0.2s;"
+          onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+          <i data-lucide="x" style="width:18px; height:18px;"></i>
+        </button>
+      </div>
+      <div id="modalRincianNilaiContent" style="padding:20px; max-height:75vh; overflow-y:auto;">
+        <!-- Konten rincian akan diisi oleh JS -->
+      </div>
+      <div style="padding:12px 20px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end;">
+        <button onclick="document.getElementById('modalRincianNilaiSiswa').style.display='none'"
+          style="padding:8px 18px; background:#4f46e5; color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:0.875rem;">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal Lihat File -->
   <div id="viewFileModal"

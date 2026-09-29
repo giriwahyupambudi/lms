@@ -962,6 +962,24 @@
     </div>
   </div>
 
+  <!-- MODAL DETAIL NILAI AKHIR -->
+  <div id="modalDetailNilaiAkhir" class="modal-overlay" style="display:none; z-index:2100">
+    <div class="modal" style="max-width: 480px; width: 95%;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); color: white; border-radius: 12px 12px 0 0; padding: 14px 20px;">
+        <h3 id="modalDetailNilaiTitle" style="color: white; display: flex; align-items: center; gap: 8px; font-size: 1.05rem; margin: 0;">
+          <i data-lucide="calculator" style="width: 18px; height: 18px;"></i> Rincian Perhitungan Nilai
+        </h3>
+        <button class="close-modal" onclick="closeModal('modalDetailNilaiAkhir')" style="color: white; background: none; border: none; cursor: pointer;"><i data-lucide="x"></i></button>
+      </div>
+      <div id="modalDetailNilaiContent" class="modal-body" style="padding: 20px;">
+        <!-- Konten rincian akan diisi oleh JS -->
+      </div>
+      <div class="modal-footer" style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end;">
+        <button class="btn btn-primary" onclick="closeModal('modalDetailNilaiAkhir')">Tutup</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ===== CEK LOGIN ADMIN =====
     let IS_SUPER_ADMIN = true;
@@ -1063,6 +1081,71 @@
     function logout() { localStorage.removeItem("admin_user"); window.location.href = "login-admin.html"; }
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    function showModalDetailNilaiAkhir(data) {
+      if (!data) return;
+      const modal = document.getElementById('modalDetailNilaiAkhir');
+      const content = document.getElementById('modalDetailNilaiContent');
+      if (!modal || !content) return;
+
+      let uNum = (typeof data.urutan === 'number' && data.urutan > 0) ? data.urutan : 0;
+      let uText = uNum > 0 ? `#${uNum} <span style="color:#ef4444; font-weight:700;">(-${uNum} poin)</span>` : '<span style="color:#64748b;">- (0 poin)</span>';
+      
+      let dMin = (typeof data.durasiMenit === 'number' && data.durasiMenit > 0) ? data.durasiMenit : 0;
+      let dText = (data.durasi && data.durasi !== '-') ? `${data.durasi} <span style="color:#ef4444; font-weight:700;">(-${dMin} poin)</span>` : '<span style="color:#64748b;">- (0 poin)</span>';
+      
+      let murniText = data.murni !== undefined && data.murni !== null ? data.murni : '-';
+      let akhirText = data.akhir !== undefined && data.akhir !== null ? data.akhir : '-';
+
+      content.innerHTML = `
+        <div style="margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
+          <h4 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #1e293b;">${data.nama || 'Siswa'}</h4>
+          <div style="font-size: 0.8rem; color: #64748b; margin-top: 3px;">
+            <span>NISN: <strong>${data.username || '-'}</strong></span> | <span>Kelas: <strong>${data.kelas || '-'}</strong></span>
+          </div>
+          <div style="margin-top: 6px; display: inline-block; background: #e0e7ff; color: #3730a3; padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">
+            ${data.materi || 'Materi'} (${data.tipe || 'Tugas'})
+          </div>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 0.85rem; color: #475569; display: flex; align-items: center; gap: 6px;">
+              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #3b82f6;"></span>
+              Nilai Murni (Awal)
+            </span>
+            <span style="font-size: 1.1rem; font-weight: 700; color: #1e293b;">${murniText}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 0.85rem; color: #475569; display: flex; align-items: center; gap: 6px;">
+              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f59e0b;"></span>
+              Urutan Maju di Kelas
+            </span>
+            <span style="font-size: 0.9rem; font-weight: 600; color: #d97706;">${uText}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="font-size: 0.85rem; color: #475569; display: flex; align-items: center; gap: 6px;">
+              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #8b5cf6;"></span>
+              Durasi Pengerjaan
+            </span>
+            <span style="font-size: 0.9rem; font-weight: 600; color: #7c3aed;">${dText}</span>
+          </div>
+          
+          <div style="border-top: 1px dashed #cbd5e1; padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 1rem; font-weight: 700; color: #0f172a;">🏆 Nilai Akhir</span>
+            <span style="font-size: 1.5rem; font-weight: 800; color: #16a34a;">${akhirText}</span>
+          </div>
+        </div>
+
+        <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 0.8rem; color: #1e40af; line-height: 1.4;">
+          <strong>Formula:</strong> Nilai Akhir = ${murniText} - ${uNum} - ${dMin} = <strong>${akhirText}</strong>
+          ${data.keterangan && data.keterangan !== '-' ? `<div style="margin-top:6px; color:#334155; font-size:0.75rem;"><strong>Catatan Guru:</strong> ${data.keterangan}</div>` : ''}
+        </div>
+      `;
+
+      modal.style.display = 'flex';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
     let overlayTimer = null;
     function showOverlay(text, autoHideMs = 4000) { 
       const txtEl = document.getElementById('syncText');
@@ -2537,6 +2620,24 @@
         };
 
         // 2. Gabungkan data nilai & tugas
+        const { rekapLogTugasMap, rekapNilaiMap } = buildRekapIndexMaps();
+        const classUrutanMap = new Map();
+
+        // Buat pemetaan urutan maju per kelas
+        const uniqueClasses = new Set();
+        userMap.forEach(u => {
+          if (u.kelas && u.kelas !== "Tanpa Kelas") uniqueClasses.add(u.kelas);
+        });
+
+        uniqueClasses.forEach(cls => {
+          const clsStudents = getStudentsForClass(cls);
+          const clsMaterials = getMaterialsForClass(cls);
+          const uMap = computeUrutanMajuMap(clsStudents, clsMaterials, rekapNilaiMap, rekapLogTugasMap);
+          for (let [k, v] of uMap.entries()) {
+            classUrutanMap.set(`${norm(cls)}_${k}`, v);
+          }
+        });
+
         let gabunganNilai = nilaiArr.concat(tugasArr);
 
         gabunganNilai.forEach(n => {
@@ -2600,14 +2701,43 @@
           const waktuSec = parseTimeToSeconds(getVal(n, ['waktu', 'timestamp']));
           const wSec = isNaN(waktuSec) ? 0 : waktuSec;
 
+          // Hitung Nilai Akhir untuk ranking
+          let userKls = norm(userObj.kelas);
+          let userUname = norm(userObj.username);
+          let userNama = norm(userObj.nama);
+          let rawMidNorm = norm(rawMid);
+          let rawJudulNorm = norm(rawJudul);
+
+          let uOrder = classUrutanMap.get(`${userKls}_${mid}_${userUname}`) ||
+                       classUrutanMap.get(`${userKls}_${mid}_${userNama}`) ||
+                       (rawMidNorm ? classUrutanMap.get(`${userKls}_${rawMidNorm}_${userUname}`) : null) ||
+                       (rawJudulNorm ? classUrutanMap.get(`${userKls}_${rawJudulNorm}_${userUname}`) : null) ||
+                       (rawMidNorm ? classUrutanMap.get(`${userKls}_${rawMidNorm}_${userNama}`) : null) ||
+                       (rawJudulNorm ? classUrutanMap.get(`${userKls}_${rawJudulNorm}_${userNama}`) : null);
+
+          let uNum = (typeof uOrder === 'number' && uOrder > 0) ? uOrder : 0;
+
+          let rawDur = (getVal(n, ['durasi', 'waktuaktif']) || "").toString().replace(/^'/, '').trim();
+          if (!rawDur && isDurationString(getVal(n, ['waktu']))) {
+            rawDur = getVal(n, ['waktu']).toString().replace(/^'/, '').trim();
+          }
+          let durasiMenit = parseDurationToMinutes(rawDur);
+
+          let finalScore = score;
+          if (pTipe && pTipe.toString().toLowerCase() === "materi") {
+            finalScore = 100;
+          } else {
+            finalScore = Math.max(0, score - uNum - durasiMenit);
+          }
+
           if (!userObj.quizzes) userObj.quizzes = new Map();
           const existing = userObj.quizzes.get(mid);
           if (!existing) {
-            userObj.quizzes.set(mid, { score, totalWaktuSec: wSec });
+            userObj.quizzes.set(mid, { score: finalScore, murni: score, urutan: uNum, durasiMenit, totalWaktuSec: wSec });
           } else {
-            let bestScore = Math.max(score, (existing.score || 0));
+            let bestScore = Math.max(finalScore, (existing.score || 0));
             let sumTimeSec = (existing.totalWaktuSec || 0) + wSec;
-            userObj.quizzes.set(mid, { score: bestScore, totalWaktuSec: sumTimeSec });
+            userObj.quizzes.set(mid, { score: bestScore, murni: Math.max(score, existing.murni || 0), urutan: uNum || existing.urutan, durasiMenit, totalWaktuSec: sumTimeSec });
           }
         });
 
@@ -2651,7 +2781,7 @@
             <td style="text-align:center">${rankBadge}</td>
             <td style="font-weight:600;">${d.nama}</td>
             <td>${d.kelas}</td>
-            <td style="text-align:right; font-weight:700; color:var(--primary)">${d.nilai}</td>
+            <td style="text-align:right; font-weight:700; color:var(--primary)" title="Total Nilai Akhir Siswa">${d.nilai}</td>
             <td style="text-align:right; font-size:0.85rem; color:var(--text-muted)">${d.waktu}</td>
           </tr>`;
         });
@@ -2879,6 +3009,26 @@
       } catch(e) {}
 
       return 0;
+    }
+
+    function updateLiveNilaiAkhir(username, uNum) {
+      const inputNilai = document.getElementById(`nilai_${username}`);
+      const inputDurasi = document.getElementById(`durasi_${username}`);
+      const previewEl = document.getElementById(`preview_akhir_${username}`);
+      if (!inputNilai || !previewEl) return;
+
+      const val = inputNilai.value.trim();
+      const baseNum = parseInt(val, 10);
+      if (isNaN(baseNum) || val === '') {
+        previewEl.style.display = 'none';
+        return;
+      }
+      const durStr = inputDurasi ? inputDurasi.value.trim() : '';
+      const dMin = parseDurationToMinutes(durStr);
+      const calcAkhir = Math.max(0, baseNum - (uNum || 0) - dMin);
+      previewEl.innerText = `Akhir: ${calcAkhir}`;
+      previewEl.title = `Nilai Murni (${baseNum}) - Urutan (${uNum || 0}) - Durasi (${dMin}) = ${calcAkhir}`;
+      previewEl.style.display = 'inline-block';
     }
 
     function renderTableNilai() {
@@ -3144,16 +3294,25 @@
            statusBadge = maxNilai !== "" ? "" : `<span class="badge draft">Belum</span>`;
         }
 
+        let baseNum = parseInt(nilaiRender, 10);
+        let uNum = urutanUploadNo ? parseInt(urutanUploadNo, 10) : 0;
+        let dMin = parseDurationToMinutes(durasiRender);
+        let nilaiAkhirPreview = !isNaN(baseNum) ? Math.max(0, baseNum - uNum - dMin) : '-';
+        let nilaiAkhirBadge = !isNaN(baseNum) 
+          ? `<span id="preview_akhir_${username}" class="badge" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-size:0.75rem; font-weight:700; margin-top:4px;" title="Nilai Murni (${baseNum}) - Urutan (${uNum}) - Durasi (${dMin}) = ${nilaiAkhirPreview}">Akhir: ${nilaiAkhirPreview}</span>`
+          : `<span id="preview_akhir_${username}" class="badge" style="display:none; background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-size:0.75rem; font-weight:700; margin-top:4px;"></span>`;
+
         html += `<tr>
           <td>${i+1}</td>
           <td style="font-weight:500;">${nama} ${fileLinkHTML}<br><small style="color:var(--text-muted)">${username}</small></td>
           <td style="text-align:center;">${urutanBadge}</td>
           <td style="text-align:center">
-             <input type="text" id="durasi_${username}" class="form-control" value="${durasiRender}" data-original-value="${durasiOriginal}" oninput="updateDraft('${safeMateri}', '${username}', 'durasi', this.value)" placeholder="00:00" style="max-width:70px; display:inline-block; text-align:center; padding: 0.3rem;">
+             <input type="text" id="durasi_${username}" class="form-control" value="${durasiRender}" data-original-value="${durasiOriginal}" oninput="updateDraft('${safeMateri}', '${username}', 'durasi', this.value); updateLiveNilaiAkhir('${username}', ${uNum})" placeholder="00:00" style="max-width:70px; display:inline-block; text-align:center; padding: 0.3rem;">
           </td>
           <td style="text-align:center">
              <div style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
-                <input type="number" id="nilai_${username}" class="form-control input-nilai" value="${nilaiRender}" data-original-value="${nilaiOriginal}" data-is-upload="${isUploadType}" data-has-upload="${!!upload}" oninput="updateDraft('${safeMateri}', '${username}', 'nilai', this.value); checkMismatch('${username}', ${isUploadType}, ${!!upload})" placeholder="-" style="max-width:80px; text-align:center; ${inputStyle}">
+                <input type="number" id="nilai_${username}" class="form-control input-nilai" value="${nilaiRender}" data-original-value="${nilaiOriginal}" data-is-upload="${isUploadType}" data-has-upload="${!!upload}" oninput="updateDraft('${safeMateri}', '${username}', 'nilai', this.value); checkMismatch('${username}', ${isUploadType}, ${!!upload}); updateLiveNilaiAkhir('${username}', ${uNum})" placeholder="-" style="max-width:80px; text-align:center; ${inputStyle}">
+                ${nilaiAkhirBadge}
                 <div class="btn-grade-container">
                    <button type="button" class="btn-grade btn-grade-ap" onclick="quickSimpanNilai('${username}', '${safeMateri}', '${safeNama}', '${safeKelas}', 95)" title="Simpan Nilai 95 (A+)">A+</button>
                    <button type="button" class="btn-grade btn-grade-a" onclick="quickSimpanNilai('${username}', '${safeMateri}', '${safeNama}', '${safeKelas}', 90)" title="Simpan Nilai 90 (A)">A</button>
@@ -4238,7 +4397,9 @@
           
           if (tipe === "materi") {
             scoreText = '<i data-lucide="check" style="color:#22c55e; width:14px;"></i>';
-            titleAttr = 'Materi telah dipelajari';
+            titleAttr = 'Materi telah dipelajari (Nilai: 100)';
+            totalScore += 100;
+            countScored++;
           } else {
             const midNorm = norm(mid);
 
@@ -4263,21 +4424,34 @@
             let uMaju = urutanMap.get(`${midNorm}_${username}`) || urutanMap.get(`${mJudul}_${username}`) ||
                         urutanMap.get(`${midNorm}_${sNamaNorm}`) || urutanMap.get(`${mJudul}_${sNamaNorm}`);
 
+            let durVal = (rec && rec.durasi && isDurationString(rec.durasi)) ? rec.durasi.toString().replace(/^'/, '').trim() : '';
+            let durasiMenit = durVal ? parseDurationToMinutes(durVal) : 0;
+
             if (rec !== undefined) {
-              const maxS = rec.score;
-              totalScore += maxS;
+              const baseScore = typeof rec.score === 'number' ? rec.score : (parseInt(rec.score, 10) || 0);
+              const uNum = (typeof uMaju === 'number' && uMaju > 0) ? uMaju : 0;
+              const finalScore = Math.max(0, baseScore - uNum - durasiMenit);
+
+              totalScore += finalScore;
               countScored++;
-              
-              let tInfo = rec.time ? ` | Waktu: ${rec.time}` : '';
-              let dInfo = rec.durasi ? ` (Durasi: ${rec.durasi})` : '';
-              let uInfo = uMaju ? ` | Urutan Maju: #${uMaju}` : '';
+
+              let uInfo = uMaju ? ` | Urutan Maju: #${uMaju} (-${uNum})` : '';
+              let dInfo = durVal ? ` | Durasi: ${durVal} (-${durasiMenit})` : '';
+              let formulaInfo = `Formula: ${baseScore} - ${uNum} - ${durasiMenit} = ${finalScore}`;
+
+              titleAttr = `Nilai Akhir: ${finalScore}\nNilai Murni: ${baseScore}${uInfo}${dInfo}\n${formulaInfo}\n(Klik untuk lihat rincian)`;
+
+              let ketStr = rec.raw ? (getVal(rec.raw, ['keterangan', 'catatan']) || '') : '';
+              let safeObj = {
+                nama, username: rawUsername, kelas: selKelas, materi: mJudulRaw, tipe: tipe.toUpperCase(),
+                murni: baseScore, urutan: uNum, durasi: durVal, durasiMenit, akhir: finalScore, keterangan: ketStr
+              };
+              let payloadStr = encodeURIComponent(JSON.stringify(safeObj));
 
               if (isUploadType && !upload) {
-                  scoreText = `<span style="font-weight:bold; color:#ef4444; background:#fef2f2; padding:3px 6px; border-radius:6px; border:1px solid #fee2e2; display:inline-flex; align-items:center; gap:4px; font-size:0.8rem;">${maxS} <i data-lucide="alert-triangle" style="width:12px; height:12px; color:#ef4444;"></i></span>`;
-                  titleAttr = `Nilai: ${maxS} (Salah Input? Siswa belum mengirim file tugas)${uInfo}${tInfo}${dInfo}`;
+                  scoreText = `<span class="badge-nilai-rekap" onclick="showModalDetailNilaiAkhir(JSON.parse(decodeURIComponent('${payloadStr}')))" style="cursor:pointer; font-weight:bold; color:#ef4444; background:#fef2f2; padding:3px 8px; border-radius:6px; border:1px solid #fee2e2; display:inline-flex; align-items:center; gap:4px; font-size:0.85rem;" title="${titleAttr}">${finalScore} <i data-lucide="alert-triangle" style="width:12px; height:12px; color:#ef4444;"></i></span>`;
               } else {
-                  scoreText = `<span style="font-weight:bold; color:var(--primary); font-size:0.95rem;">${maxS}</span>`;
-                  titleAttr = `Nilai: ${maxS}${uInfo}${tInfo}${dInfo}`;
+                  scoreText = `<span class="badge-nilai-rekap" onclick="showModalDetailNilaiAkhir(JSON.parse(decodeURIComponent('${payloadStr}')))" style="cursor:pointer; font-weight:700; color:var(--primary); background:#eff6ff; padding:3px 8px; border-radius:6px; border:1px solid #dbeafe; font-size:0.9rem; display:inline-block; transition:all 0.15s ease;" title="${titleAttr}">${finalScore}</span>`;
               }
             } else {
               if (upload) {
