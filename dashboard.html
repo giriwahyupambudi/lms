@@ -999,8 +999,15 @@
 
     const API_URL = "https://script.google.com/macros/s/AKfycbx8dBNFIqvVixZ5ORodulJYxqjtMvjr-Qajjez1uD7UIeq-ypSI1xaNjdUtJkq3ovzsbw/exec";
     const userData = localStorage.getItem("user");
-    if (!userData) { window.location.href = "index.html"; }
-    const user = JSON.parse(userData);
+    let user = null;
+    try {
+      user = userData ? JSON.parse(userData) : null;
+    } catch (e) {
+      user = null;
+    }
+    if (!user) {
+      window.location.replace("index.html");
+    }
 
     // Data Penampung Global
     let allMateriMentah = [];
@@ -1278,10 +1285,16 @@
       return urutanMap;
     }
 
-    document.getElementById("welcomeText").innerText = "Halo, " + user.nama.split(' ')[0] + "!";
-    document.getElementById("avatar-toggle").innerText = user.nama.charAt(0);
-    document.getElementById("user-fullname").innerText = user.nama;
-    document.getElementById("user-kelas-info").innerText = "Tingkat " + getTingkat(user) + " • " + (user.kelas || "Tanpa Kelas");
+    if (user && user.nama) {
+      const welcomeEl = document.getElementById("welcomeText");
+      if (welcomeEl) welcomeEl.innerText = "Halo, " + (user.nama.split(' ')[0] || user.nama) + "!";
+      const avEl = document.getElementById("avatar-toggle");
+      if (avEl) avEl.innerText = user.nama.charAt(0);
+      const fnEl = document.getElementById("user-fullname");
+      if (fnEl) fnEl.innerText = user.nama;
+      const kInfoEl = document.getElementById("user-kelas-info");
+      if (kInfoEl) kInfoEl.innerText = "Tingkat " + getTingkat(user) + " • " + (user.kelas || "Tanpa Kelas");
+    }
 
     function renderAbsenSiswa(dataAbsen, currentUser) {
       if (!Array.isArray(dataAbsen) || !currentUser) return;
@@ -1887,11 +1900,9 @@
             viewBtnHTML = `<button class="btn-action" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; grid-column: 1 / -1; margin-top: 2px;" onclick="openViewModal('${previewUrl}')"><i data-lucide="eye" style="width:14px"></i> Lihat Dokumen Tugas Anda</button>`;
           }
 
-          let mapelName = (m.mapel || m.Mapel || m.matapelajaran || m.MataPelajaran || "Umum").toString().trim();
           let matchedGuru = dataGuruMentah.find(g => (g.mapel || "").toString().trim().toLowerCase() === mapelName.toLowerCase());
           let namaGuru = matchedGuru && matchedGuru.nama ? matchedGuru.nama : "Guru Pengampu";
 
-          let ketText = (quizKeterangan.get(mid.toString()) || "").toString().trim();
           let feedbackHTML = "";
           if (ketText !== "") {
             const escapeHtmlStr = (str) => (str || "").toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");

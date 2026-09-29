@@ -225,7 +225,7 @@ window.addEventListener('appinstalled', (evt) => {
 window.addEventListener('load', () => {
   // Register Service Worker
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js?v=4')
+    navigator.serviceWorker.register('sw.js?v=5')
       .then(reg => console.log('Service Worker registered'))
       .catch(err => console.log('Service Worker failed', err));
   }
