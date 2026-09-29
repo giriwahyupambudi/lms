@@ -2891,7 +2891,7 @@
             let mStatus = (getVal(m, ['status']) || "Aktif").toString().toLowerCase();
             if (mStatus !== "aktif") return;
             let judul = getVal(m, ['judul', 'materi', 'namamateri']) || "Tanpa Judul";
-            const materiId = getVal(m, ['idmateri', 'id_materi', 'materiid']);
+            const materiId = getVal(m, ['idmateri', 'id_materi', 'materiid']) || (judul && judul !== "Tanpa Judul" ? judul.toString().trim() : "");
             selMateri.innerHTML += `<option value="${materiId}">${judul}</option>`;
          });
 
@@ -3402,17 +3402,28 @@
       let selOption = mSelect && mSelect.selectedIndex >= 0 ? mSelect.options[mSelect.selectedIndex] : null;
       let mJudulText = selOption ? selOption.text.toString().trim() : "";
 
+      let effectiveIdMateri = idMateri || (mSelect ? mSelect.value : "");
+      if (!effectiveIdMateri && mJudulText) {
+         let foundM = dataMateri.find(m => (getVal(m, ['judul', 'materi']) || "").trim() === mJudulText);
+         if (foundM) effectiveIdMateri = getVal(foundM, ['idmateri', 'id_materi', 'materiid']);
+      }
+      if (!effectiveIdMateri) effectiveIdMateri = mJudulText;
+
       await postData({
         action: "updateNilaiByUsernameMateri",
         username: username,
         nama: nama,
         kelas: kelas,
-        id_materi: idMateri,
-        "ID Materi": idMateri,
+        id_materi: effectiveIdMateri,
+        "ID Materi": effectiveIdMateri,
+        idmateri: effectiveIdMateri,
+        materi: effectiveIdMateri,
+        judul: mJudulText,
         nilai: inputVal,
         waktu: durasiVal
       });
       delete draftNilai[`${idMateri}_${username}`];
+      delete draftNilai[`${effectiveIdMateri}_${username}`];
 
       // Update dataNilai secara lokal agar tabel langsung tampil tanpa menunggu fetch ulang
       const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
@@ -3459,9 +3470,19 @@
 
     async function simpanSemuaNilai() {
       let selKelas = document.getElementById('filterKelasNilai').value;
-      let selMateri = document.getElementById('filterMateriNilai').value;
+      let mSelect = document.getElementById('filterMateriNilai');
+      let selMateri = mSelect ? mSelect.value : "";
+      let selOption = mSelect && mSelect.selectedIndex >= 0 ? mSelect.options[mSelect.selectedIndex] : null;
+      let selMateriJudul = selOption ? selOption.text.toString().trim() : "";
       
-      if(!selKelas || !selMateri) {
+      let effectiveMatId = selMateri;
+      if (!effectiveMatId && selMateriJudul) {
+         let foundM = dataMateri.find(m => (getVal(m, ['judul', 'materi']) || "").trim() === selMateriJudul);
+         if (foundM) effectiveMatId = getVal(foundM, ['idmateri', 'id_materi', 'materiid']);
+      }
+      if (!effectiveMatId) effectiveMatId = selMateriJudul;
+      
+      if(!selKelas || !effectiveMatId) {
          return alert("Pilih kelas dan materi terlebih dahulu!");
       }
       
@@ -3490,8 +3511,11 @@
                    username: username,
                    nama: nama,
                    kelas: selKelas,
-                   id_materi: selMateri,
-                   "ID Materi": selMateri,
+                   id_materi: effectiveMatId,
+                   "ID Materi": effectiveMatId,
+                   idmateri: effectiveMatId,
+                   materi: effectiveMatId,
+                   judul: selMateriJudul,
                    nilai: currentNilai,
                    waktu: currentDurasi
                 });

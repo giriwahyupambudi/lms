@@ -531,11 +531,14 @@ function doPost(e) {
         for (var i = 0; i < headers.length; i++) {
           var h = headers[i].toString().trim(); 
           var hLower = h.toLowerCase();
+          var hNorm = hLower.replace(/[^a-z0-9]/g, '');
           
           if (dataToSave[h] !== undefined) {
              updateRow[i] = dataToSave[h];
           } else if (dataToSave[hLower] !== undefined) {
              updateRow[i] = dataToSave[hLower];
+          } else if (hNorm === "idmateri" && (dataToSave.id_materi !== undefined || dataToSave["ID Materi"] !== undefined || dataToSave.idmateri !== undefined || dataToSave.materi !== undefined)) {
+             updateRow[i] = dataToSave.id_materi || dataToSave["ID Materi"] || dataToSave.idmateri || dataToSave.materi;
           } else {
              updateRow[i] = existingData[i]; 
           }
@@ -550,11 +553,14 @@ function doPost(e) {
         for (var i = 0; i < headers.length; i++) {
           var h = headers[i].toString().trim();
           var hLower = h.toLowerCase();
+          var hNorm = hLower.replace(/[^a-z0-9]/g, '');
           
           if (dataToSave[h] !== undefined) {
              newRow[i] = dataToSave[h];
           } else if (dataToSave[hLower] !== undefined) {
              newRow[i] = dataToSave[hLower];
+          } else if (hNorm === "idmateri" && (dataToSave.id_materi !== undefined || dataToSave["ID Materi"] !== undefined || dataToSave.idmateri !== undefined || dataToSave.materi !== undefined)) {
+             newRow[i] = dataToSave.id_materi || dataToSave["ID Materi"] || dataToSave.idmateri || dataToSave.materi;
           }
         }
         sheet.appendRow(newRow);
@@ -624,11 +630,14 @@ function doPost(e) {
             for (var i = 0; i < headers.length; i++) {
                var h = headers[i].toString().trim();
                var hLower = h.toLowerCase();
+               var hNorm = hLower.replace(/[^a-z0-9]/g, '');
                
                if (dataToSave[h] !== undefined) {
                   updateRow[i] = dataToSave[h];
                } else if (dataToSave[hLower] !== undefined) {
                   updateRow[i] = dataToSave[hLower];
+               } else if (hNorm === "idmateri" && (dataToSave.id_materi !== undefined || dataToSave["ID Materi"] !== undefined || dataToSave.idmateri !== undefined || dataToSave.materi !== undefined)) {
+                  updateRow[i] = dataToSave.id_materi || dataToSave["ID Materi"] || dataToSave.idmateri || dataToSave.materi;
                } else {
                   updateRow[i] = existingData[i];
                }
@@ -640,10 +649,13 @@ function doPost(e) {
             for (var i = 0; i < headers.length; i++) {
                var h = headers[i].toString().trim();
                var hLower = h.toLowerCase();
+               var hNorm = hLower.replace(/[^a-z0-9]/g, '');
                if (dataToSave[h] !== undefined) {
                   newRow[i] = dataToSave[h];
                } else if (dataToSave[hLower] !== undefined) {
                   newRow[i] = dataToSave[hLower];
+               } else if (hNorm === "idmateri" && (dataToSave.id_materi !== undefined || dataToSave["ID Materi"] !== undefined || dataToSave.idmateri !== undefined || dataToSave.materi !== undefined)) {
+                  newRow[i] = dataToSave.id_materi || dataToSave["ID Materi"] || dataToSave.idmateri || dataToSave.materi;
                }
             }
             sh.appendRow(newRow);
@@ -678,38 +690,54 @@ function doPost(e) {
        var sheetNilai = ss.getSheetByName("listNilai");
        if (!sheetNilai) throw new Error("Sheet listNilai tidak ditemukan");
        
-       var targetUser = postData.username;
-       var targetMateri = postData.id_materi;
+       var targetUser = (postData.username || "").toString().trim();
+       var targetMateri = (postData.id_materi || postData["ID Materi"] || postData.idmateri || postData.materi || "").toString().trim();
        var newNilai = postData.nilai;
        var newWaktu = postData.waktu; // Durasi baru
        var targetNama = postData.nama || "";
        var targetKelas = postData.kelas || "";
+       var targetJudul = postData.judul || "";
        
        var sheetData = sheetNilai.getDataRange().getValues();
        var headers = sheetData[0];
-       var userCol = -1, materiCol = -1, nilaiCol = -1, waktuCol = -1, namaCol = -1, kelasCol = -1;
+       var userCol = -1, materiCols = [], nilaiCol = -1, waktuCol = -1, namaCol = -1, kelasCol = -1, judulCol = -1;
        
        for(var i = 0; i < headers.length; i++){
           var h = headers[i].toString().toLowerCase().replace(/[^a-z0-9]/g, '');
           if(h === "username" || h === "nisn") userCol = i;
-          if(h === "id_materi" || h === "idmateri" || h === "modul") materiCol = i;
+          if(h === "id_materi" || h === "idmateri" || h === "modul") materiCols.push(i);
           if(h === "nilai" || h === "skor") nilaiCol = i;
           if(h === "waktu" || h === "durasi") waktuCol = i;
           if(h === "nama" || h === "namasiswa" || h === "namalengkap") namaCol = i;
           if(h === "kelas" || h === "tingkat") kelasCol = i;
+          if(h === "judul" || h === "materi") judulCol = i;
        }
        
-       if(userCol === -1 || materiCol === -1 || nilaiCol === -1) {
+       if(userCol === -1 || materiCols.length === 0 || nilaiCol === -1) {
          throw new Error("Struktur kolom listNilai tidak lengkap (butuh username, id_materi, nilai)");
        }
        
+       var targetUserNorm = targetUser.toLowerCase();
+       var targetMateriNorm = targetMateri.toLowerCase().replace(/[^a-z0-9]/g, '');
+       
        var updated = false;
        for(var j = sheetData.length - 1; j > 0; j--) {
-          var rowUsername = sheetData[j][userCol].toString().trim();
-          var rowMateri = sheetData[j][materiCol].toString().trim();
+          var rowUsername = sheetData[j][userCol].toString().trim().toLowerCase();
           
-          if(rowUsername === targetUser && rowMateri === targetMateri) {
+          var matchesMateri = false;
+          for (var m = 0; m < materiCols.length; m++) {
+             var rowMVal = sheetData[j][materiCols[m]].toString().trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+             if (rowMVal && (rowMVal === targetMateriNorm || (targetMateriNorm && (rowMVal.indexOf(targetMateriNorm) !== -1 || targetMateriNorm.indexOf(rowMVal) !== -1)))) {
+                matchesMateri = true;
+                break;
+             }
+          }
+          
+          if(rowUsername === targetUserNorm && matchesMateri) {
              sheetNilai.getRange(j + 1, nilaiCol + 1).setValue(newNilai);
+             for (var m = 0; m < materiCols.length; m++) {
+                 sheetNilai.getRange(j + 1, materiCols[m] + 1).setValue(targetMateri);
+             }
              if (waktuCol !== -1 && newWaktu !== undefined) {
                  sheetNilai.getRange(j + 1, waktuCol + 1).setValue(newWaktu);
              }
@@ -718,6 +746,9 @@ function doPost(e) {
              }
              if (kelasCol !== -1 && targetKelas !== "") {
                  sheetNilai.getRange(j + 1, kelasCol + 1).setValue(targetKelas);
+             }
+             if (judulCol !== -1 && targetJudul !== "") {
+                 sheetNilai.getRange(j + 1, judulCol + 1).setValue(targetJudul);
              }
              
              // Update timestamp
@@ -741,10 +772,13 @@ function doPost(e) {
        } else {
          var newRow = new Array(headers.length).fill("");
          newRow[userCol] = targetUser;
-         newRow[materiCol] = targetMateri;
+         for (var m = 0; m < materiCols.length; m++) {
+             newRow[materiCols[m]] = targetMateri;
+         }
          newRow[nilaiCol] = newNilai;
          if(namaCol !== -1) newRow[namaCol] = targetNama;
          if(kelasCol !== -1) newRow[kelasCol] = targetKelas;
+         if(judulCol !== -1 && targetJudul !== "") newRow[judulCol] = targetJudul;
          
          for(var i = 0; i < headers.length; i++){
            var h = headers[i].toString().toLowerCase();
@@ -769,29 +803,36 @@ function doPost(e) {
         var sheetNilai = ss.getSheetByName("listNilai");
         if (!sheetNilai) throw new Error("Sheet listNilai tidak ditemukan");
         
-        var targetUser = postData.username;
-        var targetMateri = postData.id_materi;
+        var targetUser = (postData.username || "").toString().trim().toLowerCase();
+        var targetMateri = (postData.id_materi || postData["ID Materi"] || postData.idmateri || postData.materi || "").toString().trim().toLowerCase().replace(/[^a-z0-9]/g, '');
         
         var sheetData = sheetNilai.getDataRange().getValues();
         var headers = sheetData[0];
-        var userCol = -1, materiCol = -1;
+        var userCol = -1, materiCols = [];
         
         for(var i = 0; i < headers.length; i++){
            var h = headers[i].toString().toLowerCase().replace(/[^a-z0-9]/g, '');
            if(h === "username" || h === "nisn") userCol = i;
-           if(h === "id_materi" || h === "idmateri" || h === "modul") materiCol = i;
+           if(h === "id_materi" || h === "idmateri" || h === "modul") materiCols.push(i);
         }
         
-        if(userCol === -1 || materiCol === -1) {
+        if(userCol === -1 || materiCols.length === 0) {
           throw new Error("Struktur kolom listNilai tidak lengkap");
         }
         
         var deletedCount = 0;
         for(var j = sheetData.length - 1; j > 0; j--) {
-           var rowUsername = sheetData[j][userCol].toString().trim();
-           var rowMateri = sheetData[j][materiCol].toString().trim();
+           var rowUsername = sheetData[j][userCol].toString().trim().toLowerCase();
+           var matchesMateri = false;
+           for (var m = 0; m < materiCols.length; m++) {
+              var rowMVal = sheetData[j][materiCols[m]].toString().trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+              if (rowMVal && (rowMVal === targetMateri || (targetMateri && (rowMVal.indexOf(targetMateri) !== -1 || targetMateri.indexOf(rowMVal) !== -1)))) {
+                 matchesMateri = true;
+                 break;
+              }
+           }
            
-           if(rowUsername === targetUser && rowMateri === targetMateri) {
+           if(rowUsername === targetUser && matchesMateri) {
               sheetNilai.deleteRow(j + 1);
               deletedCount++;
            }
@@ -810,19 +851,20 @@ function doPost(e) {
          
          var sheetData = sheetNilai.getDataRange().getValues();
          var headers = sheetData[0];
-         var userCol = -1, materiCol = -1, nilaiCol = -1, waktuCol = -1, namaCol = -1, kelasCol = -1;
+         var userCol = -1, materiCols = [], nilaiCol = -1, waktuCol = -1, namaCol = -1, kelasCol = -1, judulCol = -1;
          
          for(var i = 0; i < headers.length; i++){
             var h = headers[i].toString().toLowerCase().replace(/[^a-z0-9]/g, '');
             if(h === "username" || h === "nisn") userCol = i;
-            if(h === "id_materi" || h === "idmateri" || h === "modul") materiCol = i;
+            if(h === "id_materi" || h === "idmateri" || h === "modul") materiCols.push(i);
             if(h === "nilai" || h === "skor") nilaiCol = i;
             if(h === "waktu" || h === "durasi") waktuCol = i;
             if(h === "nama" || h === "namasiswa" || h === "namalengkap") namaCol = i;
             if(h === "kelas" || h === "tingkat") kelasCol = i;
+            if(h === "judul" || h === "materi") judulCol = i;
          }
          
-         if(userCol === -1 || materiCol === -1 || nilaiCol === -1) {
+         if(userCol === -1 || materiCols.length === 0 || nilaiCol === -1) {
            throw new Error("Struktur kolom listNilai tidak lengkap (butuh username, id_materi, nilai)");
          }
          
@@ -830,20 +872,33 @@ function doPost(e) {
          
          for (var d = 0; d < bulkData.length; d++) {
              var item = bulkData[d];
-             var targetUser = item.username;
-             var targetMateri = item.id_materi;
+             var targetUser = (item.username || "").toString().trim();
+             var targetMateri = (item.id_materi || item["ID Materi"] || item.idmateri || item.materi || "").toString().trim();
              var newNilai = item.nilai;
              var newWaktu = item.waktu;
              var targetNama = item.nama || "";
              var targetKelas = item.kelas || "";
+             var targetJudul = item.judul || item.materi || "";
+             var targetMateriNorm = targetMateri.toLowerCase().replace(/[^a-z0-9]/g, '');
              
              var updated = false;
              for(var j = sheetData.length - 1; j > 0; j--) {
-                var rowUsername = sheetData[j][userCol].toString().trim();
-                var rowMateri = sheetData[j][materiCol].toString().trim();
+                var rowUsername = sheetData[j][userCol].toString().trim().toLowerCase();
                 
-                if(rowUsername === targetUser && rowMateri === targetMateri) {
+                var matchesMateri = false;
+                for (var m = 0; m < materiCols.length; m++) {
+                   var rowMVal = sheetData[j][materiCols[m]].toString().trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+                   if (rowMVal && (rowMVal === targetMateriNorm || (targetMateriNorm && (rowMVal.indexOf(targetMateriNorm) !== -1 || targetMateriNorm.indexOf(rowMVal) !== -1)))) {
+                      matchesMateri = true;
+                      break;
+                   }
+                }
+                
+                if(rowUsername === targetUser.toLowerCase() && matchesMateri) {
                    sheetNilai.getRange(j + 1, nilaiCol + 1).setValue(newNilai);
+                   for (var m = 0; m < materiCols.length; m++) {
+                       sheetNilai.getRange(j + 1, materiCols[m] + 1).setValue(targetMateri);
+                   }
                    if (waktuCol !== -1 && newWaktu !== undefined) {
                        sheetNilai.getRange(j + 1, waktuCol + 1).setValue(newWaktu);
                    }
@@ -852,6 +907,9 @@ function doPost(e) {
                    }
                    if (kelasCol !== -1 && targetKelas !== "") {
                        sheetNilai.getRange(j + 1, kelasCol + 1).setValue(targetKelas);
+                   }
+                   if (judulCol !== -1 && targetJudul !== "") {
+                       sheetNilai.getRange(j + 1, judulCol + 1).setValue(targetJudul);
                    }
                    
                    var now = new Date();
@@ -871,10 +929,13 @@ function doPost(e) {
              if (!updated) {
                  var newRow = new Array(headers.length).fill("");
                  newRow[userCol] = targetUser;
-                 newRow[materiCol] = targetMateri;
+                 for (var m = 0; m < materiCols.length; m++) {
+                     newRow[materiCols[m]] = targetMateri;
+                 }
                  newRow[nilaiCol] = newNilai;
                  if(namaCol !== -1) newRow[namaCol] = targetNama;
                  if(kelasCol !== -1) newRow[kelasCol] = targetKelas;
+                 if(judulCol !== -1 && targetJudul !== "") newRow[judulCol] = targetJudul;
                  
                  for(var i = 0; i < headers.length; i++){
                    var h = headers[i].toString().toLowerCase();
