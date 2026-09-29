@@ -3585,8 +3585,8 @@
         });
       }
 
-      sel.innerHTML = '<option value="">Pilih Kelas</option>' + Array.from(kls).sort().map(k => `<option value="${k}">${k}</option>`).join('');
-      if (oldVal && kls.has(oldVal)) sel.value = oldVal;
+      sel.innerHTML = '<option value="">Pilih Kelas</option><option value="SEMUA">-- Semua Kelas (Per Tingkat) --</option>' + Array.from(kls).sort().map(k => `<option value="${k}">${k}</option>`).join('');
+      if (oldVal && (kls.has(oldVal) || oldVal === "SEMUA")) sel.value = oldVal;
 
       sel.onchange = () => { renderRekapAdmin(); };
     }
@@ -3831,7 +3831,7 @@
         [`REKAP NILAI, URUTAN MAJU & WAKTU PENGERJAAN - KELAS ${selKelas.toUpperCase()}`],
         [`Waktu Unduh: ${nowStr}`],
         [],
-        ['No', 'Urutan Maju', 'NISN', 'Nama Siswa', 'Judul Materi', 'Tipe', 'Nilai', 'Durasi Mengerjakan', 'Tanggal & Waktu Submit', 'Status Pengerjaan', 'Keterangan']
+        ['No', 'Nama Siswa', 'Kelas', 'Judul Materi', 'Nilai', 'Waktu Submit', 'Urutan Maju / Urutan Submit', 'NISN', 'Durasi', 'Status', 'Keterangan']
       ];
 
       // Sheet 2: Matriks Nilai
@@ -3942,14 +3942,14 @@
       detailRows.forEach((r, idx) => {
         aoaDetail.push([
           idx + 1,
+          r.nama,
+          selKelas,
+          r.materi,
+          r.nilai,
+          r.waktu,
           r.urutanLabel,
           r.nisn,
-          r.nama,
-          r.materi,
-          r.tipe,
-          r.nilai,
           r.durasi,
-          r.waktu,
           r.status,
           r.keterangan
         ]);
@@ -4100,6 +4100,13 @@
         return;
       }
 
+      if (selKelas === 'SEMUA') {
+        header.innerHTML = '<tr><th>Informasi</th></tr>';
+        body.innerHTML = '<tr><td style="text-align:center; padding: 30px; color: var(--text-muted);"><i data-lucide="layers" style="width:32px; height:32px; margin-bottom:10px; display:inline-block; color:var(--primary);"></i><br><b style="font-size:1.05rem; color:var(--text);">Mode Semua Kelas (Per Tingkat) Aktif</b><br><span style="font-size:0.9rem;">Untuk melihat tabel interaktif di web, pilih salah satu kelas di atas.<br>Untuk mengunduh rekap lengkap yang <b>dipisah per tingkat (Sheet X, Sheet XI)</b>, klik tombol <b>Download XLSX</b> atau <b>Semua Kelas</b> di atas.</span></td></tr>';
+        lucide.createIcons();
+        return;
+      }
+
       const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
       const students = getStudentsForClass(selKelas);
       const materials = getMaterialsForClass(selKelas);
@@ -4218,8 +4225,10 @@
     }
 
     async function downloadRekap() {
-      let selKelas = document.getElementById('filterKelasRekap').value;
-      if (!selKelas) return alert("Pilih kelas terlebih dahulu!");
+      let selKelas = (document.getElementById('filterKelasRekap') ? document.getElementById('filterKelasRekap').value : "").trim();
+      if (!selKelas || selKelas === "SEMUA") {
+        return downloadSemuaKelas();
+      }
 
       if (typeof XLSX === 'undefined') {
         if (typeof showOverlay === 'function') showOverlay("Memuat library Excel...", 2000);
@@ -4236,11 +4245,13 @@
       }
 
       let wb = XLSX.utils.book_new();
+      let tingkatClass = getTingkatSync({ kelas: selKelas }) || "X";
 
-      // Sheet 1: Urutan Maju & Nilai
+      // Sheet 1: Urutan Maju & Nilai (sesuai tingkat kelas)
       let wsDetail = XLSX.utils.aoa_to_sheet(aoaDetail);
       wsDetail['!cols'] = calculateColWidths(aoaDetail);
-      XLSX.utils.book_append_sheet(wb, wsDetail, "Urutan Maju & Nilai");
+      let sheet1Name = `${tingkatClass} - ${selKelas}`.substring(0, 31);
+      XLSX.utils.book_append_sheet(wb, wsDetail, sheet1Name);
 
       // Sheet 2: Matriks Nilai
       if (aoaMatriksNilai && aoaMatriksNilai.length > 4) {
@@ -4416,20 +4427,20 @@
         [`REKAP NILAI & URUTAN MAJU - ${judulMateriStr.toUpperCase()}`],
         [`Kelas: ${selKelas.toUpperCase()} | Waktu Unduh: ${nowStr}`],
         [],
-        ['No', 'Urutan Maju', 'NISN', 'Nama Siswa', 'Kelas', 'Judul Materi', 'Nilai', 'Durasi Mengerjakan', 'Tanggal & Waktu Submit', 'Status', 'Keterangan']
+        ['No', 'Nama Siswa', 'Kelas', 'Judul Materi', 'Nilai', 'Waktu Submit', 'Urutan Maju / Urutan Submit', 'NISN', 'Durasi', 'Status', 'Keterangan']
       ];
 
       mappedStudents.forEach((st, idx) => {
         aoa.push([
           idx + 1,
-          st.urutanLabel,
-          st.username,
           st.nama,
           selKelas,
           judulMateriStr,
           st.nilai,
-          st.durasi,
           st.waktuSubmit,
+          st.urutanLabel,
+          st.username,
+          st.durasi,
           st.status,
           st.keterangan
         ]);
@@ -4477,126 +4488,118 @@
 
       if (kelasList.length === 0) return alert('Data kelas belum tersedia!');
 
-      if (typeof showOverlay === 'function') showOverlay("Memproses rekap semua kelas...", 3000);
+      if (typeof showOverlay === 'function') showOverlay("Memproses rekap per tingkat...", 3000);
 
       // Pre-index O(1) sekali saja untuk seluruh kelas
       const { rekapNilaiMap, rekapLogTugasMap } = buildRekapIndexMaps();
 
       const wb = XLSX.utils.book_new();
-      let usedSheetNames = new Set();
       const now = new Date();
       const nowStr = formatWaktuIndo(now);
 
-      let masterDetailAoa = [
-        ["REKAP NILAI, URUTAN MAJU & WAKTU PENGERJAAN - SEMUA KELAS"],
-        [`Waktu Unduh: ${nowStr}`],
-        [],
-        ["No", "Kelas", "Urutan Maju", "NISN", "Nama Siswa", "Judul Materi", "Tipe", "Nilai", "Durasi Mengerjakan", "Tanggal & Waktu Submit", "Status Pengerjaan", "Keterangan"]
+      // Kelompokkan kelas berdasarkan Tingkat (X, XI, XII, dll.)
+      let tingkatMap = new Map();
+      kelasList.forEach(k => {
+        let t = getTingkatSync({ kelas: k }) || "X";
+        if (!tingkatMap.has(t)) tingkatMap.set(t, []);
+        tingkatMap.get(t).push(k);
+      });
+
+      // Urutkan tingkat: X, XI, XII, lalu alfabetis untuk lainnya
+      const tingkatOrder = ['X', 'XI', 'XII'];
+      const sortedTingkat = Array.from(tingkatMap.keys()).sort((a, b) => {
+        let idxA = tingkatOrder.indexOf(a);
+        let idxB = tingkatOrder.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.localeCompare(b);
+      });
+
+      const sheetHeaders = [
+        'No',
+        'Nama Siswa',
+        'Kelas',
+        'Judul Materi',
+        'Nilai',
+        'Waktu Submit',
+        'Urutan Maju / Urutan Submit',
+        'NISN',
+        'Durasi',
+        'Status',
+        'Keterangan'
       ];
 
-      let masterLogAoa = [
-        ["LOG DETAIL WAKTU PENGERJAAN - SEMUA KELAS"],
-        [`Waktu Unduh: ${nowStr}`],
-        [],
-        ["No", "Urutan Maju", "Tanggal & Waktu Submit", "NISN", "Nama Siswa", "Kelas", "Judul Materi", "Tipe", "Nilai / Status", "Durasi", "Keterangan"]
-      ];
+      let totalRowsExported = 0;
 
-      let validClassSheets = [];
+      sortedTingkat.forEach(tingkat => {
+        const classesInTingkat = tingkatMap.get(tingkat) || [];
+        let tingkatRows = [];
 
-      kelasList.forEach(kelas => {
-        const res = buildRekapDataForClass(kelas, rekapNilaiMap, rekapLogTugasMap);
-        if (!res || !res.aoaMatriksNilai || res.aoaMatriksNilai.length <= 4) return;
+        classesInTingkat.forEach(kelas => {
+          const res = buildRekapDataForClass(kelas, rekapNilaiMap, rekapLogTugasMap);
+          if (!res || !Array.isArray(res.detailRows)) return;
 
-        // Collect all detailRows for Sheet 1
-        if (Array.isArray(res.detailRows)) {
           res.detailRows.forEach(dr => {
-            masterDetailAoa.push([
-              masterDetailAoa.length - 3,
-              kelas,
-              dr.urutanLabel,
-              dr.nisn,
-              dr.nama,
-              dr.materi,
-              dr.tipe,
-              dr.nilai,
-              dr.durasi,
-              dr.waktu,
-              dr.status,
-              dr.keterangan
-            ]);
+            tingkatRows.push({
+              nama: dr.nama || '-',
+              kelas: kelas,
+              materi: dr.materi || '-',
+              nilai: dr.nilai !== undefined ? dr.nilai : '-',
+              waktu: dr.waktu || '-',
+              urutanLabel: dr.urutanLabel !== undefined ? dr.urutanLabel : '-',
+              nisn: dr.nisn || '-',
+              durasi: dr.durasi || '-',
+              status: dr.status || '-',
+              keterangan: dr.keterangan || '-'
+            });
           });
-        }
-
-        // Prepare per-class sheet
-        let baseName = kelas.replace(/[\\/?*:[\]]/g, '_').trim().substring(0, 28) || 'Kelas';
-        let sheetName = baseName;
-        let counter = 1;
-        while (usedSheetNames.has(sheetName.toLowerCase())) {
-          sheetName = `${baseName}_${counter}`;
-          counter++;
-        }
-        usedSheetNames.add(sheetName.toLowerCase());
-
-        validClassSheets.push({
-          name: sheetName,
-          aoa: res.aoaMatriksNilai
         });
 
-        if (Array.isArray(res.rawLogs)) {
-          res.rawLogs.forEach(l => {
-            masterLogAoa.push([
-              masterLogAoa.length - 3,
-              l.urutan || '-',
-              l.time || '-',
-              l.username || '-',
-              l.nama || '-',
-              kelas,
-              l.materi || '-',
-              l.tipe || '-',
-              l.nilai !== undefined ? l.nilai : '-',
-              l.durasi || '-',
-              l.keterangan || '-'
-            ]);
-          });
-        }
+        if (tingkatRows.length === 0) return;
+
+        totalRowsExported += tingkatRows.length;
+
+        const sheetAoa = [
+          [`REKAP NILAI & URUTAN MAJU - TINGKAT ${tingkat}`],
+          [`Waktu Unduh: ${nowStr} | Kelas: ${classesInTingkat.join(', ')}`],
+          [],
+          sheetHeaders
+        ];
+
+        tingkatRows.forEach((r, idx) => {
+          sheetAoa.push([
+            idx + 1,
+            r.nama,
+            r.kelas,
+            r.materi,
+            r.nilai,
+            r.waktu,
+            r.urutanLabel,
+            r.nisn,
+            r.durasi,
+            r.status,
+            r.keterangan
+          ]);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(sheetAoa);
+        ws['!cols'] = calculateColWidths(sheetAoa);
+
+        // Nama sheet di Excel: Sheet "X", Sheet "XI", dst. (Maks 31 karakter)
+        let cleanSheetName = (tingkat || 'Rekap').toString().trim().replace(/[\\/?*:[\]]/g, '_').substring(0, 31);
+        XLSX.utils.book_append_sheet(wb, ws, cleanSheetName);
       });
 
-      if (masterDetailAoa.length <= 4 && validClassSheets.length === 0) {
+      if (totalRowsExported === 0) {
         if (typeof hideOverlay === 'function') hideOverlay();
         return alert('Tidak ada data rekap siswa yang bisa diekspor!');
-      }
-
-      // Sheet 1: Master Urutan Maju & Nilai Semua Kelas
-      if (masterDetailAoa.length > 4) {
-        const wsMaster = XLSX.utils.aoa_to_sheet(masterDetailAoa);
-        wsMaster['!cols'] = calculateColWidths(masterDetailAoa);
-        XLSX.utils.book_append_sheet(wb, wsMaster, "Semua Kelas (Urutan Maju)");
-      }
-
-      // Sheet 2+: Lembar Matriks Nilai per Kelas
-      validClassSheets.forEach(item => {
-        const wsClass = XLSX.utils.aoa_to_sheet(item.aoa);
-        wsClass['!cols'] = calculateColWidths(item.aoa);
-        XLSX.utils.book_append_sheet(wb, wsClass, item.name);
-      });
-
-      // Sheet Terakhir: Log Waktu Semua Kelas
-      if (masterLogAoa.length > 4) {
-        const headerRows = masterLogAoa.slice(0, 4);
-        const dataRows = masterLogAoa.slice(4);
-        dataRows.sort((a, b) => (b[2] || '').localeCompare(a[2] || ''));
-        dataRows.forEach((r, idx) => { r[0] = idx + 1; });
-        const finalMasterLogAoa = headerRows.concat(dataRows);
-
-        const wsMasterLog = XLSX.utils.aoa_to_sheet(finalMasterLogAoa);
-        wsMasterLog['!cols'] = calculateColWidths(finalMasterLogAoa);
-        XLSX.utils.book_append_sheet(wb, wsMasterLog, "Log Waktu Semua Kelas");
       }
 
       if (typeof hideOverlay === 'function') hideOverlay();
 
       const tgl = getTimestampFile(now);
-      XLSX.writeFile(wb, `Rekap_Nilai_Semua_Kelas_${tgl}.xlsx`);
+      XLSX.writeFile(wb, `Rekap_Nilai_Per_Tingkat_${tgl}.xlsx`);
     }
 
     // ============================================
