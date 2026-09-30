@@ -6196,7 +6196,7 @@
       <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <div style="flex:1; min-width:140px;">
           <label style="font-weight:600; font-size:0.8rem; color:var(--text-muted);">Pilih Kelas</label>
-          <select id="modalKelasKoreksiAI" class="form-control" style="margin-top:4px;"></select>
+          <select id="modalKelasKoreksiAI" class="form-control" style="margin-top:4px;" onchange="onModalKelasKoreksiAIChanged()"></select>
         </div>
         <div style="flex:1; min-width:180px;">
           <label style="font-weight:600; font-size:0.8rem; color:var(--text-muted);">Pilih Materi / Tugas</label>
@@ -6877,36 +6877,114 @@ TUGAS ANDA:
         selKls.value = curKls;
       }
 
-      let selMat = document.getElementById('modalMateriKoreksiAI');
-      let matSet = new Set();
-      (Array.isArray(dataMateri) ? dataMateri : []).forEach(m => {
-        let judul = (getVal(m, ['judul', 'materi']) || "").toString().trim();
-        let status = (getVal(m, ['status']) || "Aktif").toString().toLowerCase();
-        if (judul && status === "aktif") matSet.add(judul);
-      });
-      (Array.isArray(dataLogTugas) ? dataLogTugas : []).forEach(t => {
-        let m = (getVal(t, ['materi', 'tugas', 'judul']) || "").toString().trim();
-        if (m) matSet.add(m);
-      });
-      selMat.innerHTML = '<option value="">-- Semua Tugas --</option>';
-      Array.from(matSet).sort().forEach(m => {
-        selMat.innerHTML += `<option value="${m}">${m}</option>`;
-      });
-
       // Sinkronkan pilihan materi jika ada filter aktif di Input Nilai
       let curMatSelect = document.getElementById('filterMateriNilai');
       let curMatText = curMatSelect && curMatSelect.selectedIndex >= 0 ? curMatSelect.options[curMatSelect.selectedIndex].text.trim() : "";
-      if (curMatText && matSet.has(curMatText)) {
-        selMat.value = curMatText;
-      }
+
+      populateModalMateriKoreksiAI(curMatText);
 
       switchAiTab('diskusi');
-      onMateriAiSelectionChanged();
 
       document.getElementById('koreksiAiStatusBox').style.display = 'none';
       document.getElementById('koreksiAiLog').innerText = '';
       modal.style.display = 'flex';
       lucide.createIcons();
+    }
+
+    function onModalKelasKoreksiAIChanged() {
+      populateModalMateriKoreksiAI();
+    }
+
+    function populateModalMateriKoreksiAI(preferMateriJudul = "") {
+      const selKlsEl = document.getElementById('modalKelasKoreksiAI');
+      const selMatEl = document.getElementById('modalMateriKoreksiAI');
+      if (!selMatEl) return;
+
+      const selKelas = selKlsEl ? (selKlsEl.value || "").trim() : "";
+      const tingkatDipilih = selKelas ? (getPureTingkat(selKelas) || getTingkatFromKelas(selKelas)) : "";
+      const selKelasUpper = selKelas.toUpperCase();
+
+      // Ambil username siswa di kelas ini dari dataUser agar dataLogTugas tersaring akurat
+      let studentUsernames = null;
+      if (selKelas && typeof getStudentsForClass === 'function') {
+        let studentsInClass = getStudentsForClass(selKelas);
+        studentUsernames = new Set(studentsInClass.map(s => norm(getVal(s, ['username', 'nisn']))));
+      }
+
+      let matSet = new Set();
+
+      // 1. Ambil dari dataMateri yang cocok dengan kelas / tingkat yang dipilih
+      (Array.isArray(dataMateri) ? dataMateri : []).forEach(m => {
+        let status = (getVal(m, ['status']) || "Aktif").toString().toLowerCase();
+        if (status !== "aktif") return;
+
+        let judul = (getVal(m, ['judul', 'materi', 'namamateri']) || "").toString().trim();
+        if (!judul) return;
+
+        if (!selKelas) {
+          matSet.add(judul);
+        } else {
+          let mKelasRaw = (getVal(m, ['kelas', 'tingkat']) || "").toString().trim().toUpperCase();
+          let mTingkat = getTingkatSync(m);
+
+          let isMatch = false;
+          if (mKelasRaw === "SEMUA" || mKelasRaw === "" || mTingkat === "SEMUA") {
+            isMatch = true;
+          } else {
+            let listK = mKelasRaw.split(',').map(k => k.trim());
+            if (listK.includes("SEMUA")) isMatch = true;
+            else if (listK.includes(selKelasUpper)) isMatch = true;
+            else if (tingkatDipilih && listK.some(k => getPureTingkat(k) === tingkatDipilih)) isMatch = true;
+            else if (tingkatDipilih && mTingkat === tingkatDipilih) isMatch = true;
+          }
+
+          if (isMatch) matSet.add(judul);
+        }
+      });
+
+      // 2. Ambil dari dataLogTugas HANYA tugas yang diunggah oleh siswa di kelas ini
+      (Array.isArray(dataLogTugas) ? dataLogTugas : []).forEach(t => {
+        let mJudul = (getVal(t, ['materi', 'tugas', 'judul']) || "").toString().trim();
+        if (!mJudul) return;
+
+        if (!selKelas) {
+          matSet.add(mJudul);
+        } else {
+          let tKelas = (getVal(t, ['kelas', 'tingkat', 'rombel']) || "").toString().trim().toUpperCase();
+          let tUser = norm(getVal(t, ['username', 'nisn']));
+          let isClassMatch = (tKelas === selKelasUpper) || (studentUsernames && tUser && studentUsernames.has(tUser));
+          if (isClassMatch) {
+            // Pastikan bukan materi dari tingkat yang berbeda di dataMateri
+            let matObj = (Array.isArray(dataMateri) ? dataMateri : []).find(m => {
+              let j = norm(getVal(m, ['judul', 'materi']));
+              let mid = norm(getVal(m, ['idmateri', 'id_materi', 'materiid']));
+              return (j && j === norm(mJudul)) || (mid && mid === norm(mJudul));
+            });
+            if (matObj) {
+              let mKelasRaw = (getVal(matObj, ['kelas', 'tingkat']) || "").toString().trim().toUpperCase();
+              let mTingkat = getTingkatSync(matObj);
+              if (mKelasRaw !== "SEMUA" && mKelasRaw !== "" && mTingkat !== "SEMUA" && tingkatDipilih && mTingkat !== tingkatDipilih) {
+                return;
+              }
+            }
+            matSet.add(mJudul);
+          }
+        }
+      });
+
+      let prevVal = preferMateriJudul || selMatEl.value;
+      selMatEl.innerHTML = '<option value="">-- Semua Tugas --</option>';
+      Array.from(matSet).sort().forEach(m => {
+        selMatEl.innerHTML += `<option value="${m}">${m}</option>`;
+      });
+
+      if (prevVal && matSet.has(prevVal)) {
+        selMatEl.value = prevVal;
+      } else {
+        selMatEl.value = "";
+      }
+
+      onMateriAiSelectionChanged();
     }
 
     function closeModalKoreksiAI() {
