@@ -1018,6 +1018,7 @@
     let allUserMentah = [];
 
     function getTingkat(obj) {
+      if (!obj) return "X";
       let t = (obj.tingkat || obj.Tingkat || "").toString().trim().toUpperCase();
       let k = (obj.kelas || obj.Kelas || "").toString().trim().toUpperCase();
       if (!t || (t === "X" && (k.startsWith("XI") || k.startsWith("XII")))) {
@@ -1354,14 +1355,16 @@
       if (document.getElementById("countTidakWearpack")) document.getElementById("countTidakWearpack").innerText = countTidakWearpack;
     }
 
-    // Jalankan pemuatan data cache & sync secara instan tanpa menunggu CDN / window.onload
+    // Jalankan pemuatan data cache secara instan tanpa menunggu CDN / window.onload
     loadCachedData();
-    document.addEventListener("DOMContentLoaded", () => {
-      loadCachedData();
-      loadAllData(); 
-    });
-    // Fallback pemicu sync
-    setTimeout(() => { loadAllData(); }, 300);
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => {
+        loadCachedData();
+        loadAllData();
+      });
+    } else {
+      loadAllData();
+    }
 
     function loadCachedData() {
       try {
@@ -1399,70 +1402,109 @@
       }
     }
 
+    let isSyncingData = false;
     async function loadAllData() {
+      if (isSyncingData) return;
+      isSyncingData = true;
+
       const syncStatus = document.getElementById("syncStatus");
 
       try {
         const t = new Date().getTime(); // Cache buster
-        const fetchWithTimeout = (url, ms = 15000) => {
+        const fetchWithTimeout = (url, ms = 20000) => {
           return Promise.race([
             fetch(url),
             new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms))
-          ]).catch(() => ({ json: async () => [] }));
+          ]).then(res => {
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            return res.json();
+          }).catch(err => {
+            console.warn("Fetch failed for", url, err);
+            return [];
+          });
         };
 
-        const [resMateri, resListNilai, resUser, resLogTugas, resGuru, resAbsen] = await Promise.all([
-          fetchWithTimeout(`${API_URL}?sheet=materi&_t=${t}`),
-          fetchWithTimeout(`${API_URL}?sheet=listNilai&_t=${t}`),
-          fetchWithTimeout(`${API_URL}?sheet=user&_t=${t}`),
-          fetchWithTimeout(`${API_URL}?sheet=logTugas&_t=${t}`),
-          fetchWithTimeout(`${API_URL}?sheet=public_guru&_t=${t}`),
-          fetchWithTimeout(`${API_URL}?sheet=absen&_t=${t}`)
+        // PROGRESSIVE LOADING:
+        // TAHAP 1: Segera ambil materi (27 KB) & guru (5 KB) terlebih dahulu.
+        // Begitu materi selesai di-fetch, LANGSUNG render ke layar siswa tanpa menunggu listNilai (3.4 MB)!
+        const promiseMateri = fetchWithTimeout(`${API_URL}?sheet=materi&_t=${t}`, 12000);
+        const promiseGuru = fetchWithTimeout(`${API_URL}?sheet=public_guru&_t=${t}`, 12000);
+
+        // TAHAP 2: Ambil metadata pengguna, tugas, & absensi secara paralel
+        const promiseUser = fetchWithTimeout(`${API_URL}?sheet=user&_t=${t}`, 15000);
+        const promiseLogTugas = fetchWithTimeout(`${API_URL}?sheet=logTugas&_t=${t}`, 15000);
+        const promiseAbsen = fetchWithTimeout(`${API_URL}?sheet=absen&_t=${t}`, 20000);
+
+        // TAHAP 3: Ambil listNilai (3.4 MB, 2.000+ baris) dengan batas waktu 35 detik
+        const promiseListNilai = fetchWithTimeout(`${API_URL}?sheet=listNilai&_t=${t}`, 35000);
+
+        // Listener Tahap 1: Tampilkan kartu materi dalam < 2 detik!
+        promiseMateri.then(dataMateri => {
+          if (Array.isArray(dataMateri) && dataMateri.length > 0) {
+            allMateriMentah = dataMateri;
+            try { localStorage.setItem("cache_materi", JSON.stringify(dataMateri)); } catch(e){}
+            renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah, allGuruMentah);
+          }
+        });
+
+        promiseGuru.then(dataGuru => {
+          if (Array.isArray(dataGuru) && dataGuru.length > 0) {
+            allGuruMentah = dataGuru;
+            try { localStorage.setItem("cache_guru", JSON.stringify(dataGuru)); } catch(e){}
+            if (allMateriMentah.length > 0) {
+              renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah, allGuruMentah);
+            }
+          }
+        });
+
+        // Listener Tahap 2: Absensi & Log Tugas
+        promiseAbsen.then(dataAbsen => {
+          if (Array.isArray(dataAbsen) && dataAbsen.length > 0) {
+            allAbsenMentah = dataAbsen;
+            try { localStorage.setItem("cache_absen", JSON.stringify(dataAbsen)); } catch(e){}
+            renderAbsenSiswa(allAbsenMentah, user);
+          }
+        });
+
+        promiseLogTugas.then(dataLogTugas => {
+          if (Array.isArray(dataLogTugas) && dataLogTugas.length > 0) {
+            allLogTugasMentah = dataLogTugas;
+            try { localStorage.setItem("cache_logTugas", JSON.stringify(dataLogTugas)); } catch(e){}
+            if (allMateriMentah.length > 0) {
+              renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah, allGuruMentah);
+            }
+          }
+        });
+
+        promiseUser.then(dataUser => {
+          if (Array.isArray(dataUser) && dataUser.length > 0) {
+            allUserMentah = dataUser;
+            try { localStorage.setItem("cache_user", JSON.stringify(dataUser)); } catch(e){}
+          }
+        });
+
+        // Tunggu semua selesai untuk sinkronisasi nilai akhir & ranking
+        const [dataMateri, dataGuru, dataUser, dataLogTugas, dataAbsen, dataListNilai] = await Promise.all([
+          promiseMateri, promiseGuru, promiseUser, promiseLogTugas, promiseAbsen, promiseListNilai
         ]);
 
-        const dataMateri = await resMateri.json();
-        let dataListNilai = await resListNilai.json();
-        const dataUser = await resUser.json();
-        const dataLogTugas = await resLogTugas.json();
-        const dataGuru = await resGuru.json();
-        const dataAbsen = await resAbsen.json();
-
-        // Save to cache JIKA data valid
         if (Array.isArray(dataMateri) && dataMateri.length > 0) {
-          localStorage.setItem("cache_materi", JSON.stringify(dataMateri));
           allMateriMentah = dataMateri;
         }
         if (Array.isArray(dataListNilai) && dataListNilai.length > 0) {
-          localStorage.setItem("cache_listNilai", JSON.stringify(dataListNilai));
           allProgresMentah = dataListNilai;
+          try { localStorage.setItem("cache_listNilai", JSON.stringify(dataListNilai)); } catch(e){}
         }
-        if (Array.isArray(dataUser) && dataUser.length > 0) {
-          localStorage.setItem("cache_user", JSON.stringify(dataUser));
-          allUserMentah = dataUser;
-        }
-        if (Array.isArray(dataLogTugas) && dataLogTugas.length > 0) {
-          localStorage.setItem("cache_logTugas", JSON.stringify(dataLogTugas));
-          allLogTugasMentah = dataLogTugas;
-        }
-        if (Array.isArray(dataGuru) && dataGuru.length > 0) {
-          localStorage.setItem("cache_guru", JSON.stringify(dataGuru));
-          allGuruMentah = dataGuru;
-        }
-        if (Array.isArray(dataAbsen) && dataAbsen.length > 0) {
-          localStorage.setItem("cache_absen", JSON.stringify(dataAbsen));
-          allAbsenMentah = dataAbsen;
-        }
+
+        // Render akhir komplit: nilai, ranking, dan banner tugas
+        renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah, allGuruMentah);
+        renderAbsenSiswa(allAbsenMentah, user);
+        renderRanking(allProgresMentah, allUserMentah && allUserMentah.length > 0 ? allUserMentah : (localStorage.getItem("cache_user") ? JSON.parse(localStorage.getItem("cache_user")) : []), allLogTugasMentah);
 
         const now = new Date();
         const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
         localStorage.setItem("cache_lastUpdated", timeString);
 
-        // Re-render with fresh data silently
-        renderMateri(allMateriMentah, allProgresMentah, allLogTugasMentah, allGuruMentah);
-        renderAbsenSiswa(allAbsenMentah, user);
-        renderRanking(allProgresMentah, dataUser && dataUser.length > 0 ? dataUser : (localStorage.getItem("cache_user") ? JSON.parse(localStorage.getItem("cache_user")) : []), allLogTugasMentah);
-
-        // Update indicator
         if (syncStatus) {
           syncStatus.innerHTML = `<i data-lucide="check-circle" style="width:12px; height:12px; color:#10b981;"></i> <span style="color:#10b981;">${timeString}</span>`;
         }
@@ -1474,6 +1516,8 @@
           syncStatus.innerHTML = `<i data-lucide="wifi-off" style="width:12px; height:12px; color:#ef4444;"></i> <span style="color:#ef4444;">Offline</span>`;
         }
         if (window.lucide) lucide.createIcons();
+      } finally {
+        isSyncingData = false;
       }
     }
 
@@ -1505,21 +1549,22 @@
       const list = document.getElementById("materiList");
       try {
         const myTingkat = getTingkat(user);
-        const myKelas = (user.kelas || user.Kelas || "").toString().trim().toUpperCase();
+        const myKelas = (user.kelas || user.Kelas || "").toString().trim().toUpperCase().replace(/\s+/g, ' ');
 
         // FILTER FRONTEND: Hanya tampilkan materi yang ditujukan untuk kelas spesifik user atau tingkat generik
-        const dataMateri = dataMateriMentah.filter(m => {
+        const dataMateri = (Array.isArray(dataMateriMentah) ? dataMateriMentah : []).filter(m => {
+          if (!m) return false;
           const mKelasMentah = (m.kelas || m.tingkat || m.Kelas || m.Tingkat || "").toString().trim().toUpperCase();
           const mTingkat = getTingkat(m);
           
           if (mTingkat === "SEMUA" || mKelasMentah === "SEMUA" || mKelasMentah === "") return true;
 
-          let mKelasArray = mKelasMentah.split(',').map(k => k.trim());
+          let mKelasArray = mKelasMentah.split(',').map(k => k.trim().replace(/\s+/g, ' '));
           
-          // 1. Cocok dengan kelas spesifik (misal: "X IPA 1")
+          // 1. Cocok dengan kelas spesifik (misal: "X TKR 1", "XI TKR 4")
           if (myKelas && mKelasArray.includes(myKelas)) return true;
           
-          // 2. Cocok dengan tingkat generik (misal: "X")
+          // 2. Cocok dengan tingkat generik (misal: "X", "XI")
           if (mKelasArray.includes(myTingkat)) return true;
 
           return false;
@@ -1716,11 +1761,11 @@
             }
           });
 
-          // Update Tampilan Banner Pengingat (Tanpa Pop-up Toast)
+          // Update Tampilan Banner Pengingat (Hanya jika progress/nilai sudah termuat)
           const bannerEl = document.getElementById("pendingTasksBanner");
           const countTxt = document.getElementById("pendingTaskCountText");
           if (bannerEl && countTxt) {
-            if (pendingTasksCount > 0) {
+            if (dataProgres && dataProgres.length > 0 && pendingTasksCount > 0) {
               countTxt.innerText = pendingTasksCount;
               bannerEl.style.display = "flex";
             } else {
@@ -1731,9 +1776,7 @@
           console.warn("Gagal menghitung pending tasks:", errTask);
         }
 
-
-
-         // Materi yang sudah dibuka cukup diambil dari perangkat (localStorage) agar tidak mengotori database
+        // Materi yang sudah dibuka cukup diambil dari perangkat (localStorage) agar tidak mengotori database
         // Hanya tambahkan ke openedMaterials JIKA materi tersebut tidak terkunci secara aturan (mencegah anomali jika listNilai dihapus)
         const openedMaterials = new Set();
         dataMateriFiltered.forEach((m, i) => {
@@ -1751,6 +1794,29 @@
         document.getElementById("materiTotal").innerText = dataMateriFiltered.length;
         // Progres dinilai berdasarkan jumlah evaluasi (Kuis/Tugas) yang telah diselesaikan
         document.getElementById("materiProgress").innerText = quizScores.size;
+
+        // Cegah layar kosong jika materi belum selesai dimuat atau filter tidak memiliki hasil
+        if (!dataMateriFiltered || dataMateriFiltered.length === 0) {
+          if (!dataMateriMentah || dataMateriMentah.length === 0) {
+            list.innerHTML = `
+              <div class="course-card" style="grid-column: 1 / -1; padding: 36px 16px; text-align: center; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 16px;">
+                <div style="display:inline-block; width:36px; height:36px; border:3px solid #e2e8f0; border-top-color:var(--primary); border-radius:50%; animation:spin 0.8s linear infinite; margin-bottom:12px;"></div>
+                <div style="font-weight:600; color:#475569; font-size:0.9rem;">Menghubungkan ke server materi...</div>
+                <div style="font-size:0.75rem; color:#94a3b8; margin-top:4px;">Materi akan segera tampil secara otomatis</div>
+              </div>
+            `;
+          } else {
+            list.innerHTML = `
+              <div style="grid-column: 1 / -1; text-align: center; padding: 48px 16px; color: var(--text-muted); background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px;">
+                <i data-lucide="book-x" style="width: 48px; height: 48px; margin: 0 auto 12px; display: block; opacity: 0.35; color: var(--primary);"></i>
+                <h4 style="margin: 0 0 6px; color: #334155; font-size: 1rem; font-weight: 700;">Belum Ada Materi</h4>
+                <p style="margin: 0; font-size: 0.85rem; color: #64748b;">Tidak ada materi aktif yang ditugaskan untuk kelas <b>${myKelas || myTingkat}</b>${mapelSelected ? ` pada mapel <b>${mapelSelected}</b>` : ''}.</p>
+              </div>
+            `;
+          }
+          if (window.lucide) lucide.createIcons();
+          return;
+        }
 
         let upNextHTML = "";
         let upNextFound = false;
@@ -2426,7 +2492,7 @@
     function openMateri(id) { window.location.href = "materi.html?id=" + id; }
     function logout() { 
       localStorage.removeItem("user"); 
-      localStorage.removeItem("cache_materi");
+      // Pertahankan cache_materi agar sesi login berikutnya langsung menampilkan materi
       localStorage.removeItem("cache_listNilai");
       localStorage.removeItem("cache_logTugas");
       localStorage.removeItem("cache_lastUpdated");

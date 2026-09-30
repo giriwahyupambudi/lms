@@ -751,7 +751,7 @@
                     } catch(e) {}
 
                     updateMsg("Berhasil! Mengalihkan...", "#059669", "check-circle");
-                    localStorage.removeItem("cache_materi");
+                    // Pertahankan cache_materi agar materi langsung muncul seketika (0ms) tanpa cold-start
                     localStorage.removeItem("cache_listNilai");
                     localStorage.removeItem("cache_logTugas");
                     localStorage.removeItem("cache_lastUpdated");
