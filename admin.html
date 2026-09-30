@@ -6496,7 +6496,7 @@
       if (!confirm("Apakah Anda yakin ingin menghapus File Master yang tersimpan untuk materi ini?")) return;
       masterDocxData = null;
       masterFileName = "";
-      const fileInp = document.getElementById('masterFileInput');
+      const fileInp = document.getElementById('masterDocxFileInput');
       if (fileInp) fileInp.value = "";
       const statusEl = document.getElementById('masterFileStatusText');
       if (statusEl) {
@@ -6742,19 +6742,44 @@
     }
 
     function loadMateriAiPromptAndChat(materiKey) {
-      const normM = (materiKey || "default").toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+      // Selalu bersihkan file input chooser agar tidak menampilkan nama file sisa materi sebelumnya
+      const fileInp = document.getElementById('masterDocxFileInput');
+      if (fileInp) fileInp.value = "";
+
+      const promptTa = document.getElementById('instruksiTugasAI');
+      const statusEl = document.getElementById('masterFileStatusText');
+      const soalInp = document.getElementById('soalTugasAI');
+      const kunciInp = document.getElementById('kunciJawabanAI');
+
+      if (!materiKey) {
+        masterDocxData = null;
+        masterFileName = "";
+        if (statusEl) {
+          statusEl.innerText = "Pilih materi/tugas tertentu di atas untuk memuat atau mengunggah File Master acuan.";
+          statusEl.style.color = "var(--text-muted)";
+        }
+        if (soalInp) soalInp.value = "";
+        if (kunciInp) kunciInp.value = "";
+        return;
+      }
+
+      const normM = materiKey.toString().toLowerCase().replace(/[^a-z0-9]/g, '');
       const storageKey = `AI_MATERI_DATA_${normM}`;
 
       let savedData = null;
-      let rawLocal = localStorage.getItem(storageKey);
-      if (rawLocal) {
-        try { savedData = JSON.parse(rawLocal); } catch(e) {}
-      }
-
-      if (!savedData && Array.isArray(dataSettings)) {
+      // Prioritaskan dari dataSettings database Google Sheets (terupdate & tersinkronisasi antar perangkat)
+      if (Array.isArray(dataSettings)) {
         let dbObj = dataSettings.find(s => getVal(s, ['key', 'pengaturan']) === storageKey);
         if (dbObj) {
           try { savedData = JSON.parse(getVal(dbObj, ['value', 'nilai', 'val'])); } catch(e) {}
+        }
+      }
+
+      // Jika belum ada di dataSettings, ambil dari cache localStorage
+      if (!savedData) {
+        let rawLocal = localStorage.getItem(storageKey);
+        if (rawLocal) {
+          try { savedData = JSON.parse(rawLocal); } catch(e) {}
         }
       }
 
@@ -6942,7 +6967,11 @@ TUGAS ANDA:
     }
 
     async function simpanKriteriaMateriSekarang(showAlert = true) {
-      const selMateri = document.getElementById('modalMateriKoreksiAI').value || "default";
+      const selMateri = document.getElementById('modalMateriKoreksiAI').value;
+      if (!selMateri) {
+        if (showAlert) alert("Pilih materi/tugas tertentu terlebih dahulu sebelum menyimpan kriteria.");
+        return;
+      }
       const normM = selMateri.toString().toLowerCase().replace(/[^a-z0-9]/g, '');
       const storageKey = `AI_MATERI_DATA_${normM}`;
 
@@ -6964,9 +6993,12 @@ TUGAS ANDA:
       localStorage.setItem(storageKey, JSON.stringify(dataToSave));
 
       let rowNum = "";
+      let existingIdx = -1;
       if (Array.isArray(dataSettings)) {
-        let existing = dataSettings.find(s => getVal(s, ['key', 'pengaturan']) === storageKey);
-        if (existing && existing.rowNumber) rowNum = existing.rowNumber;
+        existingIdx = dataSettings.findIndex(s => getVal(s, ['key', 'pengaturan']) === storageKey);
+        if (existingIdx !== -1 && dataSettings[existingIdx].rowNumber) {
+          rowNum = dataSettings[existingIdx].rowNumber;
+        }
       }
 
       await postData({
@@ -6978,6 +7010,18 @@ TUGAS ANDA:
           value: JSON.stringify(dataToSave)
         })
       });
+
+      // Update dataSettings di memori agar langsung sinkron tanpa perlu reload halaman
+      if (Array.isArray(dataSettings)) {
+        let record = { key: storageKey, value: JSON.stringify(dataToSave) };
+        if (rowNum) record.rowNumber = rowNum;
+        if (existingIdx !== -1) {
+          dataSettings[existingIdx] = { ...dataSettings[existingIdx], ...record };
+        } else {
+          dataSettings.push(record);
+        }
+        try { localStorage.setItem('LMS_CACHE_settings', JSON.stringify(dataSettings)); } catch(e){}
+      }
 
       if (showAlert) alert(`✅ Kriteria AI, Mode (${modeVal === 'soal' ? 'Soal/Esai' : 'Praktik'}), & Naskah Tugas untuk materi "${selMateri}" berhasil disimpan ke database!`);
     }
