@@ -6229,21 +6229,33 @@
 
       <!-- Container Soal Guru (Untuk Mode 1) -->
       <div id="containerSoalGuru" style="margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1;">
-        <label style="font-weight:600; font-size:0.85rem; color:var(--primary); display:flex; align-items:center; gap:6px;">
-          <i data-lucide="help-circle" style="width:16px; height:16px;"></i> Naskah Soal / Pertanyaan yang Diberikan Guru (Wajib untuk Mode 1)
-        </label>
-        <textarea id="soalTugasAI" class="form-control" rows="3" style="margin-top:6px; font-size:0.84rem; line-height:1.4; background:#fff;" placeholder="Tuliskan atau tempelkan naskah pertanyaan / soal esai yang harus dijawab siswa di sini..."></textarea>
-        <small style="color:var(--text-muted); font-size:0.78rem; display:block; margin-top:4px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <label style="font-weight:600; font-size:0.85rem; color:var(--primary); display:flex; align-items:center; gap:6px; margin:0;">
+            <i data-lucide="help-circle" style="width:16px; height:16px;"></i> Naskah Soal / Pertanyaan yang Diberikan Guru (Wajib untuk Mode 1)
+          </label>
+          <label class="btn btn-sm btn-outline" style="cursor:pointer; display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; padding:3px 10px; background:#fff; border-color:#cbd5e1; color:#334155; border-radius:6px; margin:0;">
+            <i data-lucide="upload" style="width:13px; height:13px; color:var(--primary);"></i> 📁 Unggah File Soal (.docx / .pdf / .txt)
+            <input type="file" id="soalGuruFileInput" accept=".docx,.pdf,.txt" onchange="onSoalGuruFileSelected(this)" style="display:none;">
+          </label>
+        </div>
+        <textarea id="soalTugasAI" class="form-control" rows="3" style="margin-top:6px; font-size:0.84rem; line-height:1.4; background:#fff;" placeholder="Tuliskan, tempelkan, atau unggah naskah soal esai dari file Word/PDF di sini..."></textarea>
+        <small id="soalGuruFileStatus" style="color:var(--text-muted); font-size:0.78rem; display:block; margin-top:4px;">
           AI akan menguji kebenaran isi jawaban siswa secara objektif terhadap pertanyaan di atas, tanpa mempermasalahkan format font atau ketikan.
         </small>
 
         <!-- Kolom Poin Kunci Jawaban Wajib (Opsional) -->
         <div style="margin-top:10px;">
-          <label style="font-weight:600; font-size:0.83rem; color:#334155; display:flex; align-items:center; gap:6px;">
-            <i data-lucide="check-square" style="width:15px; height:15px; color:#059669;"></i> Poin Kunci Jawaban yang Wajib Ada (Opsional untuk Penilaian Presisi):
-          </label>
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <label style="font-weight:600; font-size:0.83rem; color:#334155; display:flex; align-items:center; gap:6px; margin:0;">
+              <i data-lucide="check-square" style="width:15px; height:15px; color:#059669;"></i> Poin Kunci Jawaban yang Wajib Ada (Opsional):
+            </label>
+            <label class="btn btn-sm btn-outline" style="cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-size:0.73rem; padding:2px 8px; background:#fff; border-color:#cbd5e1; color:#334155; border-radius:6px; margin:0;">
+              <i data-lucide="upload" style="width:12px; height:12px; color:#059669;"></i> 📁 Unggah File Kunci (.docx / .pdf / .txt)
+              <input type="file" id="kunciGuruFileInput" accept=".docx,.pdf,.txt" onchange="onKunciGuruFileSelected(this)" style="display:none;">
+            </label>
+          </div>
           <textarea id="kunciJawabanAI" class="form-control" rows="2" style="margin-top:4px; font-size:0.83rem; line-height:1.4; background:#fff;" placeholder="Contoh: 1. Harus memuat definisi..., 2. Menjelaskan perbedaan X dan Y, 3. Menyebutkan minimal 2 contoh..."></textarea>
-          <small style="color:var(--text-muted); font-size:0.75rem; display:block; margin-top:2px;">
+          <small id="kunciGuruFileStatus" style="color:var(--text-muted); font-size:0.75rem; display:block; margin-top:2px;">
             AI akan memastikan argumen siswa mencakup poin-poin kunci di atas agar pembagian skor esai sangat konsisten & objektif.
           </small>
         </div>
@@ -6492,6 +6504,133 @@
         statusEl.style.color = "var(--text-muted)";
       }
       simpanKriteriaMateriSekarang(false);
+    }
+
+    async function extractTextFromUploadedDoc(file) {
+      if (!file) return "";
+      let fname = file.name.toLowerCase();
+
+      if (fname.endsWith('.txt')) {
+        return await file.text();
+      }
+
+      const ab = await file.arrayBuffer();
+
+      // 1. Coba parse sebagai docx
+      let docxDet = await parseDocxFormattingDetails(ab);
+      if (docxDet && docxDet.fullText && docxDet.fullText.trim().length > 0) {
+        return docxDet.fullText.trim();
+      }
+
+      // 2. Coba parse sebagai pdf
+      let pdfDet = await parsePdfFormattingDetails(ab);
+      if (pdfDet && pdfDet.fullText && pdfDet.fullText.trim().length > 0) {
+        return pdfDet.fullText.trim();
+      }
+
+      return "";
+    }
+
+    async function onSoalGuruFileSelected(inputEl) {
+      if (!inputEl.files || !inputEl.files[0]) return;
+      const file = inputEl.files[0];
+      const statusEl = document.getElementById('soalGuruFileStatus');
+      const soalInp = document.getElementById('soalTugasAI');
+      const kunciInp = document.getElementById('kunciJawabanAI');
+
+      if (statusEl) {
+        statusEl.innerHTML = `⏳ Membaca isi berkas <b>"${file.name}"</b>...`;
+        statusEl.style.color = "var(--primary)";
+      }
+
+      try {
+        let extractedText = await extractTextFromUploadedDoc(file);
+        if (!extractedText || extractedText.trim().length === 0) {
+          if (statusEl) {
+            statusEl.innerHTML = `⚠️ Gagal membaca teks dari berkas "${file.name}". Pastikan berkas berupa .docx, .pdf, atau .txt yang memuat teks.`;
+            statusEl.style.color = "#ef4444";
+          }
+          return;
+        }
+
+        // Cek apakah berkas memuat bagian Kunci Jawaban terpisah
+        let lower = extractedText.toLowerCase();
+        let splitIdx = -1;
+        let splitKeys = ["kunci jawaban:", "kunci jawaban :", "kunci:", "kunci :", "rubrik penilaian:", "rubrik :", "jawaban benar:"];
+        for (let k of splitKeys) {
+          let pos = lower.indexOf(k);
+          if (pos !== -1) {
+            splitIdx = pos;
+            break;
+          }
+        }
+
+        if (splitIdx !== -1 && kunciInp && (!kunciInp.value || kunciInp.value.trim() === "")) {
+          let soalPart = extractedText.substring(0, splitIdx).trim();
+          let kunciPart = extractedText.substring(splitIdx).trim();
+          soalInp.value = soalPart;
+          kunciInp.value = kunciPart;
+          if (statusEl) {
+            statusEl.innerHTML = `✅ Berhasil mengekstrak naskah soal & kunci jawaban dari <b>"${file.name}"</b>!`;
+            statusEl.style.color = "#10b981";
+          }
+        } else {
+          soalInp.value = extractedText;
+          if (statusEl) {
+            statusEl.innerHTML = `✅ Berhasil memuat naskah soal dari <b>"${file.name}"</b> (${extractedText.split(/\s+/).length} kata).`;
+            statusEl.style.color = "#10b981";
+          }
+        }
+
+        simpanKriteriaMateriSekarang(false);
+      } catch (err) {
+        console.error(err);
+        if (statusEl) {
+          statusEl.innerHTML = `❌ Terjadi kesalahan membaca file: ${err.message}`;
+          statusEl.style.color = "#ef4444";
+        }
+      } finally {
+        inputEl.value = "";
+      }
+    }
+
+    async function onKunciGuruFileSelected(inputEl) {
+      if (!inputEl.files || !inputEl.files[0]) return;
+      const file = inputEl.files[0];
+      const statusEl = document.getElementById('kunciGuruFileStatus');
+      const kunciInp = document.getElementById('kunciJawabanAI');
+
+      if (statusEl) {
+        statusEl.innerHTML = `⏳ Membaca kunci jawaban dari <b>"${file.name}"</b>...`;
+        statusEl.style.color = "var(--primary)";
+      }
+
+      try {
+        let extractedText = await extractTextFromUploadedDoc(file);
+        if (!extractedText || extractedText.trim().length === 0) {
+          if (statusEl) {
+            statusEl.innerHTML = `⚠️ Gagal membaca teks kunci dari berkas "${file.name}".`;
+            statusEl.style.color = "#ef4444";
+          }
+          return;
+        }
+
+        kunciInp.value = extractedText;
+        if (statusEl) {
+          statusEl.innerHTML = `✅ Kunci jawaban berhasil dimuat dari <b>"${file.name}"</b> (${extractedText.split(/\s+/).length} kata).`;
+          statusEl.style.color = "#10b981";
+        }
+
+        simpanKriteriaMateriSekarang(false);
+      } catch (err) {
+        console.error(err);
+        if (statusEl) {
+          statusEl.innerHTML = `❌ Terjadi kesalahan membaca file kunci: ${err.message}`;
+          statusEl.style.color = "#ef4444";
+        }
+      } finally {
+        inputEl.value = "";
+      }
     }
 
     let currentMateriAiChat = [];
