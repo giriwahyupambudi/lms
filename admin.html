@@ -7391,24 +7391,27 @@ TUGAS ANDA:
 
     async function callGeminiAPI(apiKey, promptText, onWaitNotify = null, inlineData = null) {
       const models = [
-        'gemini-3.5-flash',
-        'gemini-3.8-flash',
-        'gemini-3.8-pro',
-        'gemini-3.6-flash',
-        'gemini-3.6-pro',
-        'gemini-3.0-flash',
-        'gemini-flash-latest',
         'gemini-2.5-flash',
         'gemini-2.0-flash',
+        'gemini-1.5-flash',
+        'gemini-1.5-pro',
+        'gemini-2.0-flash-lite',
+        'gemini-flash-latest',
         'gemini-1.5-flash-latest',
-        'gemini-flash-lite-latest'
+        'gemini-3.5-flash',
+        'gemini-3.0-flash'
       ];
 
       let lastErrText = "";
 
       let parts = [{ text: promptText }];
       if (inlineData && inlineData.data) {
-        parts.push({ inlineData: inlineData });
+        parts.push({
+          inlineData: {
+            mimeType: inlineData.mimeType,
+            data: inlineData.data
+          }
+        });
       }
 
       for (let pass = 0; pass < 3; pass++) {
@@ -7830,13 +7833,15 @@ TUGAS ANDA:
         try {
           let docxDetails = null;
           let studentInlineData = null;
+          let fileDownloaded = false;
 
           if (fileUrl.includes("drive.google.com") || fileUrl.includes("docs.google.com") || fileUrl.toLowerCase().includes(".docx") || fileUrl.toLowerCase().includes(".pdf") || fileUrl.toLowerCase().includes(".jpg") || fileUrl.toLowerCase().includes(".jpeg") || fileUrl.toLowerCase().includes(".png") || fileUrl.toLowerCase().includes(".webp") || fileUrl.includes("google")) {
             let fileMatch = fileUrl.match(/[-\w]{25,}/);
             let downloadUrls = [];
             if (fileMatch) {
               let fId = fileMatch[0];
-              // Prioritaskan drive.usercontent.google.com (mendukung CORS wildcard * untuk PDF, DOCX, dan Gambar)
+              // Prioritaskan lh3.googleusercontent.com/d/ (CDN Google Drive resmi dengan header CORS penuh Access-Control-Allow-Origin: * yang merender visual PNG untuk dokumen/PDF/gambar)
+              downloadUrls.push(`https://lh3.googleusercontent.com/d/${fId}`);
               downloadUrls.push(`https://drive.usercontent.google.com/download?id=${fId}&export=download`);
               downloadUrls.push(`https://docs.google.com/document/d/${fId}/export?format=docx`);
               downloadUrls.push(`https://drive.google.com/uc?export=download&id=${fId}`);
@@ -7848,6 +7853,7 @@ TUGAS ANDA:
                 let fRes = await fetch(dUrl);
                 if (fRes.ok) {
                   let ab = await fRes.arrayBuffer();
+                  fileDownloaded = true;
 
                   // 1. Deteksi apakah ini berkas Gambar (foto tulisan tangan siswa di buku tulis / scan)
                   let uint8_16 = new Uint8Array(ab.slice(0, 16));
@@ -7897,8 +7903,12 @@ TUGAS ANDA:
           // Pre-flight Guardrail: Berkas kosong / rusak / tidak terbaca (< 15 karakter)
           if (!hasText && !hasInline) {
             let zeroScore = 0;
-            let zeroNote = "Berkas tugas tidak memuat teks/isi yang valid (file kosong, rusak, atau format tidak terbaca). Silakan unggah kembali.";
-            let zeroTeacherNote = "⚠️ Berkas kosong / teks < 15 karakter / gagal diekstrak";
+            let zeroNote = fileDownloaded
+              ? "Berkas tugas tidak memuat teks/isi yang valid (file kosong, rusak, atau format tidak terbaca). Silakan unggah kembali."
+              : "⚠️ Berkas tidak dapat diakses atau diunduh dari link Google Drive. Pastikan izin berbagi (sharing) berkas disetel ke 'Siapa saja yang memiliki link'.";
+            let zeroTeacherNote = fileDownloaded
+              ? "⚠️ Berkas kosong / teks < 15 karakter / gagal diekstrak"
+              : "⚠️ Gagal mengunduh berkas dari link Drive (periksa izin akses link siswa)";
             let finalTipeVal = koreksiMode === 'soal' ? 'Tugas' : 'Praktik';
 
             let existingNilaiRow = dataNilai.find(n => {
@@ -7946,7 +7956,11 @@ TUGAS ANDA:
             });
             renderKoreksiAiReviewTable();
 
-            logEl.innerText += `⚠️ Diberi nilai 0 otomatis (berkas kosong/rusak/teks < 15 karakter, kuota API dihemat).\n`;
+            if (fileDownloaded) {
+              logEl.innerText += `⚠️ Diberi nilai 0 otomatis (berkas kosong/rusak/teks < 15 karakter, kuota API dihemat).\n`;
+            } else {
+              logEl.innerText += `⚠️ Gagal unduh berkas dari Drive (link privat/tidak valid, kuota API dihemat).\n`;
+            }
             logEl.scrollTop = logEl.scrollHeight;
             continue;
           }
@@ -7985,7 +7999,7 @@ ${existingPeerTexts.slice(0, 10).join("\n")}
           // ==========================================
           let studentAnswerText = "";
           if (studentInlineData && studentInlineData.isImage) {
-            studentAnswerText = `[Jawaban siswa berupa FOTO TULISAN TANGAN (buku tulis) terlampir langsung pada pesan ini. BACA tulisan tangan siswa dengan teliti via penglihatan visual multimodal dan evaluasi kebenaran isinya!]`;
+            studentAnswerText = `[Naskah / lembar jawaban siswa terlampir langsung sebagai GAMBAR DOKUMEN / TULISAN TANGAN pada pesan ini. BACA, ANALISIS, dan EVALUASI seluruh isi naskah lembar jawaban siswa tersebut secara visual via multimodal vision!]`;
           } else if (docxDetails && docxDetails.fullText && docxDetails.fullText.length >= 10) {
             studentAnswerText = `"${docxDetails.fullText.substring(0, 3500)}"`;
           } else if (studentInlineData) {
@@ -8074,8 +8088,8 @@ Jawab HANYA format JSON murni:
 `;
           } else if (studentInlineData) {
             formatInfoText = `
-- DOKUMEN HASIL PENGERJAAN SISWA TERLAMPIR LANGSUNG SEBAGAI ATTACHMENT PDF MULTIMODAL PADA PESAN INI.
-- BACA, IDENTIFIKASI, dan EVALUASI seluruh isi naskah serta tata letak dokumen yang dikerjakan siswa (${namaSiswa}) langsung dari gambar/halaman PDF yang terlampir tersebut!
+- DOKUMEN HASIL PENGERJAAN SISWA TERLAMPIR LANGSUNG SEBAGAI GAMBAR DOKUMEN / LAMPIRAN MULTIMODAL PADA PESAN INI.
+- BACA, IDENTIFIKASI, dan EVALUASI seluruh isi naskah, kerapian pengetikan, serta tata letak dokumen (layout, margin visual, perataan teks, format huruf tebal/miring, dan posisi gambar) yang dikerjakan siswa (${namaSiswa}) langsung dari gambar dokumen yang terlampir tersebut!
 `;
           } else {
             formatInfoText = `Catatan: File disimpan di Drive (${fileUrl}). Evaluasi kepatuhan berdasarkan instruksi Guru.`;
@@ -8154,7 +8168,12 @@ Jawab HANYA format JSON murni:
           
           let parsedEval = { nilai: 80, catatan: "Tugas telah dievaluasi AI.", catatan_guru: "Mandiri" };
           try {
-            parsedEval = JSON.parse(rawResp);
+            let jsonMatch = rawResp.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              parsedEval = JSON.parse(jsonMatch[0]);
+            } else {
+              parsedEval = JSON.parse(rawResp);
+            }
           } catch(eJson) {}
 
           let finalScore = 80;
