@@ -6236,6 +6236,17 @@
         <small style="color:var(--text-muted); font-size:0.78rem; display:block; margin-top:4px;">
           AI akan menguji kebenaran isi jawaban siswa secara objektif terhadap pertanyaan di atas, tanpa mempermasalahkan format font atau ketikan.
         </small>
+
+        <!-- Kolom Poin Kunci Jawaban Wajib (Opsional) -->
+        <div style="margin-top:10px;">
+          <label style="font-weight:600; font-size:0.83rem; color:#334155; display:flex; align-items:center; gap:6px;">
+            <i data-lucide="check-square" style="width:15px; height:15px; color:#059669;"></i> Poin Kunci Jawaban yang Wajib Ada (Opsional untuk Penilaian Presisi):
+          </label>
+          <textarea id="kunciJawabanAI" class="form-control" rows="2" style="margin-top:4px; font-size:0.83rem; line-height:1.4; background:#fff;" placeholder="Contoh: 1. Harus memuat definisi..., 2. Menjelaskan perbedaan X dan Y, 3. Menyebutkan minimal 2 contoh..."></textarea>
+          <small style="color:var(--text-muted); font-size:0.75rem; display:block; margin-top:2px;">
+            AI akan memastikan argumen siswa mencakup poin-poin kunci di atas agar pembagian skor esai sangat konsisten & objektif.
+          </small>
+        </div>
       </div>
 
       <!-- Upload File Master Guru (Untuk Mode 2) -->
@@ -6303,9 +6314,50 @@
     <!-- TAB 2: EKSEKUSI KOREKSI MASSAL -->
     <div id="aiTabContentEksekusi" style="display:none;">
 
+      <!-- Opsi Otomatis Simpan -->
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="chkAutoSaveAi" style="width:16px; height:16px; cursor:pointer; accent-color:var(--primary);">
+          <label for="chkAutoSaveAi" style="font-size:0.82rem; font-weight:600; color:#334155; cursor:pointer; margin:0;">
+            ⚡ Otomatis simpan ke database saat seluruh koreksi selesai
+          </label>
+        </div>
+        <span style="font-size:0.75rem; color:#64748b;">(Jika tidak dicentang, Anda dapat meninjau & mengedit draf nilai terlebih dahulu)</span>
+      </div>
+
       <div id="koreksiAiStatusBox" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:16px; font-size:0.85rem; max-height:180px; overflow-y:auto;">
         <div id="koreksiAiProgressText" style="font-weight:600; color:var(--primary); margin-bottom:6px;">Menyiapkan file tugas siswa...</div>
         <div id="koreksiAiLog" style="font-family:monospace; color:#334155; white-space:pre-wrap; font-size:0.8rem; line-height:1.4;"></div>
+      </div>
+
+      <!-- Review & Approval Table (Draf Hasil Koreksi AI) -->
+      <div id="koreksiAiReviewBox" style="display:none; margin-bottom:16px; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+        <div style="padding:12px 16px; background:#f1f5f9; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div style="font-weight:700; font-size:0.88rem; color:#1e293b; display:flex; align-items:center; gap:6px;">
+            <i data-lucide="check-circle-2" style="width:18px; height:18px; color:#10b981;"></i>
+            <span>Draf Hasil Koreksi AI (<span id="countHasilAiReview">0</span> Tugas)</span>
+          </div>
+          <span style="font-size:0.75rem; color:#64748b;">Anda dapat mengedit nilai atau catatan sebelum disimpan</span>
+        </div>
+        <div style="max-height:280px; overflow-y:auto;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.8rem; text-align:left;">
+            <thead>
+              <tr style="background:#f8fafc; color:#475569; position:sticky; top:0; z-index:2; border-bottom:1px solid #e2e8f0;">
+                <th style="padding:8px 12px; width:25%;">Siswa</th>
+                <th style="padding:8px 12px; width:80px; text-align:center;">Nilai</th>
+                <th style="padding:8px 12px;">Catatan Evaluasi Siswa</th>
+                <th style="padding:8px 12px; width:130px;">Plagiasi</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyKoreksiAiReview"></tbody>
+          </table>
+        </div>
+        <div style="padding:12px 16px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <span id="reviewSaveStatusText" style="font-size:0.8rem; color:#64748b; font-weight:500;">Periksa draf di atas, lalu klik Simpan ke Database.</span>
+          <button class="btn btn-primary" id="btnSimpanHasilAiKeDatabase" onclick="simpanHasilAiKeDatabase()" style="background:#059669; border:none; display:flex; align-items:center; gap:6px; font-weight:700; font-size:0.85rem;">
+            <i data-lucide="save"></i> 💾 Simpan Semua Nilai ke Database LMS
+          </button>
+        </div>
       </div>
 
       <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-color); padding-top:14px;">
@@ -6600,6 +6652,12 @@
         }
       }
 
+      // Isi Poin Kunci Jawaban Wajib (untuk Mode 1)
+      const kunciInp = document.getElementById('kunciJawabanAI');
+      if (kunciInp) {
+        kunciInp.value = (savedData && savedData.kunciJawabanText !== undefined) ? savedData.kunciJawabanText : "";
+      }
+
       const promptTa = document.getElementById('instruksiTugasAI');
       const statusEl = document.getElementById('masterFileStatusText');
 
@@ -6756,6 +6814,7 @@ TUGAS ANDA:
       const dataToSave = {
         koreksiMode: modeVal,
         soalText: soalVal,
+        kunciJawabanText: document.getElementById('kunciJawabanAI') ? document.getElementById('kunciJawabanAI').value.trim() : '',
         promptText: promptText,
         chatHistory: currentMateriAiChat,
         masterDocxData: masterDocxData,
@@ -7172,6 +7231,174 @@ TUGAS ANDA:
       throw new Error(`Gemini API Error: ${lastErrText || '404/429'}`);
     }
 
+    let currentAiEvaluationDrafts = [];
+
+    function renderKoreksiAiReviewTable() {
+      const reviewBox = document.getElementById('koreksiAiReviewBox');
+      const tbody = document.getElementById('tbodyKoreksiAiReview');
+      const countEl = document.getElementById('countHasilAiReview');
+      if (!reviewBox || !tbody) return;
+
+      if (!currentAiEvaluationDrafts || currentAiEvaluationDrafts.length === 0) {
+        reviewBox.style.display = 'none';
+        tbody.innerHTML = '';
+        if (countEl) countEl.innerText = '0';
+        return;
+      }
+
+      reviewBox.style.display = 'block';
+      if (countEl) countEl.innerText = currentAiEvaluationDrafts.length;
+
+      let html = '';
+      currentAiEvaluationDrafts.forEach((item, idx) => {
+        let rubrikHtml = '';
+        if (item.rubrikBreakdown && typeof item.rubrikBreakdown === 'object') {
+          let badges = [];
+          for (let [k, v] of Object.entries(item.rubrikBreakdown)) {
+            let label = k.replace(/_/g, ' ');
+            label = label.charAt(0).toUpperCase() + label.slice(1);
+            badges.push(`<span style="display:inline-block; background:#f1f5f9; border:1px solid #e2e8f0; padding:1px 6px; border-radius:4px; margin-right:4px; margin-top:3px; font-size:10px; color:#475569;">${label}: <b>${v}</b></span>`);
+          }
+          if (badges.length > 0) {
+            rubrikHtml = `<div style="margin-top:4px;">${badges.join('')}</div>`;
+          }
+        }
+
+        let plagiasiColor = '#10b981';
+        let plagiasiBg = '#ecfdf5';
+        let plagiasiText = item.catatan_guru || '✅ Mandiri';
+        if (plagiasiText.includes('⚠️') || plagiasiText.toLowerCase().includes('duplikat') || plagiasiText.toLowerCase().includes('copy') || plagiasiText.toLowerCase().includes('mirip')) {
+          plagiasiColor = '#ef4444';
+          plagiasiBg = '#fef2f2';
+        }
+
+        html += `
+          <tr style="border-bottom: 1px solid #e2e8f0; font-size: 11px;">
+            <td style="padding: 8px 12px; vertical-align: top;">
+              <div style="font-weight: 600; color: #1e293b;">${item.nama}</div>
+              <div style="color: #64748b; font-size: 10px;">${item.kelas} &bull; ${item.username}</div>
+            </td>
+            <td style="padding: 8px 12px; text-align: center; vertical-align: top;">
+              <input type="number" min="0" max="100" value="${item.nilai}" onchange="onReviewNilaiChanged(${idx}, this.value)" style="width: 60px; padding: 4px; text-align: center; font-weight: bold; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #0284c7; background: #fff;">
+            </td>
+            <td style="padding: 8px 12px; vertical-align: top;">
+              <textarea onchange="onReviewCatatanChanged(${idx}, this.value)" style="width: 100%; min-height: 44px; padding: 6px; font-size: 11px; line-height: 1.4; border: 1px solid #cbd5e1; border-radius: 6px; resize: vertical; box-sizing: border-box; background: #fff;">${item.keterangan || ''}</textarea>
+              ${rubrikHtml}
+            </td>
+            <td style="padding: 8px 12px; vertical-align: top;">
+              <div style="font-size: 10px; color: ${plagiasiColor}; background: ${plagiasiBg}; border: 1px solid ${plagiasiColor}40; padding: 4px 6px; border-radius: 6px; line-height: 1.3;">
+                ${plagiasiText}
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+    }
+
+    function onReviewNilaiChanged(idx, val) {
+      if (currentAiEvaluationDrafts[idx]) {
+        let n = parseInt(val, 10);
+        if (isNaN(n)) n = 0;
+        n = Math.min(100, Math.max(0, n));
+        currentAiEvaluationDrafts[idx].nilai = n;
+        if (currentAiEvaluationDrafts[idx].payload && currentAiEvaluationDrafts[idx].payload.data) {
+          try {
+            let curData = JSON.parse(currentAiEvaluationDrafts[idx].payload.data);
+            curData.nilai = n;
+            currentAiEvaluationDrafts[idx].payload.data = JSON.stringify(curData);
+          } catch(e) {}
+        }
+      }
+    }
+
+    function onReviewCatatanChanged(idx, val) {
+      if (currentAiEvaluationDrafts[idx]) {
+        currentAiEvaluationDrafts[idx].keterangan = val;
+        if (currentAiEvaluationDrafts[idx].payload && currentAiEvaluationDrafts[idx].payload.data) {
+          try {
+            let curData = JSON.parse(currentAiEvaluationDrafts[idx].payload.data);
+            curData.keterangan = val;
+            currentAiEvaluationDrafts[idx].payload.data = JSON.stringify(curData);
+          } catch(e) {}
+        }
+      }
+    }
+
+    async function simpanHasilAiKeDatabase() {
+      if (!currentAiEvaluationDrafts || currentAiEvaluationDrafts.length === 0) {
+        alert("Belum ada data draf koreksi AI untuk disimpan.");
+        return;
+      }
+      const btn = document.getElementById('btnSimpanHasilAiKeDatabase');
+      const statusEl = document.getElementById('reviewSaveStatusText');
+      const progressText = document.getElementById('koreksiAiProgressText');
+
+      if (btn) btn.disabled = true;
+      if (statusEl) statusEl.innerText = `Menyimpan ${currentAiEvaluationDrafts.length} nilai ke Google Sheets...`;
+      if (progressText) progressText.innerText = `Menyimpan ${currentAiEvaluationDrafts.length} nilai AI ke database LMS...`;
+
+      try {
+        let payloads = currentAiEvaluationDrafts.map(d => d.payload);
+        await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: "saveDataBulk",
+            payloads: payloads
+          }),
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        });
+
+        // Update dataNilai di memory lokal secara instan
+        const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+        currentAiEvaluationDrafts.forEach(draft => {
+          let existingIdx = dataNilai.findIndex(n => {
+            let nUser = norm(getVal(n, ['username', 'nisn']));
+            let nMid = norm(getVal(n, ['id_materi', 'idmateri', 'modul']));
+            let nJudul = norm(getVal(n, ['judul', 'materi']));
+            return nUser === norm(draft.username) && (nMid === norm(draft.idMateri) || nJudul === norm(draft.judulMateri));
+          });
+          let newRec = {
+            timestamp: draft.timestamp,
+            waktu: draft.waktu,
+            durasi: draft.durasi,
+            username: draft.username,
+            nama: draft.nama,
+            kelas: draft.kelas,
+            id_materi: draft.idMateri,
+            "ID Materi": draft.idMateri,
+            judul: draft.judulMateri,
+            tipe: draft.tipe,
+            nilai: draft.nilai,
+            skor: draft.nilai,
+            keterangan: draft.keterangan,
+            catatan_guru: draft.catatan_guru
+          };
+          if (existingIdx !== -1) {
+            dataNilai[existingIdx] = { ...dataNilai[existingIdx], ...newRec };
+          } else {
+            dataNilai.push(newRec);
+          }
+        });
+
+        if (statusEl) statusEl.innerHTML = `<span style="color:#10b981; font-weight:700;">✅ Berhasil menyimpan ${currentAiEvaluationDrafts.length} nilai ke database!</span>`;
+        if (progressText) progressText.innerHTML = `✅ <b>Berhasil menyimpan seluruh ${currentAiEvaluationDrafts.length} nilai siswa ke database LMS!</b>`;
+
+        if (typeof renderRekapAdmin === 'function') renderRekapAdmin();
+        if (typeof renderTableNilai === 'function') renderTableNilai();
+
+        setTimeout(() => {
+          if (typeof loadAllData === 'function') loadAllData();
+        }, 1000);
+      } catch (err) {
+        console.error(err);
+        if (statusEl) statusEl.innerHTML = `<span style="color:#ef4444; font-weight:700;">❌ Gagal menyimpan nilai: ${err.message}</span>`;
+        if (progressText) progressText.innerText = "❌ Gagal menyimpan nilai ke server: " + err.message;
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
     async function jalankanKoreksiAIMassal() {
       const apiKey = getActiveGeminiApiKey();
       const instruksi = document.getElementById('instruksiTugasAI').value.trim();
@@ -7197,6 +7424,9 @@ TUGAS ANDA:
       statusBox.style.display = 'block';
       logEl.innerText = "";
       btn.disabled = true;
+
+      currentAiEvaluationDrafts = [];
+      renderKoreksiAiReviewTable();
 
       const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
 
@@ -7384,12 +7614,12 @@ TUGAS ANDA:
           let docxDetails = null;
           let studentInlineData = null;
 
-          if (fileUrl.includes("drive.google.com") || fileUrl.includes("docs.google.com") || fileUrl.toLowerCase().includes(".docx") || fileUrl.toLowerCase().includes(".pdf") || fileUrl.includes("google")) {
+          if (fileUrl.includes("drive.google.com") || fileUrl.includes("docs.google.com") || fileUrl.toLowerCase().includes(".docx") || fileUrl.toLowerCase().includes(".pdf") || fileUrl.toLowerCase().includes(".jpg") || fileUrl.toLowerCase().includes(".jpeg") || fileUrl.toLowerCase().includes(".png") || fileUrl.toLowerCase().includes(".webp") || fileUrl.includes("google")) {
             let fileMatch = fileUrl.match(/[-\w]{25,}/);
             let downloadUrls = [];
             if (fileMatch) {
               let fId = fileMatch[0];
-              // Prioritaskan drive.usercontent.google.com (mendukung CORS wildcard * untuk PDF dan DOCX)
+              // Prioritaskan drive.usercontent.google.com (mendukung CORS wildcard * untuk PDF, DOCX, dan Gambar)
               downloadUrls.push(`https://drive.usercontent.google.com/download?id=${fId}&export=download`);
               downloadUrls.push(`https://docs.google.com/document/d/${fId}/export?format=docx`);
               downloadUrls.push(`https://drive.google.com/uc?export=download&id=${fId}`);
@@ -7401,19 +7631,32 @@ TUGAS ANDA:
                 let fRes = await fetch(dUrl);
                 if (fRes.ok) {
                   let ab = await fRes.arrayBuffer();
-                  // 1. Coba parse sebagai DOCX
-                  docxDetails = await parseDocxFormattingDetails(ab);
-                  // 2. Jika gagal atau bukan docx (misal Tugas Editor PDF), parse sebagai PDF!
-                  if (!docxDetails || !docxDetails.fullText) {
-                    docxDetails = await parsePdfFormattingDetails(ab);
+
+                  // 1. Deteksi apakah ini berkas Gambar (foto tulisan tangan siswa di buku tulis / scan)
+                  let uint8_16 = new Uint8Array(ab.slice(0, 16));
+                  let isJpeg = uint8_16[0] === 0xFF && uint8_16[1] === 0xD8;
+                  let isPng = uint8_16[0] === 0x89 && uint8_16[1] === 0x50 && uint8_16[2] === 0x4E && uint8_16[3] === 0x47;
+                  let isWebp = uint8_16[8] === 0x57 && uint8_16[9] === 0x45 && uint8_16[10] === 0x42 && uint8_16[11] === 0x50;
+                  if ((isJpeg || isPng || isWebp) && ab.byteLength < 15 * 1024 * 1024) {
+                    let imgMime = isJpeg ? 'image/jpeg' : (isPng ? 'image/png' : 'image/webp');
+                    let base64Img = arrayBufferToBase64(ab);
+                    studentInlineData = { mimeType: imgMime, data: base64Img, isImage: true };
                   }
 
-                  // 3. Deteksi apakah ini berkas PDF (terutama Tugas Editor berbasis canvas gambar)
-                  let uint8 = new Uint8Array(ab.slice(0, 5));
-                  let isPdfHeader = uint8[0] === 0x25 && uint8[1] === 0x50 && uint8[2] === 0x44 && uint8[3] === 0x46; // %PDF
-                  if (isPdfHeader && ab.byteLength < 15 * 1024 * 1024) {
-                    let base64Pdf = arrayBufferToBase64(ab);
-                    studentInlineData = { mimeType: 'application/pdf', data: base64Pdf };
+                  // 2. Coba parse sebagai DOCX jika bukan gambar
+                  if (!studentInlineData) {
+                    docxDetails = await parseDocxFormattingDetails(ab);
+                    // 3. Jika gagal atau bukan docx (misal Tugas Editor PDF), parse sebagai PDF!
+                    if (!docxDetails || !docxDetails.fullText) {
+                      docxDetails = await parsePdfFormattingDetails(ab);
+                    }
+
+                    // 4. Deteksi apakah ini berkas PDF (terutama Tugas Editor berbasis canvas gambar)
+                    let isPdfHeader = uint8_16[0] === 0x25 && uint8_16[1] === 0x50 && uint8_16[2] === 0x44 && uint8_16[3] === 0x46; // %PDF
+                    if (isPdfHeader && ab.byteLength < 15 * 1024 * 1024) {
+                      let base64Pdf = arrayBufferToBase64(ab);
+                      studentInlineData = { mimeType: 'application/pdf', data: base64Pdf };
+                    }
                   }
 
                   if ((docxDetails && docxDetails.fullText && docxDetails.fullText.length > 30) || studentInlineData) break;
@@ -7429,6 +7672,67 @@ TUGAS ANDA:
 
           let koreksiMode = getKoreksiAiMode();
           let soalGuru = document.getElementById('soalTugasAI') ? document.getElementById('soalTugasAI').value.trim() : "";
+          let kunciJawabanGuru = document.getElementById('kunciJawabanAI') ? document.getElementById('kunciJawabanAI').value.trim() : "";
+
+          let hasText = docxDetails && docxDetails.fullText && docxDetails.fullText.trim().length >= 15;
+          let hasInline = !!studentInlineData;
+
+          // Pre-flight Guardrail: Berkas kosong / rusak / tidak terbaca (< 15 karakter)
+          if (!hasText && !hasInline) {
+            let zeroScore = 0;
+            let zeroNote = "Berkas tugas tidak memuat teks/isi yang valid (file kosong, rusak, atau format tidak terbaca). Silakan unggah kembali.";
+            let zeroTeacherNote = "⚠️ Berkas kosong / teks < 15 karakter / gagal diekstrak";
+            let finalTipeVal = koreksiMode === 'soal' ? 'Tugas' : 'Praktik';
+
+            let existingNilaiRow = dataNilai.find(n => {
+              let nUser = norm(getVal(n, ['username', 'nisn']));
+              let nMid = (getVal(n, ['id_materi', 'idmateri', 'modul']) || '').toString().trim();
+              let nJudul = norm(getVal(n, ['judul', 'materi']));
+              return nUser === norm(usernameSiswa) && (norm(nMid) === norm(idMateriVal) || (judulMateriVal !== '' && nJudul === norm(judulMateriVal)));
+            });
+
+            let payloadItem = {
+              action: "saveData",
+              sheet: "listNilai",
+              data: JSON.stringify({
+                timestamp: isoTimestamp,
+                waktu: tWaktuSubmit,
+                durasi: tDurasi,
+                username: usernameSiswa,
+                nama: namaSiswa,
+                kelas: kelasSiswa,
+                "ID Materi": idMateriVal,
+                judul: judulMateriVal,
+                tipe: finalTipeVal,
+                nilai: zeroScore,
+                keterangan: zeroNote,
+                catatan_guru: zeroTeacherNote
+              })
+            };
+            if (existingNilaiRow && existingNilaiRow.rowNumber) payloadItem.rowNumber = existingNilaiRow.rowNumber;
+
+            currentAiEvaluationDrafts.push({
+              nama: namaSiswa,
+              username: usernameSiswa,
+              kelas: kelasSiswa,
+              idMateri: idMateriVal,
+              judulMateri: judulMateriVal,
+              tipe: finalTipeVal,
+              nilai: zeroScore,
+              keterangan: zeroNote,
+              catatan_guru: zeroTeacherNote,
+              timestamp: isoTimestamp,
+              waktu: tWaktuSubmit,
+              durasi: tDurasi,
+              payload: payloadItem,
+              rubrikBreakdown: null
+            });
+            renderKoreksiAiReviewTable();
+
+            logEl.innerText += `⚠️ Diberi nilai 0 otomatis (berkas kosong/rusak/teks < 15 karakter, kuota API dihemat).\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+            continue;
+          }
 
           let existingPeerTexts = [];
           dataLogTugas.forEach(peerTask => {
@@ -7463,7 +7767,9 @@ ${existingPeerTexts.slice(0, 10).join("\n")}
           // MODE 1: KOREKSI JAWABAN SOAL / URAIAN TEORI
           // ==========================================
           let studentAnswerText = "";
-          if (docxDetails && docxDetails.fullText && docxDetails.fullText.length >= 10) {
+          if (studentInlineData && studentInlineData.isImage) {
+            studentAnswerText = `[Jawaban siswa berupa FOTO TULISAN TANGAN (buku tulis) terlampir langsung pada pesan ini. BACA tulisan tangan siswa dengan teliti via penglihatan visual multimodal dan evaluasi kebenaran isinya!]`;
+          } else if (docxDetails && docxDetails.fullText && docxDetails.fullText.length >= 10) {
             studentAnswerText = `"${docxDetails.fullText.substring(0, 3500)}"`;
           } else if (studentInlineData) {
             studentAnswerText = `[Naskah jawaban siswa terlampir langsung sebagai dokumen PDF pada pesan ini. BACA, ANALISIS, dan EVALUASI seluruh isi naskah jawaban siswa dari file PDF tersebut!]`;
@@ -7471,12 +7777,18 @@ ${existingPeerTexts.slice(0, 10).join("\n")}
             studentAnswerText = `[File berada di tautan Google Drive: ${fileUrl}]`;
           }
 
+          let kunciJawabanSection = kunciJawabanGuru ? `
+POIN KUNCI JAWABAN WAJIB DARI GURU (ACUAN PENILAIAN UTAMA):
+${kunciJawabanGuru}
+(Instruksi khusus: Periksa apakah jawaban siswa memuat atau menjelaskan poin-poin/konsep kunci di atas. Berikan penilaian proporsional berdasarkan kelengkapan poin kunci tersebut).
+` : "";
+
           promptText = `Anda bertindak sebagai Guru penilai tugas / ujian esai yang objektif, akademis, dan adil untuk siswa bernama ${namaSiswa}.
-Tugas Anda adalah mengevaluasi kebenaran konsep, kelengkapan alur penalaran, dan logika pemecahan masalah dari jawaban siswa terhadap NASKAH SOAL GURU berikut berdasarkan 3 KRITERIA AKADEMIS.
+Tugas Anda adalah mengevaluasi kebenaran konsep, alur penalaran, dan logika pemecahan masalah dari jawaban siswa terhadap NASKAH SOAL GURU berikut berdasarkan RUBRIK PENILAIAN BERBOBOT (Total Maksimal 100).
 
 NASKAH SOAL / TUGAS DARI GURU:
 ${soalGuru || "(Soal uraian/tugas terkait materi: " + judulMateriVal + ")"}
-
+${kunciJawabanSection}
 KRITERIA EVALUASI DARI GURU:
 ${instruksi}
 
@@ -7485,11 +7797,18 @@ ${studentAnswerText}
 
 ${peerComparisonText}
 
+PANDUAN PENILAIAN BERBASIS RUBRIK BERBOBOT (TOTAL 100 POIN):
+1. Konsep & Teori (Bobot Maksimal 40 Poin):
+   - Ketepatan konsep ilmiah/akademis, kebenaran definisi, dan pemenuhan poin kunci jawaban dari Guru.
+2. Alur Nalar & Langkah Penyelesaian (Bobot Maksimal 35 Poin):
+   - Kelengkapan tahapan/langkah, alur proses berpikir, kedalaman analisis masalah, dan kekuatan argumen.
+3. Kejelasan Bahasa & Struktur (Bobot Maksimal 25 Poin):
+   - Kerapian struktur penyampaian, bahasa yang lugas, teratur, dan mudah dipahami.
+Nilai akhir siswa ("nilai") adalah akumulasi penjumlahan dari ketiga rubrik di atas (rentang 0 - 100).
+
 PANDUAN PENILAIAN WAJIB (MODE SOAL / ESAI TEORETIS):
 1. FOKUS MURNI PADA KONTEN & LOGIKA PENALARAN:
-   - Evaluasi ketepatan konsep ilmiah/akademis yang digunakan siswa.
-   - Evaluasi kelengkapan langkah pengerjaan, runtutan proses berpikir, dan logika pemecahan masalah.
-   - Evaluasi kejelasan struktur dan kerapian penyampaian gagasan.
+   - Evaluasi ketepatan pemahaman materi siswa secara objektif.
 2. DILARANG KERAS MENGOMENTARI FORMAT DOKUMEN / TIPOGRAFI WORD:
    - JANGAN PERNAH mengomentari jenis font (misal Calibri, Times New Roman), ukuran huruf (font size), cetak tebal (bold), cetak miring (italic), garis bawah, spasi baris, atau margin halaman!
    - Tugas ini menguji pemahaman ilmu/materi siswa, BUKAN keterampilan pengetikan Microsoft Word.
@@ -7499,6 +7818,11 @@ PANDUAN PENILAIAN WAJIB (MODE SOAL / ESAI TEORETIS):
 Jawab HANYA format JSON murni:
 {
   "nilai": 85,
+  "rubrik": {
+    "konsep": 35,
+    "alur_nalar": 30,
+    "bahasa": 20
+  },
   "catatan": "Penjelasan konsep dan definisi sudah tepat serta runtut. Namun bagian analisis alasan dan langkah penyelesaian perlu diperinci agar argumen lebih kuat.",
   "catatan_guru": "✅ Mandiri"
 }`;
@@ -7559,7 +7883,7 @@ DOKUMEN MASTER GURU / ACUAN PENGETIKAN:
 ` : "";
 
           promptText = `Anda bertindak sebagai Guru penilai praktik pengetikan dokumen (Microsoft Word / Pengolah Kata) yang cermat, teliti, dan adil untuk siswa bernama ${namaSiswa}.
-Tugas Anda adalah menilai kepatuhan tata letak dokumen (layout), pengaturan halaman, kerapian pengetikan, dan manipulasi elemen visual siswa berdasarkan ATURAN FORMAT GURU dan DOKUMEN MASTER ACUAN.
+Tugas Anda adalah menilai kepatuhan tata letak dokumen (layout), pengaturan halaman, kerapian pengetikan, dan manipulasi elemen visual siswa berdasarkan ATURAN FORMAT GURU dan DOKUMEN MASTER ACUAN menggunakan RUBRIK BERBOBOT (Total Maksimal 100).
 
 ATURAN & INSTRUKSI PENGETIKAN DARI GURU:
 ${instruksi}
@@ -7571,18 +7895,35 @@ ${formatInfoText}
 
 ${peerComparisonText}
 
-PETUNJUK EVALUASI PRAKTIK:
-1. Periksa kepatuhan teknis pengetikan: bandingkan margin halaman (cm), spasi baris (line spacing), ukuran kertas, perataan paragraf, dan elemen gambar terhadap File Master / instruksi guru.
-2. PENTING (ATURAN GAMBAR): Jika terdeteksi >= 1 gambar, syarat keberadaan gambar terpenuhi. Nilai kesesuaian letak gambar (wrap text), pemotongan (crop), dan rotasi.
-3. "catatan" (UNTUK SISWA): Tuliskan evaluasi secara LUGAS, OBJEKTIF, dan KONSTRUKTIF menyebutkan parameter teknis pengetikan mana yang sudah sesuai dan mana yang perlu diperbaiki (contoh: "Margin kiri dan atas sudah sesuai 4 cm, namun spasi baris masih 1.0 (ketentuan 1.5). Letak gambar sudah rapi."). DILARANG basa-basi/sapaan nama. DILARANG karakter em dash (—).
-4. "catatan_guru" (KHUSUS GURU): Bandingkan dokumen siswa dengan siswa lain untuk mendeteksi kesamaan file / duplikasi tugas:
+PANDUAN PENILAIAN BERBASIS RUBRIK BERBOBOT (TOTAL 100 POIN):
+1. Margin & Ukuran Kertas (Bobot Maksimal 25 Poin):
+   - Kepatuhan margin halaman (atas, bawah, kiri, kanan) dan ukuran kertas (A4, F4, Letter, dsb).
+   - ATURAN TOLERANSI PEMBULATAN MARGIN WAJIB: Microsoft Word dan LibreOffice menyimpan margin dalam satuan twips (1 cm ≈ 567 twips). Sering terjadi selisih pembulatan desimal (contoh: margin 4 cm terbaca 3.8 cm s.d. 4.2 cm). Berikan TOLERANSI ±0.2 cm dan JANGAN MENGURANGI NILAI jika selisih margin hanya berada dalam rentang ±0.2 cm dari ketentuan!
+2. Spasi Baris & Perataan Paragraf (Bobot Maksimal 25 Poin):
+   - Kepatuhan spasi baris (line spacing 1.0, 1.15, 1.5, atau 2.0), perataan paragraf (Justify / Left / Center / Right), dan first line indent.
+3. Tipografi & Format Huruf (Bobot Maksimal 25 Poin):
+   - Kepatuhan jenis font (misal Times New Roman, Arial), ukuran huruf (font size), serta konsistensi cetak tebal (Bold), cetak miring (Italic), dan garis bawah (Underline).
+4. Elemen Gambar & Manipulasi Objek (Bobot Maksimal 25 Poin):
+   - Keberadaan gambar, tata letak gambar (Wrap Text / In-Line / Tight), pemotongan (crop), dan rotasi gambar.
+   - PENTING: Jika tugas/instruksi guru TIDAK mensyaratkan penyisipan gambar, otomatis berikan 25 poin penuh untuk komponen ini.
+Nilai akhir siswa ("nilai") adalah akumulasi penjumlahan dari keempat rubrik di atas (rentang 0 - 100).
+
+ATURAN CATATAN:
+1. "catatan" (UNTUK SISWA): Tuliskan evaluasi secara LUGAS, OBJEKTIF, dan KONSTRUKTIF menyebutkan parameter teknis pengetikan mana yang sudah sesuai dan mana yang perlu diperbaiki (contoh: "Margin halaman dan perataan teks sudah sesuai ketentuan. Namun pengaturan spasi baris masih 1.0 (seharusnya 1.5) dan posisi gambar perlu diselaraskan dengan teks."). DILARANG basa-basi/sapaan nama. DILARANG karakter em dash (—).
+2. "catatan_guru" (KHUSUS GURU): Bandingkan dokumen siswa dengan siswa lain untuk mendeteksi kesamaan file / duplikasi tugas:
    - Jika TEKS & METADATA FORMAT PERSIS SAMA 100%: "⚠️ FILE DUPLIKAT GANTI NAMA: persis file milik [Nama] ([Kelas])".
    - Jika ISI TEKS >70% MIRIP: "⚠️ COPY-PASTE TEKS ([%]% Mirip): dari file milik [Nama] ([Kelas])".
    - Jika mandiri: "✅ Mandiri".
 
 Jawab HANYA format JSON murni:
 {
-  "nilai": 88,
+  "nilai": 90,
+  "rubrik": {
+    "margin_kertas": 25,
+    "spasi_paragraf": 20,
+    "tipografi": 25,
+    "gambar": 20
+  },
   "catatan": "Margin halaman dan perataan teks sudah sesuai ketentuan. Namun pengaturan spasi baris masih 1.0 (seharusnya 1.5) dan posisi gambar perlu diselaraskan dengan teks.",
   "catatan_guru": "✅ Mandiri"
 }`;
@@ -7594,14 +7935,34 @@ Jawab HANYA format JSON murni:
           }, studentInlineData);
           rawResp = rawResp.replace(/```json/gi, '').replace(/```/g, '').trim();
           
-          let parsedEval = { nilai: 80, catatan: "Tugas telah dievaluasi AI.", catatan_guru: "Tidak ada indikasi plagiasi." };
+          let parsedEval = { nilai: 80, catatan: "Tugas telah dievaluasi AI.", catatan_guru: "Mandiri" };
           try {
             parsedEval = JSON.parse(rawResp);
           } catch(eJson) {}
 
-          let finalScore = Math.min(100, Math.max(0, parseInt(parsedEval.nilai || 80, 10)));
+          let finalScore = 80;
+          if (parsedEval.rubrik && typeof parsedEval.rubrik === 'object') {
+            let sumRubrik = 0;
+            let hasValidRubrik = false;
+            for (let k in parsedEval.rubrik) {
+              let val = parseInt(parsedEval.rubrik[k], 10);
+              if (!isNaN(val)) {
+                sumRubrik += val;
+                hasValidRubrik = true;
+              }
+            }
+            if (hasValidRubrik) {
+              finalScore = sumRubrik;
+            } else if (parsedEval.nilai !== undefined) {
+              finalScore = parseInt(parsedEval.nilai, 10);
+            }
+          } else if (parsedEval.nilai !== undefined) {
+            finalScore = parseInt(parsedEval.nilai, 10);
+          }
+
+          finalScore = Math.min(100, Math.max(0, isNaN(finalScore) ? 80 : finalScore));
           let finalNote = parsedEval.catatan || "Telah dievaluasi AI.";
-          let teacherNote = parsedEval.catatan_guru || "Evaluasi AI selesai.";
+          let teacherNote = parsedEval.catatan_guru || "✅ Mandiri";
 
           let finalTipeVal = koreksiMode === 'soal' ? 'Tugas' : 'Praktik';
 
@@ -7635,39 +7996,24 @@ Jawab HANYA format JSON murni:
             payloadItem.rowNumber = existingNilaiRow.rowNumber;
           }
 
-          payloads.push(payloadItem);
-
-          // Update dataNilai di memory lokal secara instan agar UI langsung sinkron
-          let existingIdx = dataNilai.findIndex(n => {
-            let nUser = norm(getVal(n, ['username', 'nisn']));
-            let nMid = norm(getVal(n, ['id_materi', 'idmateri', 'modul']));
-            let nJudul = norm(getVal(n, ['judul', 'materi']));
-            return nUser === norm(usernameSiswa) && (nMid === norm(idMateriVal) || nJudul === norm(judulMateriVal));
-          });
-
-          let newScoreRecord = {
+          currentAiEvaluationDrafts.push({
+            nama: namaSiswa,
+            username: usernameSiswa,
+            kelas: kelasSiswa,
+            idMateri: idMateriVal,
+            judulMateri: judulMateriVal,
+            tipe: finalTipeVal,
+            nilai: finalScore,
+            keterangan: finalNote,
+            catatan_guru: teacherNote,
             timestamp: isoTimestamp,
             waktu: tWaktuSubmit,
             durasi: tDurasi,
-            username: usernameSiswa,
-            nama: namaSiswa,
-            kelas: kelasSiswa,
-            id_materi: idMateriVal,
-            "ID Materi": idMateriVal,
-            judul: judulMateriVal,
-            tipe: finalTipeVal,
-            nilai: finalScore,
-            skor: finalScore,
-            keterangan: finalNote,
-            catatan_guru: teacherNote
-          };
+            payload: payloadItem,
+            rubrikBreakdown: parsedEval.rubrik || null
+          });
 
-          if (existingIdx !== -1) {
-            dataNilai[existingIdx] = { ...dataNilai[existingIdx], ...newScoreRecord };
-          } else {
-            dataNilai.push(newScoreRecord);
-          }
-
+          renderKoreksiAiReviewTable();
           successCount++;
           logEl.innerText += `✅ Nilai: ${finalScore} (${finalNote})\n`;
           logEl.scrollTop = logEl.scrollHeight;
@@ -7681,31 +8027,18 @@ Jawab HANYA format JSON murni:
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
 
-      if (payloads.length > 0) {
-        progressText.innerText = "Menyimpan nilai AI ke database LMS...";
-        try {
-          await fetch(API_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-              action: "saveDataBulk",
-              payloads: payloads
-            }),
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-          });
-          progressText.innerText = `Selesai! Berhasil mengoreksi ${successCount} tugas dengan AI.`;
+      const chkAutoSave = document.getElementById('chkAutoSaveAi');
+      const autoSaveEnabled = chkAutoSave ? chkAutoSave.checked : false;
 
-          // Re-render tampilan tabel Rekap Nilai dan Input Nilai agar nilai baru langsung muncul
-          if (typeof renderRekapAdmin === 'function') renderRekapAdmin();
-          if (typeof renderTableNilai === 'function') renderTableNilai();
-
-          setTimeout(() => {
-            loadAllData();
-          }, 1000);
-        } catch(eSave) {
-          progressText.innerText = "Gagal menyimpan hasil nilai ke server.";
+      if (currentAiEvaluationDrafts.length > 0) {
+        if (autoSaveEnabled) {
+          progressText.innerText = "Menyimpan seluruh nilai AI secara otomatis ke database LMS...";
+          await simpanHasilAiKeDatabase();
+        } else {
+          progressText.innerHTML = `✅ <b>Koreksi AI selesai untuk ${currentAiEvaluationDrafts.length} tugas siswa!</b><br><small style="color:#0284c7;">Silakan periksa dan sesuaikan nilai atau catatan pada tabel pratinjau di bawah, lalu klik <b>💾 Simpan Semua Nilai ke Database LMS</b>.</small>`;
         }
       } else {
-        progressText.innerText = "Tidak ada nilai yang dapat disimpan.";
+        progressText.innerText = "Tidak ada tugas siswa yang cocok untuk dievaluasi.";
       }
 
       btn.disabled = false;
