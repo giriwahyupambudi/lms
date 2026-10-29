@@ -617,263 +617,275 @@
     lucide.createIcons();
   });
 
-  async function loadMateri() {
-    const titleEl = document.getElementById("displayJudul");
+  const getVal = (obj, possibleKeys) => {
+    if (!obj) return undefined;
+    for (const key in obj) {
+      const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+      for (const p of possibleKeys) {
+        if (normKey === p.toLowerCase().replace(/[^a-z0-9]/g, '')) return obj[key];
+      }
+    }
+    return undefined;
+  };
+
+  function extractYouTubeId(url) {
+    if (!url) return null;
+    const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|\&v=)([^#\&\?]*).*/);
+    return (match && match[2].length === 11) ? match[2] : null;
+  }
+
+  function formatDetik(totalSeconds) {
+    const m = Math.floor(totalSeconds / 60);
+    const s = Math.floor(totalSeconds % 60);
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  function showIvToast(msg) {
+    let oldToast = document.querySelector('.iv-toast');
+    if (oldToast) oldToast.remove();
+    const toast = document.createElement('div');
+    toast.className = 'iv-toast';
+    toast.innerHTML = `<i data-lucide="alert-circle" style="width:16px;height:16px;color:#f59e0b;"></i> <span>${msg}</span>`;
+    document.body.appendChild(toast);
+    if (window.lucide) lucide.createIcons();
+    setTimeout(() => {
+      toast.style.transition = 'opacity 0.3s ease';
+      toast.style.opacity = '0';
+      setTimeout(() => toast.remove(), 300);
+    }, 3500);
+  }
+
+  // Variabel Global Video Interaktif
+  let ivPlayer = null;
+  let ivTrackingInterval = null;
+  let ivActiveCp = null;
+  let ivLastCp = null;
+  let ivSelectedOptIdx = null;
+  let ivMaxWatchedTime = 0;
+  let ivAnsweredSet = new Set();
+  let ivKuisList = [];
+
+  function renderInteractiveYouTube(m, videoId, kuisList) {
     const container = document.getElementById("materiList");
+    if (!container) return;
 
-    const getVal = (obj, possibleKeys) => {
-        if (!obj) return undefined;
-        for (const key in obj) {
-            const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
-            for (const p of possibleKeys) {
-                if (normKey === p.toLowerCase().replace(/[^a-z0-9]/g, '')) return obj[key];
-            }
-        }
-        return undefined;
-    };
+    // Sortir urutan soal berdasarkan detik terendah
+    ivKuisList = kuisList.map(item => ({
+      ...item,
+      detik: parseFloat(item.detik || item.waktu || 0)
+    })).sort((a, b) => a.detik - b.detik);
 
-    const midTarget = getParam("id");
+    ivAnsweredSet = new Set();
+    ivMaxWatchedTime = 0;
+    ivActiveCp = null;
+    ivLastCp = null;
+    ivSelectedOptIdx = null;
 
-    function extractYouTubeId(url) {
-      if (!url) return null;
-      const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|\&v=)([^#\&\?]*).*/);
-      return (match && match[2].length === 11) ? match[2] : null;
-    }
-
-    function formatDetik(totalSeconds) {
-      const m = Math.floor(totalSeconds / 60);
-      const s = Math.floor(totalSeconds % 60);
-      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    }
-
-    function showIvToast(msg) {
-      let oldToast = document.querySelector('.iv-toast');
-      if (oldToast) oldToast.remove();
-      const toast = document.createElement('div');
-      toast.className = 'iv-toast';
-      toast.innerHTML = `<i data-lucide="alert-circle" style="width:16px;height:16px;color:#f59e0b;"></i> <span>${msg}</span>`;
-      document.body.appendChild(toast);
-      if (window.lucide) lucide.createIcons();
-      setTimeout(() => {
-        toast.style.transition = 'opacity 0.3s ease';
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 300);
-      }, 3500);
-    }
-
-    // Variabel Global Video Interaktif
-    let ivPlayer = null;
-    let ivTrackingInterval = null;
-    let ivActiveCp = null;
-    let ivSelectedOptIdx = null;
-    let ivMaxWatchedTime = 0;
-    let ivAnsweredSet = new Set();
-    let ivKuisList = [];
-
-    function renderInteractiveYouTube(m, videoId, kuisList) {
-      // Sortir urutan soal berdasarkan detik terendah
-      ivKuisList = kuisList.map(item => ({
-        ...item,
-        detik: parseFloat(item.detik || item.waktu || 0)
-      })).sort((a, b) => a.detik - b.detik);
-
-      ivAnsweredSet = new Set();
-      ivMaxWatchedTime = 0;
-      ivActiveCp = null;
-      ivSelectedOptIdx = null;
-
-      container.innerHTML = `
-        <div class="interactive-video-wrapper">
-          <div class="iv-banner">
-            <span class="iv-badge"><i data-lucide="sparkles" style="width:14px;height:14px;"></i> Video Interaktif</span>
-            <span class="iv-info" style="font-weight:500;">Perhatikan video dengan seksama! Terdapat <b>${ivKuisList.length}</b> pertanyaan pemahaman di menit-menit tertentu.</span>
-          </div>
-
-          <div class="iv-player-box" id="ivPlayerBox">
-            <div id="ivYtPlayer"></div>
-            <div id="ivClickBlocker" class="iv-click-blocker" style="display:none;"></div>
-          </div>
-
-          <div class="iv-checkpoints-card">
-            <div class="iv-cp-header">
-              <span style="display:flex; align-items:center; gap:6px;">
-                <i data-lucide="check-square" style="width:16px;height:16px;color:var(--primary);"></i> Titik Pertanyaan Pemahaman
-              </span>
-              <span id="ivProgressStatus" style="color:var(--primary); font-weight:700;">0/${ivKuisList.length} Selesai</span>
-            </div>
-            <div class="iv-cp-list" id="ivCpList">
-              ${ivKuisList.map((cp, idx) => `
-                <div class="iv-cp-pill" id="cpPill_${idx}">
-                  <i data-lucide="clock" style="width:13px;height:13px;"></i>
-                  <span>Menit ${formatDetik(cp.detik)}</span>
-                </div>
-              `).join('')}
-            </div>
-          </div>
+    container.innerHTML = `
+      <div class="interactive-video-wrapper">
+        <div class="iv-banner">
+          <span class="iv-badge"><i data-lucide="sparkles" style="width:14px;height:14px;"></i> Video Interaktif</span>
+          <span class="iv-info" style="font-weight:500;">Perhatikan video dengan seksama! Terdapat <b>${ivKuisList.length}</b> pertanyaan pemahaman di menit-menit tertentu.</span>
         </div>
 
-        <!-- MODAL KUIS VIDEO OVERLAY -->
-        <div id="ivQuizModal" class="iv-quiz-modal" style="display:none;">
-          <div class="iv-quiz-backdrop"></div>
-          <div class="iv-quiz-dialog">
-            <div class="iv-quiz-header">
-              <div class="iv-quiz-step-badge">
-                <i data-lucide="help-circle" style="width:18px;height:18px;"></i>
-                <span id="ivQuizDetikBadge">Menit 00:00</span>
+        <div class="iv-player-box" id="ivPlayerBox">
+          <div id="ivYtPlayer"></div>
+          <div id="ivClickBlocker" class="iv-click-blocker" style="display:none;"></div>
+        </div>
+
+        <div class="iv-checkpoints-card">
+          <div class="iv-cp-header">
+            <span style="display:flex; align-items:center; gap:6px;">
+              <i data-lucide="check-square" style="width:16px;height:16px;color:var(--primary);"></i> Titik Pertanyaan Pemahaman
+            </span>
+            <span id="ivProgressStatus" style="color:var(--primary); font-weight:700;">0/${ivKuisList.length} Selesai</span>
+          </div>
+          <div class="iv-cp-list" id="ivCpList">
+            ${ivKuisList.map((cp, idx) => `
+              <div class="iv-cp-pill" id="cpPill_${idx}">
+                <i data-lucide="clock" style="width:13px;height:13px;"></i>
+                <span>Menit ${formatDetik(cp.detik)}</span>
               </div>
-              <span class="iv-quiz-number" id="ivQuizNumber">Pertanyaan 1</span>
-            </div>
-
-            <div class="iv-quiz-body">
-              <h4 id="ivQuizQuestion" class="iv-question-text">Pertanyaan...</h4>
-              <div id="ivQuizOptions" class="iv-options-list"></div>
-
-              <div id="ivFeedbackBox" class="iv-feedback-box" style="display:none;">
-                <div id="ivFeedbackAlert" class="iv-feedback-alert">
-                  <i id="ivFeedbackIcon" data-lucide="check-circle" style="width:18px;height:18px;"></i>
-                  <span id="ivFeedbackMsg">Jawaban Anda Benar!</span>
-                </div>
-                <p id="ivFeedbackDesc" class="iv-feedback-desc"></p>
-              </div>
-            </div>
-
-            <div class="iv-quiz-footer">
-              <button id="ivBtnRewind" class="iv-btn iv-btn-outline" onclick="ivRewind(15)">
-                <i data-lucide="rotate-ccw" style="width:15px;height:15px;"></i> Ulangi 15 Detik
-              </button>
-              <button id="ivBtnSubmit" class="iv-btn iv-btn-primary" onclick="ivCheckAnswer()" disabled>
-                Periksa Jawaban
-              </button>
-              <button id="ivBtnResume" class="iv-btn iv-btn-success" style="display:none;" onclick="ivResumeVideo()">
-                Lanjutkan Menonton <i data-lucide="play" style="width:15px;height:15px;"></i>
-              </button>
-            </div>
+            `).join('')}
           </div>
         </div>
-      `;
+      </div>
 
-      if (window.lucide) lucide.createIcons();
+      <!-- MODAL KUIS VIDEO OVERLAY -->
+      <div id="ivQuizModal" class="iv-quiz-modal" style="display:none;">
+        <div class="iv-quiz-backdrop"></div>
+        <div class="iv-quiz-dialog">
+          <div class="iv-quiz-header">
+            <div class="iv-quiz-step-badge">
+              <i data-lucide="help-circle" style="width:18px;height:18px;"></i>
+              <span id="ivQuizDetikBadge">Menit 00:00</span>
+            </div>
+            <span class="iv-quiz-number" id="ivQuizNumber">Pertanyaan 1</span>
+          </div>
 
-      // Inisialisasi YouTube Player
-      setupYouTubePlayer(videoId);
+          <div class="iv-quiz-body">
+            <h4 id="ivQuizQuestion" class="iv-question-text">Pertanyaan...</h4>
+            <div id="ivQuizOptions" class="iv-options-list"></div>
+
+            <div id="ivFeedbackBox" class="iv-feedback-box" style="display:none;">
+              <div id="ivFeedbackAlert" class="iv-feedback-alert">
+                <i id="ivFeedbackIcon" data-lucide="check-circle" style="width:18px;height:18px;"></i>
+                <span id="ivFeedbackMsg">Jawaban Anda Benar!</span>
+              </div>
+              <p id="ivFeedbackDesc" class="iv-feedback-desc"></p>
+            </div>
+          </div>
+
+          <div class="iv-quiz-footer">
+            <button id="ivBtnRewind" type="button" class="iv-btn iv-btn-outline" onclick="ivRewind(15)">
+              <i data-lucide="rotate-ccw" style="width:15px;height:15px;"></i> Ulangi 15 Detik
+            </button>
+            <button id="ivBtnSubmit" type="button" class="iv-btn iv-btn-primary" onclick="ivCheckAnswer()" disabled>
+              Periksa Jawaban
+            </button>
+            <button id="ivBtnResume" type="button" class="iv-btn iv-btn-success" style="display:none;" onclick="ivResumeVideo()">
+              Lanjutkan Menonton <i data-lucide="play" style="width:15px;height:15px;"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Pasang handler langsung pada tombol
+    const btnRewind = document.getElementById('ivBtnRewind');
+    if (btnRewind) btnRewind.onclick = () => ivRewind(15);
+    const btnSubmit = document.getElementById('ivBtnSubmit');
+    if (btnSubmit) btnSubmit.onclick = () => ivCheckAnswer();
+    const btnResume = document.getElementById('ivBtnResume');
+    if (btnResume) btnResume.onclick = () => ivResumeVideo();
+
+    if (window.lucide) lucide.createIcons();
+
+    // Inisialisasi YouTube Player
+    setupYouTubePlayer(videoId);
+  }
+
+  function setupYouTubePlayer(videoId) {
+    if (ivPlayer && typeof ivPlayer.destroy === 'function') {
+      try { ivPlayer.destroy(); } catch(e){}
     }
 
-    function setupYouTubePlayer(videoId) {
-      if (ivPlayer && typeof ivPlayer.destroy === 'function') {
-        try { ivPlayer.destroy(); } catch(e){}
+    function initPlayerInstance() {
+      if (!window.YT || !window.YT.Player) {
+        setTimeout(initPlayerInstance, 150);
+        return;
       }
 
-      function initPlayerInstance() {
-        if (!window.YT || !window.YT.Player) {
-          setTimeout(initPlayerInstance, 150);
-          return;
+      ivPlayer = new YT.Player('ivYtPlayer', {
+        videoId: videoId,
+        playerVars: {
+          'playsinline': 1,
+          'rel': 0,
+          'modestbranding': 1,
+          'enablejsapi': 1,
+          'fs': 1
+        },
+        events: {
+          'onReady': onIvReady,
+          'onStateChange': onIvStateChange
         }
+      });
+    }
 
-        ivPlayer = new YT.Player('ivYtPlayer', {
-          videoId: videoId,
-          playerVars: {
-            'playsinline': 1,
-            'rel': 0,
-            'modestbranding': 1,
-            'enablejsapi': 1,
-            'fs': 1
-          },
-          events: {
-            'onReady': onIvReady,
-            'onStateChange': onIvStateChange
-          }
-        });
+    initPlayerInstance();
+  }
+
+  function onIvReady(event) {
+    console.log("YouTube Player Interactive Siap.");
+  }
+
+  function onIvStateChange(event) {
+    if (event.data === YT.PlayerState.PLAYING) {
+      // Jika kuis sedang aktif terbuka, paksa pause kembali
+      if (ivActiveCp) {
+        ivPlayer.pauseVideo();
+        return;
       }
-
-      initPlayerInstance();
-    }
-
-    function onIvReady(event) {
-      console.log("YouTube Player Interactive Siap.");
-    }
-
-    function onIvStateChange(event) {
-      if (event.data === YT.PlayerState.PLAYING) {
-        // Jika kuis sedang aktif terbuka, paksa pause kembali
-        if (ivActiveCp) {
-          ivPlayer.pauseVideo();
-          return;
-        }
-        startIvTracking();
-      } else {
-        stopIvTracking();
-      }
-    }
-
-    function startIvTracking() {
+      startIvTracking();
+    } else {
       stopIvTracking();
-      ivTrackingInterval = setInterval(() => {
-        if (!ivPlayer || typeof ivPlayer.getCurrentTime !== 'function') return;
-        const curTime = ivPlayer.getCurrentTime();
+    }
+  }
 
-        // 1. Anti-Skip: Cegah siswa melompati soal yang belum dikerjakan
-        if (curTime > ivMaxWatchedTime + 2.5) {
-          const skippedCp = ivKuisList.find(cp => 
-            cp.detik > (ivMaxWatchedTime + 1) && 
-            cp.detik <= curTime && 
-            !ivAnsweredSet.has(cp.detik)
-          );
+  function startIvTracking() {
+    stopIvTracking();
+    ivTrackingInterval = setInterval(() => {
+      if (!ivPlayer || typeof ivPlayer.getCurrentTime !== 'function') return;
+      const curTime = ivPlayer.getCurrentTime();
 
-          if (skippedCp) {
-            ivPlayer.seekTo(ivMaxWatchedTime, true);
-            showIvToast("⚠️ Selesaikan pertanyaan pemahaman terlebih dahulu sebelum melanjutkan!");
-            return;
-          }
-        }
-
-        if (curTime > ivMaxWatchedTime) {
-          ivMaxWatchedTime = curTime;
-        }
-
-        // 2. Deteksi Checkpoint Soal
-        const targetCp = ivKuisList.find(cp => 
-          Math.abs(curTime - cp.detik) <= 0.75 && 
+      // 1. Anti-Skip: Cegah siswa melompati soal yang belum dikerjakan
+      if (curTime > ivMaxWatchedTime + 2.5) {
+        const skippedCp = ivKuisList.find(cp => 
+          cp.detik > (ivMaxWatchedTime + 1) && 
+          cp.detik <= curTime && 
           !ivAnsweredSet.has(cp.detik)
         );
 
-        if (targetCp) {
-          triggerIvQuiz(targetCp);
+        if (skippedCp) {
+          ivPlayer.seekTo(ivMaxWatchedTime, true);
+          showIvToast("⚠️ Selesaikan pertanyaan pemahaman terlebih dahulu sebelum melanjutkan!");
+          return;
         }
-      }, 300);
-    }
-
-    function stopIvTracking() {
-      if (ivTrackingInterval) {
-        clearInterval(ivTrackingInterval);
-        ivTrackingInterval = null;
-      }
-    }
-
-    function triggerIvQuiz(cp) {
-      stopIvTracking();
-      ivActiveCp = cp;
-      ivSelectedOptIdx = null;
-
-      if (ivPlayer && typeof ivPlayer.pauseVideo === 'function') {
-        ivPlayer.pauseVideo();
       }
 
-      // Tampilkan click blocker di atas video agar siswa tidak memencet play di video
-      const blocker = document.getElementById('ivClickBlocker');
-      if (blocker) blocker.style.display = 'block';
+      if (curTime > ivMaxWatchedTime) {
+        ivMaxWatchedTime = curTime;
+      }
 
-      // Setup konten modal kuis
-      const idx = ivKuisList.indexOf(cp);
-      document.getElementById('ivQuizDetikBadge').innerText = `Menit ${formatDetik(cp.detik)}`;
-      document.getElementById('ivQuizNumber').innerText = `Pertanyaan ${idx + 1} dari ${ivKuisList.length}`;
-      document.getElementById('ivQuizQuestion').innerText = cp.soal || cp.pertanyaan || "Jawab pertanyaan berikut:";
+      // 2. Deteksi Checkpoint Soal
+      const targetCp = ivKuisList.find(cp => 
+        Math.abs(curTime - cp.detik) <= 0.75 && 
+        !ivAnsweredSet.has(cp.detik)
+      );
 
-      // Highlight active pill
-      const pill = document.getElementById(`cpPill_${idx}`);
-      if (pill) pill.classList.add('active');
+      if (targetCp) {
+        triggerIvQuiz(targetCp);
+      }
+    }, 300);
+  }
 
-      // Render opsi pilihan ganda
-      const optsContainer = document.getElementById('ivQuizOptions');
+  function stopIvTracking() {
+    if (ivTrackingInterval) {
+      clearInterval(ivTrackingInterval);
+      ivTrackingInterval = null;
+    }
+  }
+
+  function triggerIvQuiz(cp) {
+    stopIvTracking();
+    ivActiveCp = cp;
+    ivLastCp = cp;
+    ivSelectedOptIdx = null;
+
+    if (ivPlayer && typeof ivPlayer.pauseVideo === 'function') {
+      try { ivPlayer.pauseVideo(); } catch(e){}
+    }
+
+    // Tampilkan click blocker di atas video agar siswa tidak memencet play di video
+    const blocker = document.getElementById('ivClickBlocker');
+    if (blocker) blocker.style.display = 'block';
+
+    // Setup konten modal kuis
+    const idx = ivKuisList.indexOf(cp);
+    const badge = document.getElementById('ivQuizDetikBadge');
+    if (badge) badge.innerText = `Menit ${formatDetik(cp.detik)}`;
+    const qNum = document.getElementById('ivQuizNumber');
+    if (qNum) qNum.innerText = `Pertanyaan ${idx + 1} dari ${ivKuisList.length}`;
+    const qText = document.getElementById('ivQuizQuestion');
+    if (qText) qText.innerText = cp.soal || cp.pertanyaan || "Jawab pertanyaan berikut:";
+
+    // Highlight active pill
+    const pill = document.getElementById(`cpPill_${idx}`);
+    if (pill) pill.classList.add('active');
+
+    // Render opsi pilihan ganda
+    const optsContainer = document.getElementById('ivQuizOptions');
+    if (optsContainer) {
       optsContainer.innerHTML = '';
       const letters = ['A', 'B', 'C', 'D', 'E'];
       const choices = cp.pilihan || cp.opsi || [];
@@ -889,161 +901,211 @@
         `;
         optsContainer.appendChild(item);
       });
+    }
 
-      // Reset feedback & buttons
-      const fbBox = document.getElementById('ivFeedbackBox');
+    // Reset feedback & buttons
+    const fbBox = document.getElementById('ivFeedbackBox');
+    if (fbBox) {
       fbBox.style.display = 'none';
       fbBox.className = 'iv-feedback-box';
+    }
 
-      const btnSubmit = document.getElementById('ivBtnSubmit');
+    const btnSubmit = document.getElementById('ivBtnSubmit');
+    if (btnSubmit) {
       btnSubmit.style.display = 'inline-flex';
       btnSubmit.disabled = true;
+      btnSubmit.onclick = () => ivCheckAnswer();
+    }
 
-      const btnResume = document.getElementById('ivBtnResume');
+    const btnResume = document.getElementById('ivBtnResume');
+    if (btnResume) {
       btnResume.style.display = 'none';
+      btnResume.onclick = () => ivResumeVideo();
+    }
 
-      const btnRewind = document.getElementById('ivBtnRewind');
+    const btnRewind = document.getElementById('ivBtnRewind');
+    if (btnRewind) {
       btnRewind.style.display = 'inline-flex';
-
-      // Tampilkan Modal
-      const modal = document.getElementById('ivQuizModal');
-      modal.style.display = 'flex';
-
-      if (window.lucide) lucide.createIcons();
+      btnRewind.onclick = () => ivRewind(15);
     }
 
-    function ivSelectOption(optIdx) {
-      // Jika kuis sudah dijawab benar, tidak bisa ganti
-      if (ivAnsweredSet.has(ivActiveCp.detik)) return;
+    // Tampilkan Modal
+    const modal = document.getElementById('ivQuizModal');
+    if (modal) modal.style.display = 'flex';
 
-      ivSelectedOptIdx = optIdx;
-      const allItems = document.querySelectorAll('.iv-option-item');
-      allItems.forEach(item => {
-        if (parseInt(item.dataset.index) === optIdx) {
-          item.classList.add('selected');
-        } else {
-          item.classList.remove('selected');
-        }
-      });
+    if (window.lucide) lucide.createIcons();
+  }
 
-      const btnSubmit = document.getElementById('ivBtnSubmit');
-      if (btnSubmit) btnSubmit.disabled = false;
-    }
+  function ivSelectOption(optIdx) {
+    const cp = ivActiveCp || ivLastCp;
+    // Jika kuis sudah dijawab benar, tidak bisa ganti
+    if (cp && ivAnsweredSet.has(cp.detik)) return;
 
-    function ivCheckAnswer() {
-      if (ivSelectedOptIdx === null || !ivActiveCp) return;
-
-      const cp = ivActiveCp;
-      let isCorrect = false;
-
-      // Normalisasi kunci jawaban (bisa integer index 0/1/2, huruf A/B/C/D, atau teks)
-      let key = cp.jawaban !== undefined ? cp.jawaban : (cp.kunci !== undefined ? cp.kunci : 0);
-      if (typeof key === 'string') {
-        const letters = ['A', 'B', 'C', 'D', 'E'];
-        let letterIdx = letters.indexOf(key.toUpperCase().trim());
-        if (letterIdx !== -1) {
-          key = letterIdx;
-        } else if (!isNaN(parseInt(key))) {
-          key = parseInt(key);
-        }
+    ivSelectedOptIdx = optIdx;
+    const allItems = document.querySelectorAll('.iv-option-item');
+    allItems.forEach(item => {
+      if (parseInt(item.dataset.index) === optIdx) {
+        item.classList.add('selected');
+      } else {
+        item.classList.remove('selected');
       }
+    });
 
-      isCorrect = (ivSelectedOptIdx === key);
+    const btnSubmit = document.getElementById('ivBtnSubmit');
+    if (btnSubmit) btnSubmit.disabled = false;
+  }
 
-      const fbBox = document.getElementById('ivFeedbackBox');
-      const fbIcon = document.getElementById('ivFeedbackIcon');
-      const fbMsg = document.getElementById('ivFeedbackMsg');
-      const fbDesc = document.getElementById('ivFeedbackDesc');
-      const btnSubmit = document.getElementById('ivBtnSubmit');
-      const btnResume = document.getElementById('ivBtnResume');
+  function ivCheckAnswer() {
+    if (ivSelectedOptIdx === null) {
+      showIvToast("Pilih salah satu jawaban terlebih dahulu!");
+      return;
+    }
+    const cp = ivActiveCp || ivLastCp;
+    if (!cp) return;
 
-      const selectedItem = document.querySelector(`.iv-option-item[data-index="${ivSelectedOptIdx}"]`);
+    let isCorrect = false;
 
-      if (isCorrect) {
-        // TANDAI SUKSES
-        ivAnsweredSet.add(cp.detik);
+    // Normalisasi kunci jawaban (bisa integer index 0/1/2, huruf A/B/C/D, atau teks)
+    let key = cp.jawaban !== undefined ? cp.jawaban : (cp.kunci !== undefined ? cp.kunci : 0);
+    if (typeof key === 'string') {
+      const letters = ['A', 'B', 'C', 'D', 'E'];
+      let letterIdx = letters.indexOf(key.toUpperCase().trim());
+      if (letterIdx !== -1) {
+        key = letterIdx;
+      } else if (!isNaN(parseInt(key))) {
+        key = parseInt(key);
+      } else {
+        const choices = cp.pilihan || cp.opsi || [];
+        let matchIdx = choices.findIndex(c => (c || "").toString().trim().toLowerCase() === key.trim().toLowerCase());
+        if (matchIdx !== -1) key = matchIdx;
+      }
+    }
+
+    isCorrect = (Number(ivSelectedOptIdx) === Number(key));
+
+    const fbBox = document.getElementById('ivFeedbackBox');
+    const fbIcon = document.getElementById('ivFeedbackIcon');
+    const fbMsg = document.getElementById('ivFeedbackMsg');
+    const fbDesc = document.getElementById('ivFeedbackDesc');
+    const btnSubmit = document.getElementById('ivBtnSubmit');
+    const btnResume = document.getElementById('ivBtnResume');
+
+    const selectedItem = document.querySelector(`.iv-option-item[data-index="${ivSelectedOptIdx}"]`);
+
+    if (isCorrect) {
+      // TANDAI SUKSES
+      ivAnsweredSet.add(cp.detik);
+      if (fbBox) {
         fbBox.className = 'iv-feedback-box correct';
         fbBox.style.display = 'block';
-        fbMsg.innerText = "Luar Biasa, Jawaban Anda Benar!";
-        fbDesc.innerText = cp.pembahasan || "Pemahaman Anda terhadap bagian materi ini sudah sangat baik. Lanjutkan menonton video.";
+      }
+      if (fbMsg) fbMsg.innerText = "Luar Biasa, Jawaban Anda Benar!";
+      if (fbDesc) fbDesc.innerText = cp.pembahasan || "Pemahaman Anda terhadap bagian materi ini sudah sangat baik. Lanjutkan menonton video.";
 
-        if (selectedItem) {
-          selectedItem.classList.remove('selected');
-          selectedItem.classList.add('correct-reveal');
-        }
+      if (selectedItem) {
+        selectedItem.classList.remove('selected');
+        selectedItem.classList.add('correct-reveal');
+      }
 
-        // Update Pill Checkpoint
-        const cpIdx = ivKuisList.indexOf(cp);
-        const pill = document.getElementById(`cpPill_${cpIdx}`);
-        if (pill) {
-          pill.className = 'iv-cp-pill completed';
-          pill.innerHTML = `<i data-lucide="check-circle" style="width:13px;height:13px;color:#16a34a;"></i> <span>Menit ${formatDetik(cp.detik)} (Selesai)</span>`;
-        }
+      // Update Pill Checkpoint
+      const cpIdx = ivKuisList.indexOf(cp);
+      const pill = document.getElementById(`cpPill_${cpIdx}`);
+      if (pill) {
+        pill.className = 'iv-cp-pill completed';
+        pill.innerHTML = `<i data-lucide="check-circle" style="width:13px;height:13px;color:#16a34a;"></i> <span>Menit ${formatDetik(cp.detik)} (Selesai)</span>`;
+      }
 
-        // Update progress badge
-        const progStatus = document.getElementById('ivProgressStatus');
-        if (progStatus) {
-          progStatus.innerText = `${ivAnsweredSet.size}/${ivKuisList.length} Selesai`;
-          if (ivAnsweredSet.size === ivKuisList.length) {
-            progStatus.innerHTML = `<span style="color:#16a34a;">Semua Pertanyaan Selesai! 🎉</span>`;
-          }
-        }
-
-        btnSubmit.style.display = 'none';
-        btnResume.style.display = 'inline-flex';
-      } else {
-        // JAWABAN BELUM TEPAT
-        fbBox.className = 'iv-feedback-box wrong';
-        fbBox.style.display = 'block';
-        fbMsg.innerText = "Jawaban Belum Tepat";
-        fbDesc.innerText = "Coba pilih jawaban lain, atau klik 'Ulangi 15 Detik' untuk mendengarkan kembali penjelasan video.";
-
-        if (selectedItem) {
-          selectedItem.classList.add('wrong-reveal');
-          setTimeout(() => {
-            selectedItem.classList.remove('wrong-reveal');
-          }, 1000);
+      // Update progress badge
+      const progStatus = document.getElementById('ivProgressStatus');
+      if (progStatus) {
+        progStatus.innerText = `${ivAnsweredSet.size}/${ivKuisList.length} Selesai`;
+        if (ivAnsweredSet.size === ivKuisList.length) {
+          progStatus.innerHTML = `<span style="color:#16a34a;">Semua Pertanyaan Selesai! 🎉</span>`;
         }
       }
 
-      if (window.lucide) lucide.createIcons();
+      if (btnSubmit) btnSubmit.style.display = 'none';
+      if (btnResume) btnResume.style.display = 'inline-flex';
+    } else {
+      // JAWABAN BELUM TEPAT
+      if (fbBox) {
+        fbBox.className = 'iv-feedback-box wrong';
+        fbBox.style.display = 'block';
+      }
+      if (fbMsg) fbMsg.innerText = "Jawaban Belum Tepat";
+      if (fbDesc) fbDesc.innerText = "Coba pilih jawaban lain, atau klik 'Ulangi 15 Detik' untuk mendengarkan kembali penjelasan video.";
+
+      if (selectedItem) {
+        selectedItem.classList.add('wrong-reveal');
+        setTimeout(() => {
+          selectedItem.classList.remove('wrong-reveal');
+        }, 1000);
+      }
     }
 
-    function ivRewind(seconds = 15) {
-      if (!ivActiveCp || !ivPlayer) return;
-      const targetSec = Math.max(0, ivActiveCp.detik - seconds);
+    if (window.lucide) lucide.createIcons();
+  }
 
-      // Tutup modal kuis
-      const modal = document.getElementById('ivQuizModal');
-      if (modal) modal.style.display = 'none';
+  function ivRewind(seconds = 15) {
+    const cp = ivActiveCp || ivLastCp;
+    const targetSec = cp ? Math.max(0, cp.detik - seconds) : 0;
 
-      const blocker = document.getElementById('ivClickBlocker');
-      if (blocker) blocker.style.display = 'none';
+    // Tutup modal kuis
+    const modal = document.getElementById('ivQuizModal');
+    if (modal) modal.style.display = 'none';
 
-      ivActiveCp = null;
+    const blocker = document.getElementById('ivClickBlocker');
+    if (blocker) blocker.style.display = 'none';
 
-      // Rewind video dan putar kembali
-      ivPlayer.seekTo(targetSec, true);
-      ivPlayer.playVideo();
-      showIvToast(`⏪ Memutar ulang penjelasan mulai detik ke-${Math.round(targetSec)}...`);
+    ivActiveCp = null;
+
+    // Rewind video dan putar kembali
+    if (ivPlayer && typeof ivPlayer.seekTo === 'function') {
+      try {
+        ivPlayer.seekTo(targetSec, true);
+        if (typeof ivPlayer.playVideo === 'function') {
+          ivPlayer.playVideo();
+        }
+      } catch(e){}
     }
+    startIvTracking();
+    showIvToast(`⏪ Memutar ulang penjelasan mulai detik ke-${Math.round(targetSec)}...`);
+  }
 
-    function ivResumeVideo() {
-      if (!ivActiveCp || !ivPlayer) return;
-      const nextSec = ivActiveCp.detik + 0.8; // Lewati sedikit dari detik soal agar tidak langsung terpicu ulang
+  function ivResumeVideo() {
+    const cp = ivActiveCp || ivLastCp;
+    const nextSec = cp ? (cp.detik + 1.2) : 0; // Lewati sedikit dari detik soal agar tidak langsung terpicu ulang
 
-      // Tutup modal
-      const modal = document.getElementById('ivQuizModal');
-      if (modal) modal.style.display = 'none';
+    // Tutup modal
+    const modal = document.getElementById('ivQuizModal');
+    if (modal) modal.style.display = 'none';
 
-      const blocker = document.getElementById('ivClickBlocker');
-      if (blocker) blocker.style.display = 'none';
+    const blocker = document.getElementById('ivClickBlocker');
+    if (blocker) blocker.style.display = 'none';
 
-      ivActiveCp = null;
+    ivActiveCp = null;
 
-      ivPlayer.seekTo(nextSec, true);
-      ivPlayer.playVideo();
+    if (ivPlayer && typeof ivPlayer.seekTo === 'function') {
+      try {
+        ivPlayer.seekTo(nextSec, true);
+        if (typeof ivPlayer.playVideo === 'function') {
+          ivPlayer.playVideo();
+        }
+      } catch(e){}
     }
+    startIvTracking();
+  }
+
+  // Bind ke window secara eksplisit
+  window.ivSelectOption = ivSelectOption;
+  window.ivCheckAnswer = ivCheckAnswer;
+  window.ivRewind = ivRewind;
+  window.ivResumeVideo = ivResumeVideo;
+
+  async function loadMateri() {
+    const titleEl = document.getElementById("displayJudul");
+    const container = document.getElementById("materiList");
+    const midTarget = getParam("id");
 
     function renderMateriItem(m) {
       if (!m) return;
