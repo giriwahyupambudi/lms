@@ -1039,6 +1039,17 @@ function doPost(e) {
       }
 
       var headers = sheetMateri.getDataRange().getValues()[0];
+      var normalizedHeaders = headers.map(function(h) { return h.toString().toLowerCase().replace(/[^a-z0-9]/g, ''); });
+      for (var key in dataToSave) {
+        if (dataToSave.hasOwnProperty(key)) {
+          var keyLower = key.toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (normalizedHeaders.indexOf(keyLower) === -1) {
+            sheetMateri.getRange(1, headers.length + 1).setValue(key);
+            headers.push(key);
+            normalizedHeaders.push(keyLower);
+          }
+        }
+      }
       var updateRow = new Array(headers.length).fill("");
       var existingData = sheetMateri.getRange(rowNum, 1, 1, headers.length).getValues()[0];
       for (var i = 0; i < headers.length; i++) {

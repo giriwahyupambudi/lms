@@ -881,6 +881,25 @@
         <div class="form-group"><label>Judul Materi</label><input type="text" id="mJudul" class="form-control" placeholder="Contoh: Logaritma Dasar"></div>
         <div class="form-group"><label>Deskripsi (Opsional)</label><input type="text" id="mDeskripsi" class="form-control" placeholder="Penjelasan singkat materi"></div>
         <div class="form-group"><label>Link / Tautan (Opsional)</label><input type="text" id="mLink" class="form-control" placeholder="Link Google Form / Modul"></div>
+
+        <!-- Pengaturan Kuis Video Interaktif -->
+        <div class="form-group" style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:12px 14px; margin-top:4px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div>
+              <div style="font-weight:600; font-size:0.85rem; color:#166534; display:flex; align-items:center; gap:6px;">
+                <i data-lucide="video" style="width:16px;height:16px;color:#16a34a;"></i> Kuis Video Interaktif (YouTube)
+              </div>
+              <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">
+                Berhentikan video di menit tertentu untuk memunculkan soal pemahaman.
+              </div>
+            </div>
+            <button type="button" class="btn btn-outline" onclick="openModalKuisVideo()" style="font-size:0.78rem; padding:6px 12px; background:white; display:flex; align-items:center; gap:6px; border-color:#86efac; color:#166534;">
+              <i data-lucide="list-plus" style="width:14px;height:14px;"></i> Kelola Soal (<span id="kuisVideoCountBadge" style="font-weight:700;">0 Soal</span>)
+            </button>
+          </div>
+          <input type="hidden" id="mKuisVideo" value="">
+        </div>
+
         <div class="form-group"><label>Mata Pelajaran</label><input type="text" id="mMapel" class="form-control" placeholder="Contoh: Matematika"></div>
         <div class="form-group" id="mKelasContainer"><label>Target Kelas / Tingkat</label><input type="text" id="mKelas" class="form-control" placeholder="Contoh: X, XI, XII, atau SEMUA"></div>
         <div class="form-group"><label>Tipe</label><select id="mTipe" class="form-control"><option value="Praktik">Praktik</option><option value="Tugas">Tugas</option><option value="Kuis">Kuis</option><option value="Survey">Survey</option><option value="Editor">Editor</option><option value="Materi Saja">Materi Saja (Tanpa Tugas/Kuis)</option><option value="Pengumuman">Pengumuman</option></select></div>
@@ -889,6 +908,109 @@
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeModal('materiModal')">Batal</button>
         <button class="btn btn-primary" onclick="saveMateri()"><i data-lucide="save"></i> Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Kelola Kuis Video Interaktif -->
+  <div id="modalKuisVideo" class="modal-overlay">
+    <div class="modal" style="max-width: 680px; width: 95%;">
+      <div class="modal-header" style="background:#f8fafc; border-bottom:1px solid var(--border-color);">
+        <div>
+          <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+            <i data-lucide="video" style="color:var(--primary); width:20px; height:20px;"></i>
+            Kelola Kuis Video Interaktif
+          </h3>
+          <p style="margin:4px 0 0 0; font-size:0.75rem; color:var(--text-muted);">
+            Masukkan menit/detik video dan pertanyaan pilihan ganda yang wajib dijawab siswa.
+          </p>
+        </div>
+        <button class="close-modal" onclick="closeModal('modalKuisVideo')"><i data-lucide="x"></i></button>
+      </div>
+
+      <div class="modal-body" style="max-height: calc(85vh - 130px); overflow-y: auto; padding: 20px;">
+        <!-- Form Tambah Pertanyaan Baru -->
+        <div style="background:#f8fafc; border:1px solid var(--border-color); border-radius:12px; padding:16px; margin-bottom:20px;">
+          <div style="font-weight:700; font-size:0.88rem; color:var(--text-main); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+            <i data-lucide="plus-circle" style="width:16px;height:16px;color:var(--primary);"></i> Form Input Pertanyaan
+          </div>
+          <input type="hidden" id="kvEditIdx" value="-1">
+
+          <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
+            <div>
+              <label style="font-size:0.78rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">Waktu Muncul</label>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <input type="number" id="kvMenit" class="form-control" min="0" value="0" placeholder="0" style="width:75px; text-align:center;">
+                <span style="font-weight:700; color:var(--text-muted);">:</span>
+                <input type="number" id="kvDetik" class="form-control" min="0" max="59" value="30" placeholder="30" style="width:75px; text-align:center;">
+                <small style="font-size:0.75rem; color:var(--text-muted);">(Menit : Detik)</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:12px;">
+            <label style="font-size:0.78rem; font-weight:600; color:var(--text-muted);">Pertanyaan</label>
+            <textarea id="kvPertanyaan" class="form-control" rows="2" placeholder="Tuliskan pertanyaan materi di detik ini..."></textarea>
+          </div>
+
+          <div class="form-group" style="margin-bottom:12px;">
+            <label style="font-size:0.78rem; font-weight:600; color:var(--text-muted);">Pilihan Jawaban (Pilih radio untuk Kunci Jawaban):</label>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="radio" name="kvKunciRadio" value="0" id="kvKunci0" checked title="Tandai Kunci Jawaban A">
+                <span style="font-weight:700; font-size:0.8rem; width:16px;">A.</span>
+                <input type="text" id="kvOpt0" class="form-control" placeholder="Pilihan jawaban A" style="flex:1;">
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="radio" name="kvKunciRadio" value="1" id="kvKunci1" title="Tandai Kunci Jawaban B">
+                <span style="font-weight:700; font-size:0.8rem; width:16px;">B.</span>
+                <input type="text" id="kvOpt1" class="form-control" placeholder="Pilihan jawaban B" style="flex:1;">
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="radio" name="kvKunciRadio" value="2" id="kvKunci2" title="Tandai Kunci Jawaban C">
+                <span style="font-weight:700; font-size:0.8rem; width:16px;">C.</span>
+                <input type="text" id="kvOpt2" class="form-control" placeholder="Pilihan jawaban C" style="flex:1;">
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="radio" name="kvKunciRadio" value="3" id="kvKunci3" title="Tandai Kunci Jawaban D">
+                <span style="font-weight:700; font-size:0.8rem; width:16px;">D.</span>
+                <input type="text" id="kvOpt3" class="form-control" placeholder="Pilihan jawaban D" style="flex:1;">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label style="font-size:0.78rem; font-weight:600; color:var(--text-muted);">Pembahasan / Feedback (Opsional)</label>
+            <input type="text" id="kvPembahasan" class="form-control" placeholder="Penjelasan singkat saat siswa menjawab...">
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <button type="button" class="btn btn-outline" id="kvBtnBatalEdit" onclick="cancelEditKuisVideo()" style="display:none; font-size:0.8rem; padding:6px 14px;">Batal Edit</button>
+            <button type="button" class="btn btn-primary" id="kvBtnAdd" onclick="addOrUpdateKuisVideoItem()" style="font-size:0.8rem; padding:6px 14px;">
+              <i data-lucide="plus" style="width:14px;height:14px;"></i> Tambah ke Daftar
+            </button>
+          </div>
+        </div>
+
+        <!-- Daftar Pertanyaan yang Telah Ditambahkan -->
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="font-weight:700; font-size:0.88rem; color:var(--text-main);">
+              Daftar Titik Pertanyaan (<span id="kvTotalCount">0</span>)
+            </div>
+            <small style="color:var(--text-muted); font-size:0.75rem;">Soal otomatis diurutkan sesuai detik video</small>
+          </div>
+          <div id="kvListContainer" style="display:flex; flex-direction:column; gap:8px;">
+            <!-- Render items di sini -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="background:#f8fafc; border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn btn-outline" onclick="closeModal('modalKuisVideo')">Tutup</button>
+        <button class="btn btn-primary" onclick="saveKuisVideoModal()">
+          <i data-lucide="check" style="width:15px;height:15px;"></i> Simpan Kuis Video
+        </button>
       </div>
     </div>
   </div>
@@ -1811,6 +1933,11 @@
       document.getElementById('mDeskripsi').value = "";
       document.getElementById('mLink').value = "";
       
+      const kuisVideoInput = document.getElementById('mKuisVideo');
+      if (kuisVideoInput) kuisVideoInput.value = "";
+      const badgeCount = document.getElementById('kuisVideoCountBadge');
+      if (badgeCount) badgeCount.innerText = "0 Soal";
+
       const mapelInput = document.getElementById('mMapel');
       if (!IS_SUPER_ADMIN) {
         mapelInput.value = MY_MAPEL;
@@ -1856,6 +1983,20 @@
       document.getElementById('mDeskripsi').value = getVal(m, ['deskripsi', 'keterangan']) || "";
       document.getElementById('mLink').value = getVal(m, ['link', 'url']) || "";
       
+      // Load data kuis_video jika tersedia
+      const rawKv = getVal(m, ['kuis_video', 'kuisvideo', 'interaktif']) || "";
+      const kuisVideoInput = document.getElementById('mKuisVideo');
+      if (kuisVideoInput) {
+        kuisVideoInput.value = typeof rawKv === 'string' ? rawKv : JSON.stringify(rawKv);
+      }
+      let kvCount = 0;
+      try {
+        let parsed = typeof rawKv === 'string' ? JSON.parse(rawKv) : rawKv;
+        if (Array.isArray(parsed)) kvCount = parsed.length;
+      } catch(e){}
+      const badgeCount = document.getElementById('kuisVideoCountBadge');
+      if (badgeCount) badgeCount.innerText = `${kvCount} Soal`;
+
       const mapelInput = document.getElementById('mMapel');
       mapelInput.value = getVal(m, ['mapel', 'matapelajaran']) || "";
       mapelInput.disabled = !IS_SUPER_ADMIN;
@@ -1865,6 +2006,214 @@
       document.getElementById('mStatus').value = getVal(m, ['status']) || "Aktif";
       
       openModal('materiModal');
+    }
+
+    // ============================================
+    // LOGIKA KELOLA KUIS VIDEO INTERAKTIF (ADMIN)
+    // ============================================
+    let tempKuisVideoList = [];
+
+    function openModalKuisVideo() {
+      const raw = (document.getElementById('mKuisVideo') ? document.getElementById('mKuisVideo').value : "") || "[]";
+      try {
+        tempKuisVideoList = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (!Array.isArray(tempKuisVideoList)) tempKuisVideoList = [];
+      } catch(e) {
+        tempKuisVideoList = [];
+      }
+
+      resetKuisVideoForm();
+      renderKuisVideoList();
+      openModal('modalKuisVideo');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function resetKuisVideoForm() {
+      document.getElementById('kvEditIdx').value = "-1";
+      document.getElementById('kvMenit').value = "0";
+      document.getElementById('kvDetik').value = "30";
+      document.getElementById('kvPertanyaan').value = "";
+      document.getElementById('kvOpt0').value = "";
+      document.getElementById('kvOpt1').value = "";
+      document.getElementById('kvOpt2').value = "";
+      document.getElementById('kvOpt3').value = "";
+      document.getElementById('kvKunci0').checked = true;
+      document.getElementById('kvPembahasan').value = "";
+
+      document.getElementById('kvBtnAdd').innerHTML = '<i data-lucide="plus" style="width:14px;height:14px;"></i> Tambah ke Daftar';
+      document.getElementById('kvBtnBatalEdit').style.display = 'none';
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function renderKuisVideoList() {
+      // Urutkan berdasarkan detik terkecil
+      tempKuisVideoList.sort((a, b) => (parseFloat(a.detik) || 0) - (parseFloat(b.detik) || 0));
+
+      const countEl = document.getElementById('kvTotalCount');
+      if (countEl) countEl.innerText = tempKuisVideoList.length;
+
+      const container = document.getElementById('kvListContainer');
+      if (!container) return;
+
+      if (tempKuisVideoList.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:24px; color:var(--text-muted); background:#f8fafc; border-radius:10px; border:1px dashed var(--border-color); font-size:0.85rem;">
+            <i data-lucide="help-circle" style="width:24px;height:24px;margin-bottom:6px;opacity:0.5;"></i>
+            <div>Belum ada pertanyaan kuis yang ditambahkan.</div>
+            <small style="font-size:0.75rem;">Gunakan form di atas untuk menambahkan pertanyaan pemahaman di menit tertentu.</small>
+          </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
+
+      const letters = ['A', 'B', 'C', 'D'];
+      container.innerHTML = tempKuisVideoList.map((item, idx) => {
+        const totalSec = parseFloat(item.detik) || 0;
+        const m = Math.floor(totalSec / 60);
+        const s = Math.floor(totalSec % 60);
+        const timeFmt = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        
+        let keyIdx = parseInt(item.jawaban);
+        if (isNaN(keyIdx)) keyIdx = 0;
+        const keyLetter = letters[keyIdx] || 'A';
+        const optText = (item.pilihan && item.pilihan[keyIdx]) ? item.pilihan[keyIdx] : "";
+
+        return `
+          <div style="background:white; border:1px solid var(--border-color); border-radius:10px; padding:12px 14px; display:flex; justify-content:space-between; align-items:flex-start; gap:12px; transition:0.2s;">
+            <div style="flex:1;">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <span style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:700; font-size:0.75rem; padding:2px 8px; border-radius:20px; display:inline-flex; align-items:center; gap:4px;">
+                  <i data-lucide="clock" style="width:12px;height:12px;"></i> ${timeFmt} (${totalSec}s)
+                </span>
+                <span style="font-weight:700; font-size:0.8rem; color:#166534; background:#f0fdf4; border:1px solid #bbf7d0; padding:2px 8px; border-radius:20px;">
+                  Kunci: ${keyLetter}
+                </span>
+              </div>
+              <div style="font-weight:600; font-size:0.88rem; color:var(--text-main); line-height:1.4;">
+                ${item.soal || item.pertanyaan}
+              </div>
+              <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">
+                <b>Kunci (${keyLetter}):</b> ${optText}
+              </div>
+              ${item.pembahasan ? `<div style="font-size:0.75rem; color:#475569; font-style:italic; margin-top:2px;">💡 ${item.pembahasan}</div>` : ''}
+            </div>
+            <div style="display:flex; gap:6px; flex-shrink:0;">
+              <button type="button" class="btn btn-sm btn-outline" onclick="editKuisVideoItem(${idx})" title="Edit Soal" style="padding:5px 8px; font-size:0.75rem;">
+                <i data-lucide="edit-2" style="width:13px;height:13px;"></i>
+              </button>
+              <button type="button" class="btn btn-sm btn-outline" onclick="deleteKuisVideoItem(${idx})" title="Hapus Soal" style="padding:5px 8px; font-size:0.75rem; color:#ef4444; border-color:#fca5a5;">
+                <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function addOrUpdateKuisVideoItem() {
+      const editIdx = parseInt(document.getElementById('kvEditIdx').value);
+      const mVal = parseInt(document.getElementById('kvMenit').value) || 0;
+      const sVal = parseInt(document.getElementById('kvDetik').value) || 0;
+      const totalDetik = (mVal * 60) + sVal;
+
+      const pertanyaan = (document.getElementById('kvPertanyaan').value || "").trim();
+      const opt0 = (document.getElementById('kvOpt0').value || "").trim();
+      const opt1 = (document.getElementById('kvOpt1').value || "").trim();
+      const opt2 = (document.getElementById('kvOpt2').value || "").trim();
+      const opt3 = (document.getElementById('kvOpt3').value || "").trim();
+      const pembahasan = (document.getElementById('kvPembahasan').value || "").trim();
+
+      const radioChecked = document.querySelector('input[name="kvKunciRadio"]:checked');
+      const kunciJawaban = radioChecked ? parseInt(radioChecked.value) : 0;
+
+      if (!pertanyaan) return showToastAdmin("Pertanyaan kuis wajib diisi!", "warning");
+      if (!opt0 || !opt1) return showToastAdmin("Minimal isi pilihan A dan B!", "warning");
+
+      const pilihan = [opt0, opt1];
+      if (opt2) pilihan.push(opt2);
+      if (opt3) pilihan.push(opt3);
+
+      if (kunciJawaban >= pilihan.length) {
+        return showToastAdmin("Kunci jawaban yang dipilih belum diisi teks opsinya!", "warning");
+      }
+
+      const newItem = {
+        detik: totalDetik,
+        soal: pertanyaan,
+        pilihan: pilihan,
+        jawaban: kunciJawaban,
+        pembahasan: pembahasan
+      };
+
+      if (editIdx >= 0 && editIdx < tempKuisVideoList.length) {
+        tempKuisVideoList[editIdx] = newItem;
+        showToastAdmin("Pertanyaan berhasil diperbarui!", "success");
+      } else {
+        tempKuisVideoList.push(newItem);
+        showToastAdmin("Pertanyaan berhasil ditambahkan ke daftar!", "success");
+      }
+
+      resetKuisVideoForm();
+      renderKuisVideoList();
+    }
+
+    function editKuisVideoItem(idx) {
+      if (idx < 0 || idx >= tempKuisVideoList.length) return;
+      const item = tempKuisVideoList[idx];
+
+      document.getElementById('kvEditIdx').value = idx;
+      const totalSec = parseFloat(item.detik) || 0;
+      document.getElementById('kvMenit').value = Math.floor(totalSec / 60);
+      document.getElementById('kvDetik').value = Math.floor(totalSec % 60);
+
+      document.getElementById('kvPertanyaan').value = item.soal || item.pertanyaan || "";
+
+      const choices = item.pilihan || item.opsi || [];
+      document.getElementById('kvOpt0').value = choices[0] || "";
+      document.getElementById('kvOpt1').value = choices[1] || "";
+      document.getElementById('kvOpt2').value = choices[2] || "";
+      document.getElementById('kvOpt3').value = choices[3] || "";
+
+      const radio = document.getElementById(`kvKunci${item.jawaban || 0}`);
+      if (radio) radio.checked = true;
+
+      document.getElementById('kvPembahasan').value = item.pembahasan || "";
+
+      document.getElementById('kvBtnAdd').innerHTML = '<i data-lucide="check" style="width:14px;height:14px;"></i> Perbarui Soal';
+      document.getElementById('kvBtnBatalEdit').style.display = 'inline-flex';
+      if (window.lucide) lucide.createIcons();
+
+      // Scroll form ke view
+      document.getElementById('modalKuisVideo').querySelector('.modal-body').scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function cancelEditKuisVideo() {
+      resetKuisVideoForm();
+    }
+
+    function deleteKuisVideoItem(idx) {
+      if (confirm("Hapus pertanyaan pemahaman ini?")) {
+        tempKuisVideoList.splice(idx, 1);
+        resetKuisVideoForm();
+        renderKuisVideoList();
+        showToastAdmin("Pertanyaan dihapus dari daftar.", "info");
+      }
+    }
+
+    function saveKuisVideoModal() {
+      tempKuisVideoList.sort((a, b) => (parseFloat(a.detik) || 0) - (parseFloat(b.detik) || 0));
+      const jsonStr = tempKuisVideoList.length > 0 ? JSON.stringify(tempKuisVideoList) : "";
+      const kuisVideoInput = document.getElementById('mKuisVideo');
+      if (kuisVideoInput) kuisVideoInput.value = jsonStr;
+
+      const badge = document.getElementById('kuisVideoCountBadge');
+      if (badge) badge.innerText = `${tempKuisVideoList.length} Soal`;
+
+      closeModal('modalKuisVideo');
+      showToastAdmin(`Kuis Video disimpan (${tempKuisVideoList.length} pertanyaan)! Jangan lupa klik Simpan pada form materi.`, "success");
     }
 
     // Helper preview by row
@@ -2013,6 +2362,8 @@
         );
       }
 
+      let kuisVideoVal = document.getElementById('mKuisVideo') ? document.getElementById('mKuisVideo').value : "";
+
       let data = {
         "judul": judulVal, "materi": judulVal, "namamateri": judulVal,
         "deskripsi": descVal, "keterangan": descVal,
@@ -2021,6 +2372,7 @@
         "kelas": kelasVal, "tingkat": kelasVal,
         "tipe": tipeVal, "tipe_evaluasi": tipeVal, "tipeevaluasi": tipeVal,
         "status": statusVal,
+        "kuis_video": kuisVideoVal, "kuisvideo": kuisVideoVal, "interaktif": kuisVideoVal,
         "id": cleanNewId,
         "id_materi": cleanNewId,
         "idmateri": cleanNewId,
