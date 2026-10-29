@@ -724,6 +724,11 @@
                     <span style="font-weight:700; font-size:0.8rem; width:16px;">D.</span>
                     <input type="text" id="studioOpt3" class="form-control" placeholder="Pilihan jawaban D" style="flex:1;">
                   </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="studioKunciRadio" value="4" id="studioKunci4" title="Tandai Kunci Jawaban E">
+                    <span style="font-weight:700; font-size:0.8rem; width:16px;">E.</span>
+                    <input type="text" id="studioOpt4" class="form-control" placeholder="Pilihan jawaban E (Opsional)" style="flex:1;">
+                  </div>
                 </div>
               </div>
 
@@ -2902,6 +2907,7 @@
       document.getElementById('studioOpt1').value = "";
       document.getElementById('studioOpt2').value = "";
       document.getElementById('studioOpt3').value = "";
+      if (document.getElementById('studioOpt4')) document.getElementById('studioOpt4').value = "";
       document.getElementById('studioKunci0').checked = true;
       document.getElementById('studioPembahasan').value = "";
 
@@ -2932,7 +2938,7 @@
         return;
       }
 
-      const letters = ['A', 'B', 'C', 'D'];
+      const letters = ['A', 'B', 'C', 'D', 'E'];
       container.innerHTML = studioKuisList.map((item, idx) => {
         const totalSec = parseFloat(item.detik) || 0;
         const timeFmt = formatStudioDetik(totalSec);
@@ -2986,6 +2992,7 @@
       const opt1 = (document.getElementById('studioOpt1').value || "").trim();
       const opt2 = (document.getElementById('studioOpt2').value || "").trim();
       const opt3 = (document.getElementById('studioOpt3').value || "").trim();
+      const opt4 = document.getElementById('studioOpt4') ? (document.getElementById('studioOpt4').value || "").trim() : "";
       const pembahasan = (document.getElementById('studioPembahasan').value || "").trim();
 
       const radioChecked = document.querySelector('input[name="studioKunciRadio"]:checked');
@@ -2997,6 +3004,7 @@
       const pilihan = [opt0, opt1];
       if (opt2) pilihan.push(opt2);
       if (opt3) pilihan.push(opt3);
+      if (opt4) pilihan.push(opt4);
 
       if (kunciJawaban >= pilihan.length) {
         return showToastAdmin("Kunci jawaban yang dipilih belum diisi teks opsinya!", "warning");
@@ -3038,6 +3046,7 @@
       document.getElementById('studioOpt1').value = choices[1] || "";
       document.getElementById('studioOpt2').value = choices[2] || "";
       document.getElementById('studioOpt3').value = choices[3] || "";
+      if (document.getElementById('studioOpt4')) document.getElementById('studioOpt4').value = choices[4] || "";
 
       const radio = document.getElementById(`studioKunci${item.jawaban || 0}`);
       if (radio) radio.checked = true;

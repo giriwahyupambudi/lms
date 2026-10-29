@@ -664,10 +664,17 @@
   let ivMaxWatchedTime = 0;
   let ivAnsweredSet = new Set();
   let ivKuisList = [];
+  let ivCurrentMateri = null;
+  let ivQuestionMistakes = {};
+  let ivScoresPerQuestion = {};
+  let ivHasSubmittedScore = false;
+  let ivStartTime = Date.now();
 
   function renderInteractiveYouTube(m, videoId, kuisList) {
     const container = document.getElementById("materiList");
     if (!container) return;
+
+    ivCurrentMateri = m;
 
     // Sortir urutan soal berdasarkan detik terendah
     ivKuisList = kuisList.map(item => ({
@@ -676,6 +683,10 @@
     })).sort((a, b) => a.detik - b.detik);
 
     ivAnsweredSet = new Set();
+    ivQuestionMistakes = {};
+    ivScoresPerQuestion = {};
+    ivHasSubmittedScore = false;
+    ivStartTime = Date.now();
     ivMaxWatchedTime = 0;
     ivActiveCp = null;
     ivLastCp = null;
@@ -992,15 +1003,60 @@
 
     const selectedItem = document.querySelector(`.iv-option-item[data-index="${ivSelectedOptIdx}"]`);
 
+    const maxPtsPerQuestion = ivKuisList.length > 0 ? (100 / ivKuisList.length) : 100;
+
     if (isCorrect) {
       // TANDAI SUKSES
       ivAnsweredSet.add(cp.detik);
+
+      // Hitung Poin Berdasarkan Penalti Kesalahan
+      const mistakes = ivQuestionMistakes[cp.detik] || 0;
+      // Setiap kali salah, potong 20% dari bobot soal (maksimal potong 100%, min 0)
+      const penaltyRatio = Math.min(1, mistakes * 0.20);
+      const multiplier = Math.max(0, 1 - penaltyRatio);
+      const earnedPoints = Math.round((maxPtsPerQuestion * multiplier) * 10) / 10;
+      ivScoresPerQuestion[cp.detik] = earnedPoints;
+
+      const isAllDone = (ivAnsweredSet.size === ivKuisList.length);
+      let totalScore = 0;
+      if (isAllDone) {
+        totalScore = Math.round(Object.values(ivScoresPerQuestion).reduce((a, b) => a + b, 0));
+        if (totalScore > 100) totalScore = 100;
+        if (totalScore < 0) totalScore = 0;
+        submitIvScore(totalScore, ivCurrentMateri);
+      }
+
       if (fbBox) {
         fbBox.className = 'iv-feedback-box correct';
         fbBox.style.display = 'block';
       }
       if (fbMsg) fbMsg.innerText = "Luar Biasa, Jawaban Anda Benar!";
-      if (fbDesc) fbDesc.innerText = cp.pembahasan || "Pemahaman Anda terhadap bagian materi ini sudah sangat baik. Lanjutkan menonton video.";
+
+      let badgePoints = `
+        <div style="margin-top:8px; display:inline-flex; align-items:center; gap:6px; background:#dcfce7; color:#166534; padding:3px 10px; border-radius:14px; font-size:0.8rem; font-weight:700;">
+          <i data-lucide="award" style="width:14px;height:14px;"></i> Poin Soal Ini: +${earnedPoints} / ${Math.round(maxPtsPerQuestion * 10) / 10} ${mistakes === 0 ? '(Langsung Benar! ⭐)' : `(${mistakes}x salah: -${Math.round(penaltyRatio * 100)}%)`}
+        </div>
+      `;
+
+      let finalBox = '';
+      if (isAllDone) {
+        finalBox = `
+          <div style="margin-top:12px; padding:12px 14px; background:#eff6ff; border-radius:12px; border:1.5px solid #bfdbfe; text-align:center;">
+            <div style="font-size:1.05rem; font-weight:800; color:#1e40af;">🎉 Semua Kuis Video Selesai!</div>
+            <div style="font-size:0.92rem; color:#1d4ed8; margin-top:2px;">
+              Nilai Akhir Kuis Video: <b style="font-size:1.25rem; color:#1e3a8a;">${totalScore} / 100</b>
+            </div>
+            <div style="font-size:0.75rem; color:#475569; margin-top:4px;">
+              Nilai Anda telah otomatis tersimpan ke rekap nilai. Silakan klik tombol di bawah untuk melanjutkan menonton video.
+            </div>
+          </div>
+        `;
+      }
+
+      if (fbDesc) {
+        let textPembahasan = cp.pembahasan || "Pemahaman Anda terhadap bagian materi ini sudah sangat baik.";
+        fbDesc.innerHTML = `<div style="margin-bottom:4px;">${textPembahasan}</div>` + badgePoints + finalBox;
+      }
 
       if (selectedItem) {
         selectedItem.classList.remove('selected');
@@ -1012,28 +1068,39 @@
       const pill = document.getElementById(`cpPill_${cpIdx}`);
       if (pill) {
         pill.className = 'iv-cp-pill completed';
-        pill.innerHTML = `<i data-lucide="check-circle" style="width:13px;height:13px;color:#16a34a;"></i> <span>Menit ${formatDetik(cp.detik)} (Selesai)</span>`;
+        pill.innerHTML = `<i data-lucide="check-circle" style="width:13px;height:13px;color:#16a34a;"></i> <span>Menit ${formatDetik(cp.detik)} (+${earnedPoints} pt)</span>`;
       }
 
       // Update progress badge
       const progStatus = document.getElementById('ivProgressStatus');
       if (progStatus) {
-        progStatus.innerText = `${ivAnsweredSet.size}/${ivKuisList.length} Selesai`;
-        if (ivAnsweredSet.size === ivKuisList.length) {
-          progStatus.innerHTML = `<span style="color:#16a34a;">Semua Pertanyaan Selesai! 🎉</span>`;
+        if (isAllDone) {
+          progStatus.innerHTML = `<span style="color:#16a34a; font-weight:800;">Nilai Akhir: ${totalScore}/100 🎉</span>`;
+        } else {
+          progStatus.innerText = `${ivAnsweredSet.size}/${ivKuisList.length} Selesai`;
         }
       }
 
       if (btnSubmit) btnSubmit.style.display = 'none';
       if (btnResume) btnResume.style.display = 'inline-flex';
     } else {
-      // JAWABAN BELUM TEPAT
+      // JAWABAN BELUM TEPAT (Catat Kesalahan & Tampilkan Penalti)
+      ivQuestionMistakes[cp.detik] = (ivQuestionMistakes[cp.detik] || 0) + 1;
+      const mistakes = ivQuestionMistakes[cp.detik];
+      const penaltyPct = Math.min(100, mistakes * 20);
+      const remainingPct = Math.max(0, 100 - penaltyPct);
+
       if (fbBox) {
         fbBox.className = 'iv-feedback-box wrong';
         fbBox.style.display = 'block';
       }
-      if (fbMsg) fbMsg.innerText = "Jawaban Belum Tepat";
-      if (fbDesc) fbDesc.innerText = "Coba pilih jawaban lain, atau klik 'Ulangi 15 Detik' untuk mendengarkan kembali penjelasan video.";
+      if (fbMsg) fbMsg.innerText = `Jawaban Belum Tepat (Penalti -${penaltyPct}%)`;
+      if (fbDesc) {
+        fbDesc.innerHTML = `
+          Poin maksimal soal ini tersisa: <b>${remainingPct}%</b> (${mistakes}x kesalahan).<br>
+          Coba pilih jawaban lain, atau klik tombol <b>'Ulangi 15 Detik'</b> untuk menyimak kembali penjelasan video.
+        `;
+      }
 
       if (selectedItem) {
         selectedItem.classList.add('wrong-reveal');
@@ -1096,11 +1163,61 @@
     startIvTracking();
   }
 
+  async function submitIvScore(finalScore, m) {
+    if (ivHasSubmittedScore) return;
+    ivHasSubmittedScore = true;
+
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    const username = (userData.username || userData.nisn || "").toString().trim();
+    const nama = userData.nama || userData.name || "Siswa";
+    const kelas = userData.kelas || userData.tingkat || "";
+    const mid = (m ? (getVal(m, ['id_materi', 'idmateri', 'id']) || m.rowNumber) : (getParam("id") || "")).toString().trim();
+    const judul = m ? (getVal(m, ['judul', 'materi', 'namamateri']) || "Materi Video") : "Materi Video";
+
+    if (!username || !mid) return;
+
+    const durationSec = Math.round((Date.now() - ivStartTime) / 1000);
+    const waktuFormat = formatDetik(durationSec);
+
+    try {
+      localStorage.setItem(`kuis_video_score_${username}_${mid}`, finalScore.toString());
+    } catch(e){}
+
+    const payload = {
+      action: 'saveScore',
+      sheet: 'listNilai',
+      data: {
+        username: username,
+        nama: nama,
+        kelas: kelas,
+        id_materi: mid,
+        tipe: 'Kuis Video',
+        nilai: finalScore,
+        waktu: "'" + waktuFormat,
+        timestamp: new Date().toISOString(),
+        judul: judul,
+        keterangan: `Selesai Kuis Video (${ivKuisList.length} soal)`
+      }
+    };
+
+    try {
+      await fetch("https://script.google.com/macros/s/AKfycbx8dBNFIqvVixZ5ORodulJYxqjtMvjr-Qajjez1uD7UIeq-ypSI1xaNjdUtJkq3ovzsbw/exec", {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      console.log("Nilai kuis video berhasil dikirim ke listNilai:", finalScore);
+    } catch(e) {
+      console.error("Gagal mengirim nilai kuis video:", e);
+    }
+  }
+
   // Bind ke window secara eksplisit
   window.ivSelectOption = ivSelectOption;
   window.ivCheckAnswer = ivCheckAnswer;
   window.ivRewind = ivRewind;
   window.ivResumeVideo = ivResumeVideo;
+  window.submitIvScore = submitIvScore;
 
   async function loadMateri() {
     const titleEl = document.getElementById("displayJudul");
