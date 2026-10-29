@@ -15,6 +15,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link rel="manifest" href="manifest.json">
   <script src="pwa-handler.js" defer></script>
+  <!-- YouTube IFrame API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
 
   <style>
     :root {
@@ -153,6 +155,9 @@
     .btn-icon:hover { background: var(--bg-color); color: var(--text-main); }
     .btn-icon.edit:hover { color: var(--primary); border-color: var(--primary-light); background: var(--primary-light); }
     .btn-icon.delete:hover { color: var(--danger); border-color: #fecaca; background: #fee2e2; }
+    .studio-pill-filter { background: white; border: 1px solid var(--border-color); color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+    .studio-pill-filter:hover { background: var(--bg-color); color: var(--text-main); }
+    .studio-pill-filter.active { background: var(--primary); border-color: var(--primary); color: white; font-weight: 700; }
 
     /* LOADING SPINNER */
     .spin-anim { animation: spin 1s linear infinite; }
@@ -216,6 +221,7 @@
     <div class="brand" style="color:white; margin-bottom: 32px;"><i data-lucide="shield-check"></i> Al Ilmi Admin</div>
     <button class="nav-item active" id="tabDashboardD" onclick="showTab('dashboard')"><i data-lucide="layout-dashboard"></i> Dashboard</button>
     <button class="nav-item" id="tabMateriD" onclick="showTab('materi')"><i data-lucide="book-open"></i> Kelola Materi</button>
+    <button class="nav-item" id="tabKelolaSoalD" onclick="showTab('kelolaSoal')"><i data-lucide="help-circle"></i> Kelola Soal</button>
     <button class="nav-item" id="tabAnalisisD" onclick="showTab('analisis')"><i data-lucide="bar-chart-2"></i> Analisis Soal</button>
     <button class="nav-item" id="tabNilaiD" onclick="showTab('nilai')"><i data-lucide="graduation-cap"></i> Input Nilai</button>
     <button class="nav-item" id="tabTugasD" onclick="showTab('tugas')"><i data-lucide="file-text"></i> Tugas</button>
@@ -233,6 +239,7 @@
   <nav class="bottom-nav">
     <button class="nav-item active" id="tabDashboard" onclick="showTab('dashboard')"><i data-lucide="layout-dashboard"></i> Dasbor</button>
     <button class="nav-item" id="tabMateri" onclick="showTab('materi')"><i data-lucide="book-open"></i> Materi</button>
+    <button class="nav-item" id="tabKelolaSoal" onclick="showTab('kelolaSoal')"><i data-lucide="help-circle"></i> Soal</button>
     <button class="nav-item" id="tabNilai" onclick="showTab('nilai')"><i data-lucide="graduation-cap"></i> Nilai</button>
     <button class="nav-item" id="tabAbsen" onclick="showTab('absen')"><i data-lucide="user-check"></i> Absen</button>
     <button class="nav-item" id="tabRekapAbsen" onclick="showTab('rekapAbsen')"><i data-lucide="calendar-check"></i> Rekap Absen</button>
@@ -539,6 +546,335 @@
                 <tr><td colspan="4" style="text-align:center;">Memuat data...</td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION: STUDIO & BANK SOAL TERPADU ================= -->
+      <section id="kelolaSoalSection" style="display:none">
+        <div class="header-section" style="margin-bottom: 20px;">
+          <div>
+            <h1 style="display:flex; align-items:center; gap:10px;">
+              <i data-lucide="help-circle" style="color:var(--primary); width:28px; height:28px;"></i>
+              Studio & Bank Soal Terpadu
+            </h1>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">
+              Kelola pertanyaan pemahaman video interaktif (YouTube) maupun bank soal evaluasi (materi non-video/teori/praktik).
+            </p>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-primary" id="btnSaveStudioKuis" style="display:none;" onclick="saveStudioKuisVideo()">
+              <i data-lucide="save"></i> Simpan Kuis Video ke Server
+            </button>
+            <button class="btn btn-outline" id="btnRefreshRegularSoal" style="display:none;" onclick="refreshRegularSoalList()">
+              <i data-lucide="refresh-cw"></i> Segarkan Data Soal
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter & Pemilih Materi -->
+        <div class="card" style="margin-bottom: 20px; padding: 16px 20px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+            <div style="flex:1; min-width:300px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                <label style="font-size:0.8rem; font-weight:700; color:var(--text-main);">
+                  Pilih Materi Pembelajaran:
+                </label>
+                <!-- Filter Cepat Tipe -->
+                <div style="display:flex; gap:6px;">
+                  <button type="button" class="btn btn-sm studio-pill-filter active" id="pillFilterAll" onclick="filterStudioMaterials('all')" style="padding:2px 10px; font-size:0.75rem; border-radius:20px;">Semua</button>
+                  <button type="button" class="btn btn-sm studio-pill-filter" id="pillFilterVideo" onclick="filterStudioMaterials('video')" style="padding:2px 10px; font-size:0.75rem; border-radius:20px;">🎬 Video YouTube</button>
+                  <button type="button" class="btn btn-sm studio-pill-filter" id="pillFilterRegular" onclick="filterStudioMaterials('regular')" style="padding:2px 10px; font-size:0.75rem; border-radius:20px;">📄 Non-Video / Modul</button>
+                </div>
+              </div>
+              <select id="studioSelectMateri" class="form-control" style="font-size:0.9rem; font-weight:600;" onchange="onStudioMateriChange()">
+                <option value="">Memuat daftar materi...</option>
+              </select>
+            </div>
+            <div id="studioMateriSummaryBadge" style="display:flex; align-items:center; gap:8px;">
+              <!-- Badge info materi di sini -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Tampilan Kosong Jika Belum Ada Materi -->
+        <div id="studioEmptyState" class="card" style="display:none; text-align:center; padding:50px 20px;">
+          <i data-lucide="inbox" style="width:48px; height:48px; color:var(--text-muted); margin:0 auto 12px; display:block;"></i>
+          <h3 style="margin:0 0 6px 0; font-size:1.1rem; color:var(--text-main);">Tidak Ada Materi Sesuai Filter</h3>
+          <p style="color:var(--text-muted); font-size:0.85rem; max-width:480px; margin:0 auto 16px;">
+            Belum ada materi pembelajaran yang sesuai dengan filter yang dipilih. Silakan tambahkan materi baru di menu <b>Kelola Materi</b>.
+          </p>
+          <button class="btn btn-primary" onclick="showTab('materi'); openModalMateri();">
+            <i data-lucide="plus"></i> Tambah Materi Baru
+          </button>
+        </div>
+
+        <!-- ================= MODE 1: MATERI VIDEO YOUTUBE ================= -->
+        <div id="studioVideoContainer" style="display:none; grid-template-columns: 1.1fr 0.9fr; gap: 20px; align-items: start;">
+          <!-- SISI KIRI: PLAYER & KONTROL WAKTU -->
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="card" style="padding:16px;">
+              <div style="position:relative; width:100%; padding-bottom:56.25%; height:0; border-radius:12px; overflow:hidden; background:#0f172a; box-shadow:0 10px 25px -5px rgba(0,0,0,0.2);">
+                <div id="studioYtPlayer" style="position:absolute; top:0; left:0; width:100%; height:100%;"></div>
+              </div>
+
+              <!-- Bar Kontrol Video & Detik -->
+              <div style="margin-top:14px; background:#f8fafc; border:1px solid var(--border-color); border-radius:10px; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <button type="button" class="btn btn-sm btn-outline" onclick="studioSeekRelative(-5)" title="Mundur 5 detik">
+                    <i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i> -5s
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline" id="studioBtnPlayToggle" onclick="studioTogglePlay()" title="Putar/Jeda">
+                    <i data-lucide="play" id="studioPlayIcon" style="width:14px;height:14px;"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline" onclick="studioSeekRelative(5)" title="Maju 5 detik">
+                    +5s <i data-lucide="rotate-cw" style="width:14px;height:14px;"></i>
+                  </button>
+                  <div style="font-size:0.85rem; font-weight:700; color:var(--text-main); font-family:monospace; margin-left:6px;" id="studioTimeDisplay">
+                    00:00 / 00:00
+                  </div>
+                </div>
+
+                <button type="button" class="btn btn-warning" onclick="studioCaptureCurrentTime()" style="background:#f59e0b; color:white; border:none; font-weight:700; display:flex; align-items:center; gap:6px;">
+                  <i data-lucide="clock" style="width:16px;height:16px;"></i> Ambil Detik Ini
+                </button>
+              </div>
+            </div>
+
+            <!-- Petunjuk Penggunaan Kuis Video -->
+            <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:14px 16px; font-size:0.82rem; color:#1e40af; line-height:1.5;">
+              <div style="font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                <i data-lucide="lightbulb" style="width:16px;height:16px;"></i> Cara Praktis Menambah Kuis Video:
+              </div>
+              <ol style="margin:4px 0 0 16px; padding:0;">
+                <li>Putar video di atas hingga mencapai bagian penjelasan yang ingin ditanyakan.</li>
+                <li>Klik tombol kuning <b>"Ambil Detik Ini"</b> (video otomatis jeda & detiknya masuk ke form).</li>
+                <li>Tulis pertanyaan & pilihan jawaban di sebelah kanan, lalu klik <b>"Tambah ke Daftar"</b>.</li>
+                <li>Klik <b>"Simpan Kuis Video ke Server"</b> untuk menyimpan semua perubahan.</li>
+              </ol>
+            </div>
+          </div>
+
+          <!-- SISI KANAN: FORM INPUT & DAFTAR SOAL VIDEO -->
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <!-- Form Input Soal Video -->
+            <div class="card" style="padding:18px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">
+                <div style="font-weight:700; font-size:0.92rem; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+                  <i data-lucide="edit-3" style="width:16px;height:16px;color:var(--primary);"></i>
+                  <span id="studioFormTitle">Form Input Pertanyaan Kuis Video</span>
+                </div>
+                <input type="hidden" id="studioEditIdx" value="-1">
+              </div>
+
+              <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
+                <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted); width:100px;">Detik Muncul:</label>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <input type="number" id="studioMenit" class="form-control" min="0" value="0" placeholder="0" style="width:70px; text-align:center;">
+                  <span style="font-weight:700; color:var(--text-muted);">:</span>
+                  <input type="number" id="studioDetik" class="form-control" min="0" max="59" value="0" placeholder="30" style="width:70px; text-align:center;">
+                  <small style="font-size:0.75rem; color:var(--text-muted);">(Menit : Detik)</small>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom:10px;">
+                <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted);">Pertanyaan Pemahaman:</label>
+                <textarea id="studioPertanyaan" class="form-control" rows="2" placeholder="Tuliskan pertanyaan materi di detik ini..."></textarea>
+              </div>
+
+              <div class="form-group" style="margin-bottom:10px;">
+                <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted);">Pilihan Jawaban (Pilih radio untuk Kunci Jawaban):</label>
+                <div style="display:flex; flex-direction:column; gap:6px; margin-top:4px;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="studioKunciRadio" value="0" id="studioKunci0" checked title="Tandai Kunci Jawaban A">
+                    <span style="font-weight:700; font-size:0.8rem; width:16px;">A.</span>
+                    <input type="text" id="studioOpt0" class="form-control" placeholder="Pilihan jawaban A" style="flex:1;">
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="studioKunciRadio" value="1" id="studioKunci1" title="Tandai Kunci Jawaban B">
+                    <span style="font-weight:700; font-size:0.8rem; width:16px;">B.</span>
+                    <input type="text" id="studioOpt1" class="form-control" placeholder="Pilihan jawaban B" style="flex:1;">
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="studioKunciRadio" value="2" id="studioKunci2" title="Tandai Kunci Jawaban C">
+                    <span style="font-weight:700; font-size:0.8rem; width:16px;">C.</span>
+                    <input type="text" id="studioOpt2" class="form-control" placeholder="Pilihan jawaban C" style="flex:1;">
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="studioKunciRadio" value="3" id="studioKunci3" title="Tandai Kunci Jawaban D">
+                    <span style="font-weight:700; font-size:0.8rem; width:16px;">D.</span>
+                    <input type="text" id="studioOpt3" class="form-control" placeholder="Pilihan jawaban D" style="flex:1;">
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom:14px;">
+                <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted);">Pembahasan / Feedback (Opsional):</label>
+                <input type="text" id="studioPembahasan" class="form-control" placeholder="Penjelasan singkat saat siswa menjawab...">
+              </div>
+
+              <div style="display:flex; justify-content:flex-end; gap:8px;">
+                <button type="button" class="btn btn-outline" id="studioBtnBatalEdit" onclick="studioCancelEdit()" style="display:none; font-size:0.8rem; padding:6px 14px;">Batal</button>
+                <button type="button" class="btn btn-primary" id="studioBtnSaveQuestion" onclick="studioAddOrUpdateQuestion()" style="font-size:0.82rem; padding:7px 16px;">
+                  <i data-lucide="plus" style="width:14px;height:14px;"></i> Tambah ke Daftar
+                </button>
+              </div>
+            </div>
+
+            <!-- Daftar Pertanyaan Kuis Video -->
+            <div class="card" style="padding:18px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">
+                <div style="font-weight:700; font-size:0.92rem; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+                  <i data-lucide="list" style="width:16px;height:16px;color:var(--primary);"></i>
+                  Daftar Titik Pertanyaan (<span id="studioQuestionCount">0</span>)
+                </div>
+                <small style="color:var(--text-muted); font-size:0.75rem;">Klik menit untuk memutar video</small>
+              </div>
+
+              <div id="studioQuestionsContainer" style="display:flex; flex-direction:column; gap:8px; max-height:400px; overflow-y:auto;">
+                <!-- Daftar pertanyaan video di-render dinamis -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= MODE 2: MATERI NON-VIDEO / REGULER (SHEET SOAL) ================= -->
+        <div id="studioRegularContainer" style="display:none; grid-template-columns: 0.95fr 1.05fr; gap: 20px; align-items: start;">
+          <!-- SISI KIRI: INFO MATERI & PANDUAN -->
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <!-- Kartu Info Materi -->
+            <div class="card" style="padding:18px;">
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">
+                <div style="background:#f5f3ff; color:#7c3aed; padding:8px; border-radius:10px;">
+                  <i data-lucide="book-open" style="width:20px; height:20px;"></i>
+                </div>
+                <div>
+                  <h3 id="regularInfoJudul" style="margin:0; font-size:1rem; color:var(--text-main);">Judul Materi</h3>
+                  <p id="regularInfoSub" style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-muted);">ID: - | Mapel: - | Kelas: -</p>
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.8rem; margin-bottom:14px;">
+                <div style="background:#f8fafc; border:1px solid var(--border-color); border-radius:8px; padding:10px;">
+                  <span style="color:var(--text-muted); display:block; font-size:0.7rem;">Tipe Evaluasi:</span>
+                  <b id="regularInfoTipe" style="color:var(--primary); font-size:0.85rem;">Praktik / Teori</b>
+                </div>
+                <div style="background:#f8fafc; border:1px solid var(--border-color); border-radius:8px; padding:10px;">
+                  <span style="color:var(--text-muted); display:block; font-size:0.7rem;">Total Soal di Database:</span>
+                  <b id="regularInfoTotalSoal" style="color:#16a34a; font-size:0.85rem;">0 Soal Tersimpan</b>
+                </div>
+              </div>
+
+              <div id="regularLinkContainer" style="margin-bottom:14px; display:none;">
+                <a id="regularBtnOpenLink" href="#" target="_blank" class="btn btn-outline" style="width:100%; justify-content:center; font-size:0.8rem;">
+                  <i data-lucide="external-link"></i> Buka Tautan Modul / Dokumen Materi
+                </a>
+              </div>
+
+              <button type="button" class="btn btn-outline" id="regularBtnPreviewSiswa" onclick="previewSoalRegularStudio()" style="width:100%; justify-content:center; color:#f59e0b; border-color:#fde68a; background:#fffbeb; font-size:0.82rem;">
+                <i data-lucide="eye"></i> Preview Tampilan Kuis Siswa
+              </button>
+            </div>
+
+            <!-- Petunjuk Penulisan Soal Reguler -->
+            <div style="background:#fdf4ff; border:1px solid #f0abfc; border-radius:12px; padding:14px 16px; font-size:0.82rem; color:#86198f; line-height:1.5;">
+              <div style="font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                <i data-lucide="info" style="width:16px;height:16px;"></i> Petunjuk Penulisan Soal:
+              </div>
+              <ul style="margin:4px 0 0 16px; padding:0;">
+                <li>Soal otomatis tersimpan ke sheet <b>'soal'</b> di Google Spreadsheet.</li>
+                <li>Isi pilihan jawaban A sampai D (opsi E bersifat opsional jika diperlukan).</li>
+                <li>Tandai salah satu radio button sebagai <b>Kunci Jawaban</b>.</li>
+                <li>Jika soal memiliki gambar, masukkan link publik (Google Drive atau URL gambar web).</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- SISI KANAN: FORM INPUT & DAFTAR SOAL REGULER -->
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <!-- Form Input Soal Reguler -->
+            <div class="card" id="regularQuestionCard" style="padding:18px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">
+                <div style="font-weight:700; font-size:0.92rem; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+                  <i data-lucide="plus-circle" style="width:16px;height:16px;color:#7c3aed;"></i>
+                  <span id="regularFormTitle">Form Tambah Butir Soal</span>
+                </div>
+                <input type="hidden" id="regularEditRowNumber" value="">
+              </div>
+
+              <div class="form-group" style="margin-bottom:10px;">
+                <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted);">Butir Pertanyaan Soal:</label>
+                <textarea id="regularPertanyaan" class="form-control" rows="3" placeholder="Tuliskan teks pertanyaan soal di sini..."></textarea>
+              </div>
+
+              <div class="form-group" style="margin-bottom:10px;">
+                <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted);">Link Gambar Soal (Opsional):</label>
+                <input type="text" id="regularGambar" class="form-control" placeholder="https://lh3.googleusercontent.com/... atau link Drive" onchange="previewRegularImageInput(this.value)">
+                <div id="regularImagePreviewThumb" style="margin-top:6px; display:none;">
+                  <img id="regularThumbImg" src="" style="max-height:120px; border-radius:6px; border:1px solid var(--border-color);">
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom:10px;">
+                <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted);">Pilihan Jawaban (Klik radio untuk Kunci Jawaban):</label>
+                <div style="display:flex; flex-direction:column; gap:6px; margin-top:4px;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="regularKunciRadio" value="A" id="regKunciA" checked title="Kunci Jawaban A">
+                    <span style="font-weight:700; font-size:0.8rem; width:16px;">A.</span>
+                    <input type="text" id="regularOptA" class="form-control" placeholder="Pilihan jawaban A" style="flex:1;">
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="regularKunciRadio" value="B" id="regKunciB" title="Kunci Jawaban B">
+                    <span style="font-weight:700; font-size:0.8rem; width:16px;">B.</span>
+                    <input type="text" id="regularOptB" class="form-control" placeholder="Pilihan jawaban B" style="flex:1;">
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="regularKunciRadio" value="C" id="regKunciC" title="Kunci Jawaban C">
+                    <span style="font-weight:700; font-size:0.8rem; width:16px;">C.</span>
+                    <input type="text" id="regularOptC" class="form-control" placeholder="Pilihan jawaban C" style="flex:1;">
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="regularKunciRadio" value="D" id="regKunciD" title="Kunci Jawaban D">
+                    <span style="font-weight:700; font-size:0.8rem; width:16px;">D.</span>
+                    <input type="text" id="regularOptD" class="form-control" placeholder="Pilihan jawaban D" style="flex:1;">
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="regularKunciRadio" value="E" id="regKunciE" title="Kunci Jawaban E (Opsional)">
+                    <span style="font-weight:700; font-size:0.8rem; width:16px;">E.</span>
+                    <input type="text" id="regularOptE" class="form-control" placeholder="Pilihan jawaban E (opsional)" style="flex:1;">
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom:14px;">
+                <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted);">Pembahasan / Penjelasan Jawaban (Opsional):</label>
+                <input type="text" id="regularPembahasan" class="form-control" placeholder="Penjelasan pembahasan saat siswa selesai ujian...">
+              </div>
+
+              <div style="display:flex; justify-content:flex-end; gap:8px;">
+                <button type="button" class="btn btn-outline" id="regularBtnCancel" onclick="resetRegularForm()" style="display:none; font-size:0.8rem; padding:6px 14px;">Batal</button>
+                <button type="button" class="btn btn-primary" id="regularBtnSave" onclick="saveRegularSoal()" style="font-size:0.82rem; padding:7px 18px; background:#7c3aed; border-color:#6d28d9;">
+                  <i data-lucide="plus" style="width:14px;height:14px;"></i> Tambah Soal ke Sheet
+                </button>
+              </div>
+            </div>
+
+            <!-- Daftar Soal Tersimpan dari Sheet Soal -->
+            <div class="card" style="padding:18px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">
+                <div style="font-weight:700; font-size:0.92rem; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+                  <i data-lucide="clipboard-list" style="width:16px;height:16px;color:#7c3aed;"></i>
+                  Daftar Soal Tersimpan (<span id="regularQuestionCount">0</span>)
+                </div>
+                <button type="button" class="btn btn-sm btn-outline" onclick="refreshRegularSoalList()" title="Muat ulang dari server" style="padding:3px 8px; font-size:0.75rem;">
+                  <i data-lucide="refresh-cw" style="width:12px;height:12px;"></i> Segarkan
+                </button>
+              </div>
+
+              <div id="regularQuestionsContainer" style="display:flex; flex-direction:column; gap:12px; max-height:550px; overflow-y:auto;">
+                <!-- Daftar butir soal dari sheet 'soal' di-render dinamis -->
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -881,25 +1217,6 @@
         <div class="form-group"><label>Judul Materi</label><input type="text" id="mJudul" class="form-control" placeholder="Contoh: Logaritma Dasar"></div>
         <div class="form-group"><label>Deskripsi (Opsional)</label><input type="text" id="mDeskripsi" class="form-control" placeholder="Penjelasan singkat materi"></div>
         <div class="form-group"><label>Link / Tautan (Opsional)</label><input type="text" id="mLink" class="form-control" placeholder="Link Google Form / Modul"></div>
-
-        <!-- Pengaturan Kuis Video Interaktif -->
-        <div class="form-group" style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:12px 14px; margin-top:4px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-            <div>
-              <div style="font-weight:600; font-size:0.85rem; color:#166534; display:flex; align-items:center; gap:6px;">
-                <i data-lucide="video" style="width:16px;height:16px;color:#16a34a;"></i> Kuis Video Interaktif (YouTube)
-              </div>
-              <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">
-                Berhentikan video di menit tertentu untuk memunculkan soal pemahaman.
-              </div>
-            </div>
-            <button type="button" class="btn btn-outline" onclick="openModalKuisVideo()" style="font-size:0.78rem; padding:6px 12px; background:white; display:flex; align-items:center; gap:6px; border-color:#86efac; color:#166534;">
-              <i data-lucide="list-plus" style="width:14px;height:14px;"></i> Kelola Soal (<span id="kuisVideoCountBadge" style="font-weight:700;">0 Soal</span>)
-            </button>
-          </div>
-          <input type="hidden" id="mKuisVideo" value="">
-        </div>
-
         <div class="form-group"><label>Mata Pelajaran</label><input type="text" id="mMapel" class="form-control" placeholder="Contoh: Matematika"></div>
         <div class="form-group" id="mKelasContainer"><label>Target Kelas / Tingkat</label><input type="text" id="mKelas" class="form-control" placeholder="Contoh: X, XI, XII, atau SEMUA"></div>
         <div class="form-group"><label>Tipe</label><select id="mTipe" class="form-control"><option value="Praktik">Praktik</option><option value="Tugas">Tugas</option><option value="Kuis">Kuis</option><option value="Survey">Survey</option><option value="Editor">Editor</option><option value="Materi Saja">Materi Saja (Tanpa Tugas/Kuis)</option><option value="Pengumuman">Pengumuman</option></select></div>
@@ -908,109 +1225,6 @@
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeModal('materiModal')">Batal</button>
         <button class="btn btn-primary" onclick="saveMateri()"><i data-lucide="save"></i> Simpan</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Kelola Kuis Video Interaktif -->
-  <div id="modalKuisVideo" class="modal-overlay">
-    <div class="modal" style="max-width: 680px; width: 95%;">
-      <div class="modal-header" style="background:#f8fafc; border-bottom:1px solid var(--border-color);">
-        <div>
-          <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
-            <i data-lucide="video" style="color:var(--primary); width:20px; height:20px;"></i>
-            Kelola Kuis Video Interaktif
-          </h3>
-          <p style="margin:4px 0 0 0; font-size:0.75rem; color:var(--text-muted);">
-            Masukkan menit/detik video dan pertanyaan pilihan ganda yang wajib dijawab siswa.
-          </p>
-        </div>
-        <button class="close-modal" onclick="closeModal('modalKuisVideo')"><i data-lucide="x"></i></button>
-      </div>
-
-      <div class="modal-body" style="max-height: calc(85vh - 130px); overflow-y: auto; padding: 20px;">
-        <!-- Form Tambah Pertanyaan Baru -->
-        <div style="background:#f8fafc; border:1px solid var(--border-color); border-radius:12px; padding:16px; margin-bottom:20px;">
-          <div style="font-weight:700; font-size:0.88rem; color:var(--text-main); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
-            <i data-lucide="plus-circle" style="width:16px;height:16px;color:var(--primary);"></i> Form Input Pertanyaan
-          </div>
-          <input type="hidden" id="kvEditIdx" value="-1">
-
-          <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
-            <div>
-              <label style="font-size:0.78rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">Waktu Muncul</label>
-              <div style="display:flex; align-items:center; gap:6px;">
-                <input type="number" id="kvMenit" class="form-control" min="0" value="0" placeholder="0" style="width:75px; text-align:center;">
-                <span style="font-weight:700; color:var(--text-muted);">:</span>
-                <input type="number" id="kvDetik" class="form-control" min="0" max="59" value="30" placeholder="30" style="width:75px; text-align:center;">
-                <small style="font-size:0.75rem; color:var(--text-muted);">(Menit : Detik)</small>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-bottom:12px;">
-            <label style="font-size:0.78rem; font-weight:600; color:var(--text-muted);">Pertanyaan</label>
-            <textarea id="kvPertanyaan" class="form-control" rows="2" placeholder="Tuliskan pertanyaan materi di detik ini..."></textarea>
-          </div>
-
-          <div class="form-group" style="margin-bottom:12px;">
-            <label style="font-size:0.78rem; font-weight:600; color:var(--text-muted);">Pilihan Jawaban (Pilih radio untuk Kunci Jawaban):</label>
-            <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
-              <div style="display:flex; align-items:center; gap:8px;">
-                <input type="radio" name="kvKunciRadio" value="0" id="kvKunci0" checked title="Tandai Kunci Jawaban A">
-                <span style="font-weight:700; font-size:0.8rem; width:16px;">A.</span>
-                <input type="text" id="kvOpt0" class="form-control" placeholder="Pilihan jawaban A" style="flex:1;">
-              </div>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <input type="radio" name="kvKunciRadio" value="1" id="kvKunci1" title="Tandai Kunci Jawaban B">
-                <span style="font-weight:700; font-size:0.8rem; width:16px;">B.</span>
-                <input type="text" id="kvOpt1" class="form-control" placeholder="Pilihan jawaban B" style="flex:1;">
-              </div>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <input type="radio" name="kvKunciRadio" value="2" id="kvKunci2" title="Tandai Kunci Jawaban C">
-                <span style="font-weight:700; font-size:0.8rem; width:16px;">C.</span>
-                <input type="text" id="kvOpt2" class="form-control" placeholder="Pilihan jawaban C" style="flex:1;">
-              </div>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <input type="radio" name="kvKunciRadio" value="3" id="kvKunci3" title="Tandai Kunci Jawaban D">
-                <span style="font-weight:700; font-size:0.8rem; width:16px;">D.</span>
-                <input type="text" id="kvOpt3" class="form-control" placeholder="Pilihan jawaban D" style="flex:1;">
-              </div>
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-bottom:14px;">
-            <label style="font-size:0.78rem; font-weight:600; color:var(--text-muted);">Pembahasan / Feedback (Opsional)</label>
-            <input type="text" id="kvPembahasan" class="form-control" placeholder="Penjelasan singkat saat siswa menjawab...">
-          </div>
-
-          <div style="display:flex; justify-content:flex-end; gap:8px;">
-            <button type="button" class="btn btn-outline" id="kvBtnBatalEdit" onclick="cancelEditKuisVideo()" style="display:none; font-size:0.8rem; padding:6px 14px;">Batal Edit</button>
-            <button type="button" class="btn btn-primary" id="kvBtnAdd" onclick="addOrUpdateKuisVideoItem()" style="font-size:0.8rem; padding:6px 14px;">
-              <i data-lucide="plus" style="width:14px;height:14px;"></i> Tambah ke Daftar
-            </button>
-          </div>
-        </div>
-
-        <!-- Daftar Pertanyaan yang Telah Ditambahkan -->
-        <div>
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <div style="font-weight:700; font-size:0.88rem; color:var(--text-main);">
-              Daftar Titik Pertanyaan (<span id="kvTotalCount">0</span>)
-            </div>
-            <small style="color:var(--text-muted); font-size:0.75rem;">Soal otomatis diurutkan sesuai detik video</small>
-          </div>
-          <div id="kvListContainer" style="display:flex; flex-direction:column; gap:8px;">
-            <!-- Render items di sini -->
-          </div>
-        </div>
-      </div>
-
-      <div class="modal-footer" style="background:#f8fafc; border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; gap:10px;">
-        <button class="btn btn-outline" onclick="closeModal('modalKuisVideo')">Tutup</button>
-        <button class="btn btn-primary" onclick="saveKuisVideoModal()">
-          <i data-lucide="check" style="width:15px;height:15px;"></i> Simpan Kuis Video
-        </button>
       </div>
     </div>
   </div>
@@ -1374,14 +1588,15 @@
     }
 
     function showTab(tabName) {
-      ['dashboardSection', 'materiSection', 'nilaiSection', 'usersSection', 'settingsSection', 'tugasSection', 'rankingSection', 'rekapSection', 'analisisSection', 'guruSection', 'absenSection', 'rekapAbsenSection'].forEach(s => {
+      if (tabName === 'kuisVideo') tabName = 'kelolaSoal';
+      ['dashboardSection', 'materiSection', 'kelolaSoalSection', 'kuisVideoSection', 'nilaiSection', 'usersSection', 'settingsSection', 'tugasSection', 'rankingSection', 'rekapSection', 'analisisSection', 'guruSection', 'absenSection', 'rekapAbsenSection'].forEach(s => {
         let el = document.getElementById(s);
         if (el) el.style.display = 'none';
       });
       let targetSec = document.getElementById(tabName + 'Section');
       if (targetSec) targetSec.style.display = 'block';
       
-      ['tabDashboard', 'tabMateri', 'tabNilai', 'tabUsers', 'tabSettings', 'tabTugas', 'tabRanking', 'tabRekap', 'tabAnalisis', 'tabGuru', 'tabAbsen', 'tabRekapAbsen'].forEach(id => {
+      ['tabDashboard', 'tabMateri', 'tabKelolaSoal', 'tabKuisVideo', 'tabNilai', 'tabUsers', 'tabSettings', 'tabTugas', 'tabRanking', 'tabRekap', 'tabAnalisis', 'tabGuru', 'tabAbsen', 'tabRekapAbsen'].forEach(id => {
         let el = document.getElementById(id); if(el) el.classList.remove('active');
         let elD = document.getElementById(id+'D'); if(elD) elD.classList.remove('active');
       });
@@ -1390,6 +1605,14 @@
       if(document.getElementById(current)) document.getElementById(current).classList.add('active');
       if(document.getElementById(current+'D')) document.getElementById(current+'D').classList.add('active');
       
+      if (tabName === 'kelolaSoal') {
+        if (typeof populateStudioSoal === 'function') populateStudioSoal();
+      } else {
+        if (typeof studioPlayer !== 'undefined' && studioPlayer && typeof studioPlayer.pauseVideo === 'function') {
+          try { studioPlayer.pauseVideo(); } catch(e){}
+        }
+      }
+
       if (tabName === 'analisis') {
         populateFilterAnalisis();
       }
@@ -1818,6 +2041,11 @@
         let mapel = getVal(m, ['mapel', 'matapelajaran']) || "-";
         let tipe = getVal(m, ['tipe', 'tipeevaluasi', 'tipe_evaluasi']) || "Praktik";
         let kelas = getVal(m, ['kelas', 'tingkat']) || "SEMUA";
+        let linkVal = (getVal(m, ['link', 'linkmateri', 'url', 'file']) || "").toString().trim();
+        let isYt = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/i.test(linkVal);
+        let btnStudioSoal = isYt 
+          ? `<button class="btn-icon" style="color:#2563eb; border-color:#bfdbfe; background:#eff6ff;" onclick="openStudioSoal(${m.rowNumber})" title="Studio Kuis Video"><i data-lucide="video"></i></button>`
+          : `<button class="btn-icon" style="color:#7c3aed; border-color:#ddd6fe; background:#f5f3ff;" onclick="openStudioSoal(${m.rowNumber})" title="Kelola Bank Soal"><i data-lucide="help-circle"></i></button>`;
 
         // Hitung ID Modul Relatif per Tingkat
         let mTingkat = getTingkatSync(m);
@@ -1842,7 +2070,8 @@
           <td>
             <div class="action-group" style="justify-content:center">
               <button class="btn-icon" style="color:#0ea5e9; border-color:#bae6fd; background:#f0f9ff;" onclick="previewContentByRow(${m.rowNumber})" title="Preview Materi"><i data-lucide="play-circle"></i></button>
-              <button class="btn-icon" style="color:#f59e0b; border-color:#fef3c7; background:#fffbeb;" onclick="previewSoalByRow(${m.rowNumber})" title="Preview Soal"><i data-lucide="help-circle"></i></button>
+              ${btnStudioSoal}
+              <button class="btn-icon" style="color:#f59e0b; border-color:#fef3c7; background:#fffbeb;" onclick="previewSoalByRow(${m.rowNumber})" title="Preview Kuis"><i data-lucide="eye"></i></button>
               <button class="btn-icon" style="color:${isDraft ? '#10b981' : '#64748b'}; border-color:${isDraft ? '#a7f3d0' : '#e2e8f0'}; background:${isDraft ? '#d1fae5' : '#f1f5f9'};" onclick="toggleMateriStatus(${m.rowNumber})" title="${isDraft ? 'Tampilkan ke Siswa' : 'Sembunyikan'}"><i data-lucide="${isDraft ? 'eye' : 'eye-off'}"></i></button>
               <button class="btn-icon edit" onclick="editMateriByRow(${m.rowNumber})" title="Edit"><i data-lucide="edit-2"></i></button>
               <button class="btn-icon delete" onclick="deleteData('materi', ${m.rowNumber})" title="Hapus"><i data-lucide="trash-2"></i></button>
@@ -1933,11 +2162,6 @@
       document.getElementById('mDeskripsi').value = "";
       document.getElementById('mLink').value = "";
       
-      const kuisVideoInput = document.getElementById('mKuisVideo');
-      if (kuisVideoInput) kuisVideoInput.value = "";
-      const badgeCount = document.getElementById('kuisVideoCountBadge');
-      if (badgeCount) badgeCount.innerText = "0 Soal";
-
       const mapelInput = document.getElementById('mMapel');
       if (!IS_SUPER_ADMIN) {
         mapelInput.value = MY_MAPEL;
@@ -1947,13 +2171,13 @@
         mapelInput.disabled = false;
       }
 
-        let mKelasElem = document.getElementById('mKelas');
-        if (mKelasElem.tagName === 'SELECT') {
-            mKelasElem.selectedIndex = 0;
-        } else {
-            mKelasElem.value = "";
-        }
-        document.getElementById('mTipe').value = "Praktik";
+      let mKelasElem = document.getElementById('mKelas');
+      if (mKelasElem.tagName === 'SELECT') {
+          mKelasElem.selectedIndex = 0;
+      } else {
+          mKelasElem.value = "";
+      }
+      document.getElementById('mTipe').value = "Praktik";
       document.getElementById('mStatus').value = "Aktif";
       openModal('materiModal');
     }
@@ -1983,20 +2207,6 @@
       document.getElementById('mDeskripsi').value = getVal(m, ['deskripsi', 'keterangan']) || "";
       document.getElementById('mLink').value = getVal(m, ['link', 'url']) || "";
       
-      // Load data kuis_video jika tersedia
-      const rawKv = getVal(m, ['kuis_video', 'kuisvideo', 'interaktif']) || "";
-      const kuisVideoInput = document.getElementById('mKuisVideo');
-      if (kuisVideoInput) {
-        kuisVideoInput.value = typeof rawKv === 'string' ? rawKv : JSON.stringify(rawKv);
-      }
-      let kvCount = 0;
-      try {
-        let parsed = typeof rawKv === 'string' ? JSON.parse(rawKv) : rawKv;
-        if (Array.isArray(parsed)) kvCount = parsed.length;
-      } catch(e){}
-      const badgeCount = document.getElementById('kuisVideoCountBadge');
-      if (badgeCount) badgeCount.innerText = `${kvCount} Soal`;
-
       const mapelInput = document.getElementById('mMapel');
       mapelInput.value = getVal(m, ['mapel', 'matapelajaran']) || "";
       mapelInput.disabled = !IS_SUPER_ADMIN;
@@ -2009,58 +2219,628 @@
     }
 
     // ============================================
-    // LOGIKA KELOLA KUIS VIDEO INTERAKTIF (ADMIN)
+    // LOGIKA STUDIO & BANK SOAL TERPADU (ADMIN)
     // ============================================
-    let tempKuisVideoList = [];
+    let studioPlayer = null;
+    let studioCurrentMateri = null;
+    let studioKuisList = [];
+    let studioTimeTracker = null;
+    let studioFilterMode = 'all'; // 'all', 'video', 'regular'
+    let studioAllSoal = [];
+    let studioCurrentRegularQuestions = [];
 
-    function openModalKuisVideo() {
-      const raw = (document.getElementById('mKuisVideo') ? document.getElementById('mKuisVideo').value : "") || "[]";
-      try {
-        tempKuisVideoList = typeof raw === 'string' ? JSON.parse(raw) : raw;
-        if (!Array.isArray(tempKuisVideoList)) tempKuisVideoList = [];
-      } catch(e) {
-        tempKuisVideoList = [];
+    function filterStudioMaterials(mode) {
+      studioFilterMode = mode;
+      ['pillFilterAll', 'pillFilterVideo', 'pillFilterRegular'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('active');
+      });
+      const activeBtn = document.getElementById(mode === 'all' ? 'pillFilterAll' : (mode === 'video' ? 'pillFilterVideo' : 'pillFilterRegular'));
+      if (activeBtn) activeBtn.classList.add('active');
+      
+      populateStudioSoal(studioCurrentMateri ? studioCurrentMateri.rowNumber : null);
+    }
+
+    function populateStudioSoal(targetRowNum = null) {
+      const select = document.getElementById('studioSelectMateri');
+      const emptyState = document.getElementById('studioEmptyState');
+      const videoContainer = document.getElementById('studioVideoContainer');
+      const regularContainer = document.getElementById('studioRegularContainer');
+      const summaryBadge = document.getElementById('studioMateriSummaryBadge');
+      if (!select) return;
+
+      const allMaterials = Array.isArray(dataMateri) ? dataMateri : [];
+      let filtered = allMaterials.filter(m => {
+        let l = (getVal(m, ['link', 'url']) || "").toString().trim();
+        let isYt = l.includes('youtube.com') || l.includes('youtu.be');
+        if (studioFilterMode === 'video') return isYt;
+        if (studioFilterMode === 'regular') return !isYt;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        if (emptyState) emptyState.style.display = 'block';
+        if (videoContainer) videoContainer.style.display = 'none';
+        if (regularContainer) regularContainer.style.display = 'none';
+        if (summaryBadge) summaryBadge.innerHTML = '';
+        select.innerHTML = '<option value="">(Tidak ada materi yang sesuai filter)</option>';
+        return;
       }
 
-      resetKuisVideoForm();
-      renderKuisVideoList();
-      openModal('modalKuisVideo');
-      if (window.lucide) lucide.createIcons();
+      if (emptyState) emptyState.style.display = 'none';
+
+      select.innerHTML = filtered.map(m => {
+        let mid = getVal(m, ['idmateri', 'id_materi', 'materiid']) || m.rowNumber;
+        let judul = getVal(m, ['judul', 'materi', 'namamateri']) || "Materi";
+        let kelas = getVal(m, ['kelas', 'tingkat']) || "-";
+        let l = (getVal(m, ['link', 'url']) || "").toString().trim();
+        let isYt = l.includes('youtube.com') || l.includes('youtu.be');
+
+        if (isYt) {
+          let rawKv = getVal(m, ['kuis_video', 'kuisvideo', 'interaktif']) || "";
+          let count = 0;
+          try {
+            let parsed = typeof rawKv === 'string' ? JSON.parse(rawKv) : rawKv;
+            if (Array.isArray(parsed)) count = parsed.length;
+          } catch(e){}
+          return `<option value="${m.rowNumber}">[🎬 Video] [${mid}] ${judul} (Kelas: ${kelas}) - ${count} Kuis</option>`;
+        } else {
+          return `<option value="${m.rowNumber}">[📄 Modul] [${mid}] ${judul} (Kelas: ${kelas})</option>`;
+        }
+      }).join('');
+
+      let selectedRow = targetRowNum;
+      if (!selectedRow || !filtered.some(m => m.rowNumber == selectedRow)) {
+        selectedRow = filtered[0].rowNumber;
+      }
+      select.value = selectedRow;
+
+      loadStudioMateri(selectedRow);
+    }
+    // Backward compatibility
+    window.populateKuisVideoStudio = populateStudioSoal;
+
+    function onStudioMateriChange() {
+      const select = document.getElementById('studioSelectMateri');
+      if (!select || !select.value) return;
+      loadStudioMateri(select.value);
     }
 
-    function resetKuisVideoForm() {
-      document.getElementById('kvEditIdx').value = "-1";
-      document.getElementById('kvMenit').value = "0";
-      document.getElementById('kvDetik').value = "30";
-      document.getElementById('kvPertanyaan').value = "";
-      document.getElementById('kvOpt0').value = "";
-      document.getElementById('kvOpt1').value = "";
-      document.getElementById('kvOpt2').value = "";
-      document.getElementById('kvOpt3').value = "";
-      document.getElementById('kvKunci0').checked = true;
-      document.getElementById('kvPembahasan').value = "";
+    function loadStudioMateri(rowNum) {
+      const m = dataMateri.find(item => item.rowNumber == rowNum);
+      if (!m) return;
+      studioCurrentMateri = m;
 
-      document.getElementById('kvBtnAdd').innerHTML = '<i data-lucide="plus" style="width:14px;height:14px;"></i> Tambah ke Daftar';
-      document.getElementById('kvBtnBatalEdit').style.display = 'none';
-      if (window.lucide) lucide.createIcons();
+      let mid = getVal(m, ['idmateri', 'id_materi', 'materiid']) || m.rowNumber;
+      let mapel = getVal(m, ['mapel', 'matapelajaran']) || "-";
+      let kelas = getVal(m, ['kelas', 'tingkat']) || "-";
+      let tipe = getVal(m, ['tipe', 'tipeevaluasi', 'tipe_evaluasi']) || "Praktik";
+      let link = (getVal(m, ['link', 'url']) || "").toString().trim();
+
+      // Check if YouTube
+      let match = link.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|\&v=)([^#\&\?]*).*/);
+      let videoId = (match && match[2].length === 11) ? match[2] : null;
+
+      // Update Top Summary Badge
+      const summaryBadge = document.getElementById('studioMateriSummaryBadge');
+      if (summaryBadge) {
+        summaryBadge.innerHTML = `
+          <span style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:20px;">
+            ID: ${mid}
+          </span>
+          <span style="background:#f1f5f9; color:#475569; font-size:0.75rem; font-weight:600; padding:4px 10px; border-radius:20px;">
+            ${mapel} (${kelas})
+          </span>
+          <span style="background:${videoId ? '#fef2f2' : '#f5f3ff'}; color:${videoId ? '#dc2626' : '#7c3aed'}; border:1px solid ${videoId ? '#fecaca' : '#ddd6fe'}; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:20px;">
+            ${videoId ? '🎬 Video YouTube' : '📄 Modul/Teori'}
+          </span>
+        `;
+      }
+
+      const videoContainer = document.getElementById('studioVideoContainer');
+      const regularContainer = document.getElementById('studioRegularContainer');
+      const btnSaveVideo = document.getElementById('btnSaveStudioKuis');
+      const btnRefreshReg = document.getElementById('btnRefreshRegularSoal');
+
+      if (videoId) {
+        // MODE 1: MATERI VIDEO YOUTUBE
+        if (videoContainer) videoContainer.style.display = 'grid';
+        if (regularContainer) regularContainer.style.display = 'none';
+        if (btnSaveVideo) btnSaveVideo.style.display = 'inline-flex';
+        if (btnRefreshReg) btnRefreshReg.style.display = 'none';
+
+        // Parse list soal kuis_video
+        let rawKv = getVal(m, ['kuis_video', 'kuisvideo', 'interaktif']) || "";
+        try {
+          studioKuisList = typeof rawKv === 'string' ? JSON.parse(rawKv) : rawKv;
+          if (!Array.isArray(studioKuisList)) studioKuisList = [];
+        } catch(e) {
+          studioKuisList = [];
+        }
+
+        studioResetForm();
+        renderStudioQuestionsList();
+        initStudioPlayer(videoId);
+      } else {
+        // MODE 2: MATERI NON-VIDEO / REGULER
+        // Pause and destroy YT player if active
+        if (studioPlayer && typeof studioPlayer.pauseVideo === 'function') {
+          try { studioPlayer.pauseVideo(); } catch(e){}
+        }
+
+        if (videoContainer) videoContainer.style.display = 'none';
+        if (regularContainer) regularContainer.style.display = 'grid';
+        if (btnSaveVideo) btnSaveVideo.style.display = 'none';
+        if (btnRefreshReg) btnRefreshReg.style.display = 'inline-flex';
+
+        // Update info panel
+        let judul = getVal(m, ['judul', 'materi', 'namamateri']) || "Tanpa Judul";
+        const elJudul = document.getElementById('regularInfoJudul');
+        if (elJudul) elJudul.innerText = judul;
+        const elSub = document.getElementById('regularInfoSub');
+        if (elSub) elSub.innerText = `ID: ${mid} | Mapel: ${mapel} | Kelas: ${kelas}`;
+        const elTipe = document.getElementById('regularInfoTipe');
+        if (elTipe) elTipe.innerText = tipe;
+
+        // Check if there is an external link
+        const linkCont = document.getElementById('regularLinkContainer');
+        const linkBtn = document.getElementById('regularBtnOpenLink');
+        if (link && link.startsWith('http')) {
+          if (linkCont) linkCont.style.display = 'block';
+          if (linkBtn) linkBtn.href = link;
+        } else {
+          if (linkCont) linkCont.style.display = 'none';
+        }
+
+        resetRegularForm();
+        fetchAndRenderRegularSoal(m);
+      }
     }
 
-    function renderKuisVideoList() {
-      // Urutkan berdasarkan detik terkecil
-      tempKuisVideoList.sort((a, b) => (parseFloat(a.detik) || 0) - (parseFloat(b.detik) || 0));
-
-      const countEl = document.getElementById('kvTotalCount');
-      if (countEl) countEl.innerText = tempKuisVideoList.length;
-
-      const container = document.getElementById('kvListContainer');
+    // ============================================
+    // LOGIKA SOAL NON-VIDEO (SHEET 'soal')
+    // ============================================
+    async function fetchAndRenderRegularSoal(m, forceRefresh = false) {
+      const container = document.getElementById('regularQuestionsContainer');
+      const countEl = document.getElementById('regularQuestionCount');
+      const infoTotalEl = document.getElementById('regularInfoTotalSoal');
       if (!container) return;
 
-      if (tempKuisVideoList.length === 0) {
+      container.innerHTML = '<div style="text-align:center; padding:30px;"><i data-lucide="refresh-cw" class="spin-anim" style="width:24px; height:24px; color:#7c3aed; margin-bottom:8px;"></i><p style="font-size:0.85rem; color:var(--text-muted);">Memuat daftar soal dari database...</p></div>';
+      if (window.lucide) lucide.createIcons();
+
+      let targetMid = getVal(m, ['idmateri', 'id_materi', 'materiid']);
+      let myTingkat = getTingkatSync(m);
+      if (!targetMid) {
+        let materialsForThisTingkat = dataMateri.filter(item => getTingkatSync(item) === myTingkat || getTingkatSync(item) === "SEMUA");
+        targetMid = (materialsForThisTingkat.indexOf(m) + 1).toString();
+      }
+      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      const targetMidNorm = norm(targetMid);
+
+      try {
+        const res = await fetch(`${API_URL}?sheet=soal&_t=${new Date().getTime()}`);
+        const data = await res.json();
+        studioAllSoal = Array.isArray(data) ? data : [];
+
+        studioCurrentRegularQuestions = studioAllSoal.filter(q => {
+          const qMidRaw = getVal(q, ['id_materi', 'idmateri', 'materiid', 'materi_id']);
+          const qMid = qMidRaw ? qMidRaw.toString().trim() : "";
+          const qTingkat = (getVal(q, ['tingkat', 'kelas', 'tingkatan']) || "").toString().trim().toUpperCase();
+
+          let matchId = (norm(qMid) === targetMidNorm);
+          let matchTingkat = (qTingkat === "" || qTingkat === "SEMUA" || qTingkat === myTingkat);
+          return matchId && matchTingkat;
+        });
+
+        if (countEl) countEl.innerText = studioCurrentRegularQuestions.length;
+        if (infoTotalEl) infoTotalEl.innerText = `${studioCurrentRegularQuestions.length} Soal Tersimpan`;
+
+        renderRegularQuestionsList(studioCurrentRegularQuestions);
+      } catch(e) {
+        console.error(e);
+        container.innerHTML = '<div style="text-align:center; padding:30px; color:#ef4444;"><i data-lucide="alert-triangle" style="width:24px;height:24px;margin-bottom:8px;"></i><p style="font-size:0.85rem;">Gagal memuat soal dari server. Periksa koneksi internet.</p></div>';
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+
+    function renderRegularQuestionsList(questions) {
+      const container = document.getElementById('regularQuestionsContainer');
+      if (!container) return;
+
+      if (!questions || questions.length === 0) {
         container.innerHTML = `
-          <div style="text-align:center; padding:24px; color:var(--text-muted); background:#f8fafc; border-radius:10px; border:1px dashed var(--border-color); font-size:0.85rem;">
-            <i data-lucide="help-circle" style="width:24px;height:24px;margin-bottom:6px;opacity:0.5;"></i>
-            <div>Belum ada pertanyaan kuis yang ditambahkan.</div>
-            <small style="font-size:0.75rem;">Gunakan form di atas untuk menambahkan pertanyaan pemahaman di menit tertentu.</small>
+          <div style="text-align:center; padding:35px 20px; color:var(--text-muted); background:#f8fafc; border:1px dashed var(--border-color); border-radius:12px;">
+            <i data-lucide="help-circle" style="width:36px; height:36px; color:#cbd5e1; margin-bottom:8px;"></i>
+            <h4 style="margin:0 0 4px 0; font-size:0.95rem; color:var(--text-main);">Belum Ada Butir Soal</h4>
+            <p style="margin:0; font-size:0.8rem;">Gunakan form di atas untuk menambahkan pertanyaan pilihan ganda pada materi ini.</p>
+          </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = questions.map((q, idx) => {
+        const sText = getVal(q, ['soal', 'pertanyaan', 'text', 'isisoal']) || "Tanpa teks soal";
+        const optA = getVal(q, ['a', 'pilihana', 'opsia', 'jawaban_a']) || "-";
+        const optB = getVal(q, ['b', 'pilihanb', 'opsib', 'jawaban_b']) || "-";
+        const optC = getVal(q, ['c', 'pilihanc', 'opsic', 'jawaban_c']) || "-";
+        const optD = getVal(q, ['d', 'pilihand', 'opsid', 'jawaban_d']) || "-";
+        const optE = getVal(q, ['e', 'pilihane', 'opsie', 'jawaban_e']) || "-";
+        const kunci = (getVal(q, ['kunci', 'jawaban', 'kuncijawaban', 'kunci_jawaban']) || "A").toString().toUpperCase().trim();
+        const pembahasan = getVal(q, ['pembahasan', 'penjelasan']) || "";
+        let img = getVal(q, ['gambar', 'image', 'url_gambar', 'urlgambar']);
+        if (img && typeof img === 'string' && (img.includes("drive.google.com") || img.includes("docs.google.com"))) {
+          let fMatch = img.match(/[-\w]{25,}/);
+          if (fMatch) img = `https://lh3.googleusercontent.com/d/${fMatch[0]}`;
+        }
+
+        return `
+          <div style="background:white; border:1px solid var(--border-color); border-radius:10px; padding:14px; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:10px;">
+              <div style="font-weight:700; font-size:0.88rem; color:var(--text-main); line-height:1.4;">
+                <span style="color:#7c3aed; margin-right:4px;">#${idx + 1}.</span> ${sText}
+              </div>
+              <div style="display:flex; gap:4px; flex-shrink:0;">
+                <button type="button" class="btn btn-sm btn-outline" onclick="editRegularSoal(${q.rowNumber})" title="Edit Soal" style="padding:4px 8px; font-size:0.75rem;">
+                  <i data-lucide="edit-2" style="width:13px;height:13px;"></i> Edit
+                </button>
+                <button type="button" class="btn btn-sm btn-outline" onclick="deleteRegularSoal(${q.rowNumber})" title="Hapus Soal" style="padding:4px 8px; font-size:0.75rem; color:#ef4444; border-color:#fca5a5;">
+                  <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                </button>
+              </div>
+            </div>
+
+            ${img && img.toString().startsWith("http") ? `
+              <div style="margin-bottom:10px;">
+                <img src="${img}" style="max-height:160px; max-width:100%; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer;" onclick="window.open('${img}')" title="Klik untuk memperbesar">
+              </div>
+            ` : ''}
+
+            <!-- Pilihan Ganda Grid -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:0.78rem; margin-bottom:8px;">
+              <div style="padding:6px 10px; border-radius:6px; background:${kunci==='A'?'#f0fdf4':'#f8fafc'}; border:1px solid ${kunci==='A'?'#bbf7d0':'#e2e8f0'};">
+                <b>A.</b> ${optA} ${kunci==='A' ? ' <span style="color:#16a34a; font-weight:700;">✓ Kunci</span>' : ''}
+              </div>
+              <div style="padding:6px 10px; border-radius:6px; background:${kunci==='B'?'#f0fdf4':'#f8fafc'}; border:1px solid ${kunci==='B'?'#bbf7d0':'#e2e8f0'};">
+                <b>B.</b> ${optB} ${kunci==='B' ? ' <span style="color:#16a34a; font-weight:700;">✓ Kunci</span>' : ''}
+              </div>
+              <div style="padding:6px 10px; border-radius:6px; background:${kunci==='C'?'#f0fdf4':'#f8fafc'}; border:1px solid ${kunci==='C'?'#bbf7d0':'#e2e8f0'};">
+                <b>C.</b> ${optC} ${kunci==='C' ? ' <span style="color:#16a34a; font-weight:700;">✓ Kunci</span>' : ''}
+              </div>
+              <div style="padding:6px 10px; border-radius:6px; background:${kunci==='D'?'#f0fdf4':'#f8fafc'}; border:1px solid ${kunci==='D'?'#bbf7d0':'#e2e8f0'};">
+                <b>D.</b> ${optD} ${kunci==='D' ? ' <span style="color:#16a34a; font-weight:700;">✓ Kunci</span>' : ''}
+              </div>
+              ${optE !== "-" && optE !== "" ? `
+                <div style="padding:6px 10px; border-radius:6px; background:${kunci==='E'?'#f0fdf4':'#f8fafc'}; border:1px solid ${kunci==='E'?'#bbf7d0':'#e2e8f0'}; grid-column:span 2;">
+                  <b>E.</b> ${optE} ${kunci==='E' ? ' <span style="color:#16a34a; font-weight:700;">✓ Kunci</span>' : ''}
+                </div>
+              ` : ''}
+            </div>
+
+            ${pembahasan ? `
+              <div style="background:#f8fafc; border-left:3px solid #7c3aed; padding:6px 10px; font-size:0.75rem; color:#475569; border-radius:0 6px 6px 0;">
+                💡 <b>Pembahasan:</b> ${pembahasan}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function saveRegularSoal() {
+      if (!studioCurrentMateri) return showToastAdmin("Pilih materi terlebih dahulu!", "warning");
+
+      const editRowNum = document.getElementById('regularEditRowNumber').value;
+      const soalText = (document.getElementById('regularPertanyaan').value || "").trim();
+      const optA = (document.getElementById('regularOptA').value || "").trim();
+      const optB = (document.getElementById('regularOptB').value || "").trim();
+      const optC = (document.getElementById('regularOptC').value || "").trim();
+      const optD = (document.getElementById('regularOptD').value || "").trim();
+      const optE = (document.getElementById('regularOptE').value || "").trim();
+      const gambar = (document.getElementById('regularGambar').value || "").trim();
+      const pembahasan = (document.getElementById('regularPembahasan').value || "").trim();
+
+      const radioChecked = document.querySelector('input[name="regularKunciRadio"]:checked');
+      const kunci = radioChecked ? radioChecked.value : "A";
+
+      if (!soalText) return showToastAdmin("Teks pertanyaan soal wajib diisi!", "warning");
+      if (!optA || !optB) return showToastAdmin("Minimal pilihan A dan B wajib diisi!", "warning");
+
+      let targetMid = getVal(studioCurrentMateri, ['idmateri', 'id_materi', 'materiid']);
+      let myTingkat = getTingkatSync(studioCurrentMateri);
+      if (!targetMid) {
+        let materialsForThisTingkat = dataMateri.filter(item => getTingkatSync(item) === myTingkat || getTingkatSync(item) === "SEMUA");
+        targetMid = (materialsForThisTingkat.indexOf(studioCurrentMateri) + 1).toString();
+      }
+      targetMid = (targetMid || "").toString().trim();
+      let targetKelas = getVal(studioCurrentMateri, ['kelas', 'tingkat']) || myTingkat;
+
+      let payload = {
+        "id_materi": targetMid,
+        "idmateri": targetMid,
+        "materiid": targetMid,
+        "tingkat": myTingkat,
+        "kelas": targetKelas,
+        "soal": soalText,
+        "pertanyaan": soalText,
+        "a": optA,
+        "b": optB,
+        "c": optC,
+        "d": optD,
+        "e": optE,
+        "kunci": kunci,
+        "jawaban": kunci,
+        "pembahasan": pembahasan,
+        "gambar": gambar
+      };
+
+      showToastAdmin("Menyimpan soal ke spreadsheet...", "info");
+
+      try {
+        let reqPayload = {
+          action: "saveData",
+          sheet: "soal",
+          data: JSON.stringify(payload)
+        };
+        if (editRowNum && parseInt(editRowNum) > 1) {
+          reqPayload.rowNumber = parseInt(editRowNum);
+        }
+
+        await postData(reqPayload);
+        showToastAdmin(editRowNum ? "Butir soal berhasil diperbarui!" : "Butir soal berhasil ditambahkan ke sheet!", "success");
+        resetRegularForm();
+        fetchAndRenderRegularSoal(studioCurrentMateri, true);
+      } catch(e) {
+        console.error(e);
+        showToastAdmin("Gagal menyimpan butir soal.", "error");
+      }
+    }
+
+    function editRegularSoal(rowNum) {
+      const q = studioCurrentRegularQuestions.find(item => item.rowNumber == rowNum) || studioAllSoal.find(item => item.rowNumber == rowNum);
+      if (!q) return;
+
+      document.getElementById('regularEditRowNumber').value = rowNum;
+      document.getElementById('regularPertanyaan').value = getVal(q, ['soal', 'pertanyaan', 'text', 'isisoal']) || "";
+      document.getElementById('regularOptA').value = getVal(q, ['a', 'pilihana', 'opsia', 'jawaban_a']) || "";
+      document.getElementById('regularOptB').value = getVal(q, ['b', 'pilihanb', 'opsib', 'jawaban_b']) || "";
+      document.getElementById('regularOptC').value = getVal(q, ['c', 'pilihanc', 'opsic', 'jawaban_c']) || "";
+      document.getElementById('regularOptD').value = getVal(q, ['d', 'pilihand', 'opsid', 'jawaban_d']) || "";
+      document.getElementById('regularOptE').value = getVal(q, ['e', 'pilihane', 'opsie', 'jawaban_e']) || "";
+      
+      const imgVal = getVal(q, ['gambar', 'image', 'url_gambar', 'urlgambar']) || "";
+      document.getElementById('regularGambar').value = imgVal;
+      previewRegularImageInput(imgVal);
+
+      document.getElementById('regularPembahasan').value = getVal(q, ['pembahasan', 'penjelasan']) || "";
+
+      const kunci = (getVal(q, ['kunci', 'jawaban', 'kuncijawaban', 'kunci_jawaban']) || "A").toString().toUpperCase().trim();
+      const radio = document.querySelector(`input[name="regularKunciRadio"][value="${kunci}"]`);
+      if (radio) radio.checked = true;
+
+      document.getElementById('regularFormTitle').innerText = `Edit Butir Soal (Baris ${rowNum})`;
+      document.getElementById('regularBtnSave').innerHTML = '<i data-lucide="check" style="width:14px;height:14px;"></i> Perbarui Soal di Sheet';
+      document.getElementById('regularBtnCancel').style.display = 'inline-flex';
+      if (window.lucide) lucide.createIcons();
+
+      document.getElementById('regularQuestionCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function deleteRegularSoal(rowNum) {
+      if (!confirm("Hapus butir soal ini secara permanen dari spreadsheet?")) return;
+      try {
+        await deleteData('soal', rowNum);
+        showToastAdmin("Butir soal berhasil dihapus.", "success");
+        fetchAndRenderRegularSoal(studioCurrentMateri, true);
+      } catch(e) {
+        console.error(e);
+        showToastAdmin("Gagal menghapus butir soal.", "error");
+      }
+    }
+
+    function resetRegularForm() {
+      document.getElementById('regularEditRowNumber').value = "";
+      document.getElementById('regularPertanyaan').value = "";
+      document.getElementById('regularOptA').value = "";
+      document.getElementById('regularOptB').value = "";
+      document.getElementById('regularOptC').value = "";
+      document.getElementById('regularOptD').value = "";
+      document.getElementById('regularOptE').value = "";
+      document.getElementById('regularGambar').value = "";
+      document.getElementById('regularPembahasan').value = "";
+      
+      const radioA = document.getElementById('regKunciA');
+      if (radioA) radioA.checked = true;
+
+      document.getElementById('regularFormTitle').innerText = "Form Tambah Butir Soal";
+      document.getElementById('regularBtnSave').innerHTML = '<i data-lucide="plus" style="width:14px;height:14px;"></i> Tambah Soal ke Sheet';
+      document.getElementById('regularBtnCancel').style.display = 'none';
+      
+      const thumb = document.getElementById('regularImagePreviewThumb');
+      if (thumb) thumb.style.display = 'none';
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function previewRegularImageInput(url) {
+      const thumbCont = document.getElementById('regularImagePreviewThumb');
+      const thumbImg = document.getElementById('regularThumbImg');
+      if (!thumbCont || !thumbImg) return;
+
+      let cleanUrl = (url || "").toString().trim();
+      if (!cleanUrl) {
+        thumbCont.style.display = 'none';
+        return;
+      }
+
+      if (cleanUrl.includes("drive.google.com") || cleanUrl.includes("docs.google.com")) {
+        let fMatch = cleanUrl.match(/[-\w]{25,}/);
+        if (fMatch) cleanUrl = `https://lh3.googleusercontent.com/d/${fMatch[0]}`;
+      }
+
+      if (cleanUrl.startsWith("http")) {
+        thumbImg.src = cleanUrl;
+        thumbCont.style.display = 'block';
+      } else {
+        thumbCont.style.display = 'none';
+      }
+    }
+
+    function refreshRegularSoalList() {
+      if (studioCurrentMateri) {
+        fetchAndRenderRegularSoal(studioCurrentMateri, true);
+      }
+    }
+
+    function previewSoalRegularStudio() {
+      if (studioCurrentMateri) {
+        previewSoalByRow(studioCurrentMateri.rowNumber);
+      }
+    }
+
+    function initStudioPlayer(videoId) {
+      if (studioTimeTracker) {
+        clearInterval(studioTimeTracker);
+        studioTimeTracker = null;
+      }
+
+      if (studioPlayer && typeof studioPlayer.destroy === 'function') {
+        try { studioPlayer.destroy(); } catch(e){}
+      }
+
+      function createPlayer() {
+        if (!window.YT || !window.YT.Player) {
+          setTimeout(createPlayer, 150);
+          return;
+        }
+
+        studioPlayer = new YT.Player('studioYtPlayer', {
+          videoId: videoId,
+          playerVars: {
+            'playsinline': 1,
+            'rel': 0,
+            'modestbranding': 1,
+            'enablejsapi': 1
+          },
+          events: {
+            'onReady': onStudioPlayerReady,
+            'onStateChange': onStudioPlayerStateChange
+          }
+        });
+      }
+
+      createPlayer();
+    }
+
+    function onStudioPlayerReady() {
+      startStudioTimeTracker();
+    }
+
+    function onStudioPlayerStateChange(event) {
+      const playIcon = document.getElementById('studioPlayIcon');
+      if (!playIcon) return;
+      if (event.data === YT.PlayerState.PLAYING) {
+        playIcon.setAttribute('data-lucide', 'pause');
+        if (window.lucide) lucide.createIcons();
+      } else {
+        playIcon.setAttribute('data-lucide', 'play');
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+
+    function startStudioTimeTracker() {
+      if (studioTimeTracker) clearInterval(studioTimeTracker);
+      studioTimeTracker = setInterval(() => {
+        if (!studioPlayer || typeof studioPlayer.getCurrentTime !== 'function') return;
+        let cur = studioPlayer.getCurrentTime() || 0;
+        let dur = studioPlayer.getDuration() || 0;
+        const disp = document.getElementById('studioTimeDisplay');
+        if (disp) {
+          disp.innerText = `${formatStudioDetik(cur)} / ${formatStudioDetik(dur)}`;
+        }
+      }, 350);
+    }
+
+    function formatStudioDetik(totalSec) {
+      let m = Math.floor(totalSec / 60);
+      let s = Math.floor(totalSec % 60);
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function studioTogglePlay() {
+      if (!studioPlayer || typeof studioPlayer.getPlayerState !== 'function') return;
+      let state = studioPlayer.getPlayerState();
+      if (state === YT.PlayerState.PLAYING) {
+        studioPlayer.pauseVideo();
+      } else {
+        studioPlayer.playVideo();
+      }
+    }
+
+    function studioSeekRelative(seconds) {
+      if (!studioPlayer || typeof studioPlayer.getCurrentTime !== 'function') return;
+      let target = Math.max(0, studioPlayer.getCurrentTime() + seconds);
+      studioPlayer.seekTo(target, true);
+    }
+
+    function studioSeekTo(seconds) {
+      if (!studioPlayer || typeof studioPlayer.seekTo !== 'function') return;
+      studioPlayer.seekTo(seconds, true);
+      studioPlayer.pauseVideo();
+      showToastAdmin(`Memutar video ke detik ${formatStudioDetik(seconds)}`, "info");
+    }
+
+    function studioCaptureCurrentTime() {
+      if (!studioPlayer || typeof studioPlayer.getCurrentTime !== 'function') return;
+      let cur = studioPlayer.getCurrentTime() || 0;
+      studioPlayer.pauseVideo();
+
+      let m = Math.floor(cur / 60);
+      let s = Math.floor(cur % 60);
+
+      document.getElementById('studioMenit').value = m;
+      document.getElementById('studioDetik').value = s;
+      document.getElementById('studioPertanyaan').focus();
+
+      showToastAdmin(`⏱ Waktu video diambil: Menit ${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} (${Math.round(cur)}s)`, "info");
+    }
+
+    function studioResetForm() {
+      document.getElementById('studioEditIdx').value = "-1";
+      document.getElementById('studioMenit').value = "0";
+      document.getElementById('studioDetik').value = "30";
+      document.getElementById('studioPertanyaan').value = "";
+      document.getElementById('studioOpt0').value = "";
+      document.getElementById('studioOpt1').value = "";
+      document.getElementById('studioOpt2').value = "";
+      document.getElementById('studioOpt3').value = "";
+      document.getElementById('studioKunci0').checked = true;
+      document.getElementById('studioPembahasan').value = "";
+
+      document.getElementById('studioFormTitle').innerText = "Form Input Pertanyaan";
+      document.getElementById('studioBtnSaveQuestion').innerHTML = '<i data-lucide="plus" style="width:14px;height:14px;"></i> Tambah ke Daftar';
+      document.getElementById('studioBtnBatalEdit').style.display = 'none';
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function renderStudioQuestionsList() {
+      studioKuisList.sort((a, b) => (parseFloat(a.detik) || 0) - (parseFloat(b.detik) || 0));
+
+      const countEl = document.getElementById('studioQuestionCount');
+      if (countEl) countEl.innerText = studioKuisList.length;
+
+      const container = document.getElementById('studioQuestionsContainer');
+      if (!container) return;
+
+      if (studioKuisList.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:24px 12px; color:var(--text-muted); background:#f8fafc; border-radius:10px; border:1px dashed var(--border-color); font-size:0.82rem;">
+            <i data-lucide="help-circle" style="width:24px;height:24px;margin-bottom:6px;opacity:0.4;"></i>
+            <div>Belum ada pertanyaan pada video ini.</div>
+            <small style="font-size:0.75rem; color:#94a3b8;">Gunakan form di atas atau tombol <b>"Ambil Detik Ini"</b> untuk menambah soal.</small>
           </div>
         `;
         if (window.lucide) lucide.createIcons();
@@ -2068,41 +2848,38 @@
       }
 
       const letters = ['A', 'B', 'C', 'D'];
-      container.innerHTML = tempKuisVideoList.map((item, idx) => {
+      container.innerHTML = studioKuisList.map((item, idx) => {
         const totalSec = parseFloat(item.detik) || 0;
-        const m = Math.floor(totalSec / 60);
-        const s = Math.floor(totalSec % 60);
-        const timeFmt = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-        
+        const timeFmt = formatStudioDetik(totalSec);
         let keyIdx = parseInt(item.jawaban);
         if (isNaN(keyIdx)) keyIdx = 0;
         const keyLetter = letters[keyIdx] || 'A';
         const optText = (item.pilihan && item.pilihan[keyIdx]) ? item.pilihan[keyIdx] : "";
 
         return `
-          <div style="background:white; border:1px solid var(--border-color); border-radius:10px; padding:12px 14px; display:flex; justify-content:space-between; align-items:flex-start; gap:12px; transition:0.2s;">
+          <div style="background:white; border:1px solid var(--border-color); border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:flex-start; gap:10px; transition:0.2s;">
             <div style="flex:1;">
-              <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                <span style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:700; font-size:0.75rem; padding:2px 8px; border-radius:20px; display:inline-flex; align-items:center; gap:4px;">
-                  <i data-lucide="clock" style="width:12px;height:12px;"></i> ${timeFmt} (${totalSec}s)
-                </span>
-                <span style="font-weight:700; font-size:0.8rem; color:#166534; background:#f0fdf4; border:1px solid #bbf7d0; padding:2px 8px; border-radius:20px;">
+              <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px; flex-wrap:wrap;">
+                <button type="button" onclick="studioSeekTo(${totalSec})" title="Klik untuk putar di menit ini" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:700; font-size:0.75rem; padding:2px 8px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; cursor:pointer;">
+                  <i data-lucide="play-circle" style="width:12px;height:12px;"></i> ${timeFmt}
+                </button>
+                <span style="font-weight:700; font-size:0.75rem; color:#166534; background:#f0fdf4; border:1px solid #bbf7d0; padding:2px 8px; border-radius:20px;">
                   Kunci: ${keyLetter}
                 </span>
               </div>
-              <div style="font-weight:600; font-size:0.88rem; color:var(--text-main); line-height:1.4;">
+              <div style="font-weight:600; font-size:0.85rem; color:var(--text-main); line-height:1.35;">
                 ${item.soal || item.pertanyaan}
               </div>
-              <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">
+              <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
                 <b>Kunci (${keyLetter}):</b> ${optText}
               </div>
-              ${item.pembahasan ? `<div style="font-size:0.75rem; color:#475569; font-style:italic; margin-top:2px;">💡 ${item.pembahasan}</div>` : ''}
+              ${item.pembahasan ? `<div style="font-size:0.72rem; color:#475569; font-style:italic; margin-top:2px;">💡 ${item.pembahasan}</div>` : ''}
             </div>
-            <div style="display:flex; gap:6px; flex-shrink:0;">
-              <button type="button" class="btn btn-sm btn-outline" onclick="editKuisVideoItem(${idx})" title="Edit Soal" style="padding:5px 8px; font-size:0.75rem;">
+            <div style="display:flex; gap:4px; flex-shrink:0;">
+              <button type="button" class="btn btn-sm btn-outline" onclick="studioEditQuestion(${idx})" title="Edit Soal" style="padding:4px 7px; font-size:0.75rem;">
                 <i data-lucide="edit-2" style="width:13px;height:13px;"></i>
               </button>
-              <button type="button" class="btn btn-sm btn-outline" onclick="deleteKuisVideoItem(${idx})" title="Hapus Soal" style="padding:5px 8px; font-size:0.75rem; color:#ef4444; border-color:#fca5a5;">
+              <button type="button" class="btn btn-sm btn-outline" onclick="studioDeleteQuestion(${idx})" title="Hapus Soal" style="padding:4px 7px; font-size:0.75rem; color:#ef4444; border-color:#fca5a5;">
                 <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
               </button>
             </div>
@@ -2113,20 +2890,20 @@
       if (window.lucide) lucide.createIcons();
     }
 
-    function addOrUpdateKuisVideoItem() {
-      const editIdx = parseInt(document.getElementById('kvEditIdx').value);
-      const mVal = parseInt(document.getElementById('kvMenit').value) || 0;
-      const sVal = parseInt(document.getElementById('kvDetik').value) || 0;
+    function studioAddOrUpdateQuestion() {
+      const editIdx = parseInt(document.getElementById('studioEditIdx').value);
+      const mVal = parseInt(document.getElementById('studioMenit').value) || 0;
+      const sVal = parseInt(document.getElementById('studioDetik').value) || 0;
       const totalDetik = (mVal * 60) + sVal;
 
-      const pertanyaan = (document.getElementById('kvPertanyaan').value || "").trim();
-      const opt0 = (document.getElementById('kvOpt0').value || "").trim();
-      const opt1 = (document.getElementById('kvOpt1').value || "").trim();
-      const opt2 = (document.getElementById('kvOpt2').value || "").trim();
-      const opt3 = (document.getElementById('kvOpt3').value || "").trim();
-      const pembahasan = (document.getElementById('kvPembahasan').value || "").trim();
+      const pertanyaan = (document.getElementById('studioPertanyaan').value || "").trim();
+      const opt0 = (document.getElementById('studioOpt0').value || "").trim();
+      const opt1 = (document.getElementById('studioOpt1').value || "").trim();
+      const opt2 = (document.getElementById('studioOpt2').value || "").trim();
+      const opt3 = (document.getElementById('studioOpt3').value || "").trim();
+      const pembahasan = (document.getElementById('studioPembahasan').value || "").trim();
 
-      const radioChecked = document.querySelector('input[name="kvKunciRadio"]:checked');
+      const radioChecked = document.querySelector('input[name="studioKunciRadio"]:checked');
       const kunciJawaban = radioChecked ? parseInt(radioChecked.value) : 0;
 
       if (!pertanyaan) return showToastAdmin("Pertanyaan kuis wajib diisi!", "warning");
@@ -2148,73 +2925,102 @@
         pembahasan: pembahasan
       };
 
-      if (editIdx >= 0 && editIdx < tempKuisVideoList.length) {
-        tempKuisVideoList[editIdx] = newItem;
-        showToastAdmin("Pertanyaan berhasil diperbarui!", "success");
+      if (editIdx >= 0 && editIdx < studioKuisList.length) {
+        studioKuisList[editIdx] = newItem;
+        showToastAdmin("Pertanyaan berhasil diperbarui di daftar!", "success");
       } else {
-        tempKuisVideoList.push(newItem);
+        studioKuisList.push(newItem);
         showToastAdmin("Pertanyaan berhasil ditambahkan ke daftar!", "success");
       }
 
-      resetKuisVideoForm();
-      renderKuisVideoList();
+      studioResetForm();
+      renderStudioQuestionsList();
     }
 
-    function editKuisVideoItem(idx) {
-      if (idx < 0 || idx >= tempKuisVideoList.length) return;
-      const item = tempKuisVideoList[idx];
+    function studioEditQuestion(idx) {
+      if (idx < 0 || idx >= studioKuisList.length) return;
+      const item = studioKuisList[idx];
 
-      document.getElementById('kvEditIdx').value = idx;
+      document.getElementById('studioEditIdx').value = idx;
       const totalSec = parseFloat(item.detik) || 0;
-      document.getElementById('kvMenit').value = Math.floor(totalSec / 60);
-      document.getElementById('kvDetik').value = Math.floor(totalSec % 60);
+      document.getElementById('studioMenit').value = Math.floor(totalSec / 60);
+      document.getElementById('studioDetik').value = Math.floor(totalSec % 60);
 
-      document.getElementById('kvPertanyaan').value = item.soal || item.pertanyaan || "";
+      document.getElementById('studioPertanyaan').value = item.soal || item.pertanyaan || "";
 
       const choices = item.pilihan || item.opsi || [];
-      document.getElementById('kvOpt0').value = choices[0] || "";
-      document.getElementById('kvOpt1').value = choices[1] || "";
-      document.getElementById('kvOpt2').value = choices[2] || "";
-      document.getElementById('kvOpt3').value = choices[3] || "";
+      document.getElementById('studioOpt0').value = choices[0] || "";
+      document.getElementById('studioOpt1').value = choices[1] || "";
+      document.getElementById('studioOpt2').value = choices[2] || "";
+      document.getElementById('studioOpt3').value = choices[3] || "";
 
-      const radio = document.getElementById(`kvKunci${item.jawaban || 0}`);
+      const radio = document.getElementById(`studioKunci${item.jawaban || 0}`);
       if (radio) radio.checked = true;
 
-      document.getElementById('kvPembahasan').value = item.pembahasan || "";
+      document.getElementById('studioPembahasan').value = item.pembahasan || "";
 
-      document.getElementById('kvBtnAdd').innerHTML = '<i data-lucide="check" style="width:14px;height:14px;"></i> Perbarui Soal';
-      document.getElementById('kvBtnBatalEdit').style.display = 'inline-flex';
+      document.getElementById('studioFormTitle').innerText = `Edit Pertanyaan (Menit ${formatStudioDetik(totalSec)})`;
+      document.getElementById('studioBtnSaveQuestion').innerHTML = '<i data-lucide="check" style="width:14px;height:14px;"></i> Perbarui Soal';
+      document.getElementById('studioBtnBatalEdit').style.display = 'inline-flex';
       if (window.lucide) lucide.createIcons();
 
-      // Scroll form ke view
-      document.getElementById('modalKuisVideo').querySelector('.modal-body').scrollTo({ top: 0, behavior: 'smooth' });
+      // Seek video to timestamp
+      studioSeekTo(totalSec);
     }
 
-    function cancelEditKuisVideo() {
-      resetKuisVideoForm();
+    function studioCancelEdit() {
+      studioResetForm();
     }
 
-    function deleteKuisVideoItem(idx) {
-      if (confirm("Hapus pertanyaan pemahaman ini?")) {
-        tempKuisVideoList.splice(idx, 1);
-        resetKuisVideoForm();
-        renderKuisVideoList();
+    function studioDeleteQuestion(idx) {
+      if (confirm("Hapus pertanyaan pemahaman ini dari video?")) {
+        studioKuisList.splice(idx, 1);
+        studioResetForm();
+        renderStudioQuestionsList();
         showToastAdmin("Pertanyaan dihapus dari daftar.", "info");
       }
     }
 
-    function saveKuisVideoModal() {
-      tempKuisVideoList.sort((a, b) => (parseFloat(a.detik) || 0) - (parseFloat(b.detik) || 0));
-      const jsonStr = tempKuisVideoList.length > 0 ? JSON.stringify(tempKuisVideoList) : "";
-      const kuisVideoInput = document.getElementById('mKuisVideo');
-      if (kuisVideoInput) kuisVideoInput.value = jsonStr;
+    async function saveStudioKuisVideo() {
+      if (!studioCurrentMateri) return showToastAdmin("Pilih materi video terlebih dahulu!", "warning");
 
-      const badge = document.getElementById('kuisVideoCountBadge');
-      if (badge) badge.innerText = `${tempKuisVideoList.length} Soal`;
+      studioKuisList.sort((a, b) => (parseFloat(a.detik) || 0) - (parseFloat(b.detik) || 0));
+      const jsonStr = studioKuisList.length > 0 ? JSON.stringify(studioKuisList) : "";
 
-      closeModal('modalKuisVideo');
-      showToastAdmin(`Kuis Video disimpan (${tempKuisVideoList.length} pertanyaan)! Jangan lupa klik Simpan pada form materi.`, "success");
+      // Update objek materi lokal
+      studioCurrentMateri.kuis_video = jsonStr;
+      studioCurrentMateri.kuisvideo = jsonStr;
+      studioCurrentMateri.interaktif = jsonStr;
+
+      try {
+        localStorage.setItem("LMS_CACHE_materi", JSON.stringify(dataMateri));
+      } catch(e){}
+
+      showToastAdmin("Menyimpan kuis video ke database...", "info");
+
+      try {
+        await postData({
+          action: "saveData",
+          sheet: "materi",
+          rowNumber: studioCurrentMateri.rowNumber,
+          data: JSON.stringify(studioCurrentMateri)
+        });
+
+        showToastAdmin(`Kuis Video berhasil disimpan ke database (${studioKuisList.length} soal)!`, "success");
+        renderTableMateri(); // refresh daftar materi jika ada perubahan
+        populateKuisVideoStudio(studioCurrentMateri.rowNumber); // refresh label dropdown
+      } catch(e) {
+        console.error(e);
+        showToastAdmin("Gagal menyimpan ke server, periksa koneksi internet.", "error");
+      }
     }
+
+    function openStudioSoal(rowNum) {
+      showTab('kelolaSoal');
+      populateStudioSoal(rowNum);
+    }
+    // Backward compatibility alias
+    window.openStudioKuisVideo = openStudioSoal;
 
     // Helper preview by row
     function previewContentByRow(rowNum) {
@@ -2362,7 +3168,12 @@
         );
       }
 
-      let kuisVideoVal = document.getElementById('mKuisVideo') ? document.getElementById('mKuisVideo').value : "";
+      // Pertahankan kuis_video yang ada jika materi ini sudah punya kuis sebelumnya
+      let existingM = dataMateri.find(m => (rowNum && m.rowNumber == rowNum) || (oldId && norm(getVal(m, ['idmateri', 'id_materi'])) === norm(oldId)));
+      let kuisVideoVal = existingM ? (getVal(existingM, ['kuis_video', 'kuisvideo', 'interaktif']) || "") : "";
+      if (typeof kuisVideoVal === 'object') {
+        try { kuisVideoVal = JSON.stringify(kuisVideoVal); } catch(e){ kuisVideoVal = ""; }
+      }
 
       let data = {
         "judul": judulVal, "materi": judulVal, "namamateri": judulVal,
