@@ -574,24 +574,43 @@
 
         <!-- Filter & Pemilih Materi -->
         <div class="card" style="margin-bottom: 20px; padding: 16px 20px;">
-          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-            <div style="flex:1; min-width:300px;">
-              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+          <div style="display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+            <div style="flex:1; min-width:320px; display:flex; flex-direction:column; gap:10px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
                 <label style="font-size:0.8rem; font-weight:700; color:var(--text-main);">
                   Pilih Materi Pembelajaran:
                 </label>
                 <!-- Filter Cepat Tipe -->
-                <div style="display:flex; gap:6px;">
-                  <button type="button" class="btn btn-sm studio-pill-filter active" id="pillFilterAll" onclick="filterStudioMaterials('all')" style="padding:2px 10px; font-size:0.75rem; border-radius:20px;">Semua</button>
-                  <button type="button" class="btn btn-sm studio-pill-filter" id="pillFilterVideo" onclick="filterStudioMaterials('video')" style="padding:2px 10px; font-size:0.75rem; border-radius:20px;">🎬 Video YouTube</button>
-                  <button type="button" class="btn btn-sm studio-pill-filter" id="pillFilterRegular" onclick="filterStudioMaterials('regular')" style="padding:2px 10px; font-size:0.75rem; border-radius:20px;">📄 Non-Video / Modul</button>
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <button type="button" class="btn btn-sm studio-pill-filter active" id="pillFilterAll" onclick="filterStudioMaterials('all')" style="padding:2px 10px; font-size:0.75rem; border-radius:20px;">Semua Tipe</button>
+                  <button type="button" class="btn btn-sm studio-pill-filter" id="pillFilterVideo" onclick="filterStudioMaterials('video')" style="padding:2px 10px; font-size:0.75rem; border-radius:20px;">🎬 Video</button>
+                  <button type="button" class="btn btn-sm studio-pill-filter" id="pillFilterRegular" onclick="filterStudioMaterials('regular')" style="padding:2px 10px; font-size:0.75rem; border-radius:20px;">📄 Non-Video</button>
                 </div>
               </div>
-              <select id="studioSelectMateri" class="form-control" style="font-size:0.9rem; font-weight:600;" onchange="onStudioMateriChange()">
-                <option value="">Memuat daftar materi...</option>
-              </select>
+
+              <!-- Input Controls: Filter Kelas & Select Materi -->
+              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <!-- Filter Kelas/Tingkat -->
+                <div style="width:150px; flex-shrink:0;">
+                  <select id="studioFilterKelas" class="form-control" style="font-size:0.85rem; font-weight:600; background:#f8fafc;" onchange="onStudioFilterKelasChange()">
+                    <option value="">Semua Kelas</option>
+                    <option value="X">Kelas X</option>
+                    <option value="XI">Kelas XI</option>
+                    <option value="XII">Kelas XII</option>
+                  </select>
+                </div>
+
+                <!-- Dropdown Materi -->
+                <div style="flex:1; min-width:240px;">
+                  <select id="studioSelectMateri" class="form-control" style="font-size:0.9rem; font-weight:600;" onchange="onStudioMateriChange()">
+                    <option value="">Memuat daftar materi...</option>
+                  </select>
+                </div>
+              </div>
             </div>
-            <div id="studioMateriSummaryBadge" style="display:flex; align-items:center; gap:8px;">
+
+            <!-- Badges Info Materi -->
+            <div id="studioMateriSummaryBadge" style="display:flex; align-items:center; gap:8px; padding-bottom:4px;">
               <!-- Badge info materi di sini -->
             </div>
           </div>
@@ -2241,6 +2260,10 @@
       populateStudioSoal(studioCurrentMateri ? studioCurrentMateri.rowNumber : null);
     }
 
+    function onStudioFilterKelasChange() {
+      populateStudioSoal(studioCurrentMateri ? studioCurrentMateri.rowNumber : null);
+    }
+
     function populateStudioSoal(targetRowNum = null) {
       const select = document.getElementById('studioSelectMateri');
       const emptyState = document.getElementById('studioEmptyState');
@@ -2250,6 +2273,23 @@
       if (!select) return;
 
       const allMaterials = Array.isArray(dataMateri) ? dataMateri : [];
+      let fKelas = document.getElementById('studioFilterKelas') ? document.getElementById('studioFilterKelas').value : "";
+
+      // Jika ada targetRowNum tertentu, pastikan tidak tersembunyi oleh filter kelas lama
+      if (targetRowNum) {
+        let targetM = allMaterials.find(m => m.rowNumber == targetRowNum);
+        if (targetM && fKelas) {
+          let listK = (getVal(targetM, ['kelas', 'tingkat']) || "").toString().trim().toUpperCase().split(',').map(k => k.trim());
+          let match = listK.includes("SEMUA") || listK.some(k => getPureTingkat(k) === fKelas);
+          if (!match) {
+            const selKelas = document.getElementById('studioFilterKelas');
+            if (selKelas) selKelas.value = "";
+            fKelas = "";
+          }
+        }
+      }
+
+      // Filter berdasarkan tipe (video / regular)
       let filtered = allMaterials.filter(m => {
         let l = (getVal(m, ['link', 'url']) || "").toString().trim();
         let isYt = l.includes('youtube.com') || l.includes('youtu.be');
@@ -2258,18 +2298,40 @@
         return true;
       });
 
+      // Filter berdasarkan Kelas / Tingkat
+      if (fKelas !== "") {
+        filtered = filtered.filter(m => {
+          let kelasStr = (getVal(m, ['kelas', 'tingkat']) || "").toString().trim().toUpperCase();
+          let listK = kelasStr.split(',').map(k => k.trim());
+          return listK.includes("SEMUA") || listK.some(k => getPureTingkat(k) === fKelas);
+        });
+      }
+
       if (filtered.length === 0) {
         if (emptyState) emptyState.style.display = 'block';
         if (videoContainer) videoContainer.style.display = 'none';
         if (regularContainer) regularContainer.style.display = 'none';
         if (summaryBadge) summaryBadge.innerHTML = '';
-        select.innerHTML = '<option value="">(Tidak ada materi yang sesuai filter)</option>';
+        select.innerHTML = '<option value="">(Tidak ada materi sesuai filter kelas & tipe)</option>';
         return;
       }
 
       if (emptyState) emptyState.style.display = 'none';
 
-      select.innerHTML = filtered.map(m => {
+      // Urutkan (Sort) teratur berdasarkan Tingkat (X, XI, XII, Lainnya) lalu ID Materi
+      const tingkatRank = { "X": 1, "XI": 2, "XII": 3, "SEMUA": 4 };
+      filtered.sort((a, b) => {
+        let tA = getTingkatSync(a);
+        let tB = getTingkatSync(b);
+        let rA = tingkatRank[tA] || 99;
+        let rB = tingkatRank[tB] || 99;
+        if (rA !== rB) return rA - rB;
+        let idA = (getVal(a, ['idmateri', 'id_materi', 'materiid']) || a.rowNumber).toString().toLowerCase();
+        let idB = (getVal(b, ['idmateri', 'id_materi', 'materiid']) || b.rowNumber).toString().toLowerCase();
+        return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
+      });
+
+      function renderOptionMateriItem(m) {
         let mid = getVal(m, ['idmateri', 'id_materi', 'materiid']) || m.rowNumber;
         let judul = getVal(m, ['judul', 'materi', 'namamateri']) || "Materi";
         let kelas = getVal(m, ['kelas', 'tingkat']) || "-";
@@ -2283,11 +2345,34 @@
             let parsed = typeof rawKv === 'string' ? JSON.parse(rawKv) : rawKv;
             if (Array.isArray(parsed)) count = parsed.length;
           } catch(e){}
-          return `<option value="${m.rowNumber}">[🎬 Video] [${mid}] ${judul} (Kelas: ${kelas}) - ${count} Kuis</option>`;
+          return `<option value="${m.rowNumber}">[🎬 Video] [${mid}] ${judul} (${kelas}) - ${count} Kuis</option>`;
         } else {
-          return `<option value="${m.rowNumber}">[📄 Modul] [${mid}] ${judul} (Kelas: ${kelas})</option>`;
+          return `<option value="${m.rowNumber}">[📄 Modul] [${mid}] ${judul} (${kelas})</option>`;
         }
-      }).join('');
+      }
+
+      let htmlOptions = '';
+      if (fKelas === "") {
+        const groups = { "X": [], "XI": [], "XII": [], "LAINNYA": [] };
+        filtered.forEach(m => {
+          let t = getTingkatSync(m);
+          if (groups[t]) groups[t].push(m);
+          else groups["LAINNYA"].push(m);
+        });
+
+        ["X", "XI", "XII", "LAINNYA"].forEach(gKey => {
+          const list = groups[gKey];
+          if (list && list.length > 0) {
+            let label = gKey === "LAINNYA" ? "Materi Umum / Semua Kelas" : `Kelas ${gKey}`;
+            htmlOptions += `<optgroup label="📁 ${label}">`;
+            htmlOptions += list.map(m => renderOptionMateriItem(m)).join('');
+            htmlOptions += `</optgroup>`;
+          }
+        });
+      } else {
+        htmlOptions = filtered.map(m => renderOptionMateriItem(m)).join('');
+      }
+      select.innerHTML = htmlOptions;
 
       let selectedRow = targetRowNum;
       if (!selectedRow || !filtered.some(m => m.rowNumber == selectedRow)) {
