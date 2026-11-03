@@ -364,7 +364,7 @@ function doPost(e) {
            pembuat_asli: docxMeta.pembuat_asli
          };
 
-         // Simpan record ke logTugas
+         // Simpan record ke logTugas dengan mapping header dinamis agar kebal pergeseran kolom
          var sheetTugas = ss.getSheetByName("logTugas");
          if (!sheetTugas) {
             sheetTugas = ss.insertSheet("logTugas");
@@ -374,22 +374,37 @@ function doPost(e) {
          var now = new Date();
          var timeStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
          
-         sheetTugas.appendRow([
-            pData.username || "-",
-            pData.nama || "-",
-            pData.kelas || "-",
-            pData.id_materi || "-",
-            pData.judul || "Tugas",
-            pData.tipe || "Tugas",
-            fileUrl,
-            timeStr,
-            fileMetaObj.nama_asli,
-            fileMetaObj.ukuran_formatted,
-            fileMetaObj.tipe_file,
-            JSON.stringify(fileMetaObj),
-            docxMeta.pertama_dibuat,
-            docxMeta.pembuat_asli
-         ]);
+         var headersRow = sheetTugas.getRange(1, 1, 1, Math.max(14, sheetTugas.getLastColumn())).getValues()[0];
+         var normalizedHeaders = headersRow.map(function(h) {
+            return h.toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+         });
+         
+         var rowDataMap = {
+           username: pData.username || "-",
+           nama: pData.nama || "-",
+           kelas: pData.kelas || "-",
+           idmateri: pData.id_materi || "-",
+           materi: pData.judul || "Tugas",
+           tipe: pData.tipe || "Tugas",
+           linktugas: fileUrl,
+           file: fileUrl,
+           waktu: timeStr,
+           namaasli: fileMetaObj.nama_asli,
+           ukuranfile: fileMetaObj.ukuran_formatted,
+           tipefile: fileMetaObj.tipe_file,
+           metadata: JSON.stringify(fileMetaObj),
+           pertamadibuat: docxMeta.pertama_dibuat,
+           pembuatasli: docxMeta.pembuat_asli
+         };
+         
+         var newRow = new Array(headersRow.length).fill("");
+         for (var col = 0; col < headersRow.length; col++) {
+            var hClean = normalizedHeaders[col];
+            if (rowDataMap.hasOwnProperty(hClean)) {
+               newRow[col] = rowDataMap[hClean];
+            }
+         }
+         sheetTugas.appendRow(newRow);
          
          return ContentService.createTextOutput(JSON.stringify({status: "success", url: fileUrl}))
                               .setMimeType(ContentService.MimeType.JSON);
@@ -407,6 +422,18 @@ function doPost(e) {
         status: "success", 
         updatedCount: updatedCount || 0,
         message: "Berhasil mengekstrak metadata dari " + (updatedCount || 0) + " berkas tugas lama."
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ===============================================
+    // ACTION: PERBAIKI DATA LOG TUGAS BERGESER
+    // ===============================================
+    if (action === "fixShiftedLogTugas") {
+      var fixedCount = perbaikiDataLogTugasBergeser();
+      return ContentService.createTextOutput(JSON.stringify({ 
+        status: "success", 
+        fixedCount: fixedCount || 0,
+        message: "Berhasil merapikan " + (fixedCount || 0) + " baris data logTugas yang bergeser."
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -1378,4 +1405,79 @@ function setupAwal() {
   var dummyFile = folder.createFile("dummy_auth_file.txt", "dummy", MimeType.PLAIN_TEXT);
   dummyFile.setTrashed(true);
   Logger.log("Otorisasi berhasil. Script kini memiliki akses penuh untuk menulis file ke Drive.");
+}
+
+// ========================================================
+// FUNGSI PERBAIKAN: MERAPIKAN DATA LOG TUGAS YANG BERGESER
+// ========================================================
+function perbaikiDataLogTugasBergeser() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetTugas = ss.getSheetByName("logTugas");
+  if (!sheetTugas) {
+    Logger.log("❌ Sheet logTugas tidak ditemukan!");
+    return 0;
+  }
+
+  var lastRow = sheetTugas.getLastRow();
+  var lastCol = sheetTugas.getLastColumn();
+  if (lastRow <= 1) {
+    Logger.log("❌ Data logTugas kosong.");
+    return 0;
+  }
+
+  var rawData = sheetTugas.getRange(1, 1, lastRow, lastCol).getValues();
+  var fixedCount = 0;
+
+  // Header acuan baris 1 normal:
+  // [0] username, [1] nama, [2] kelas, [3] id_materi, [4] materi, [5] tipe, [6] link_tugas, [7] waktu, [8] nama_asli, ...
+
+  for (var i = 1; i < rawData.length; i++) {
+    var row = rawData[i];
+    var colG = row[6] ? row[6].toString().trim() : ""; // Seharusnya link_tugas, tapi jika bergeser isinya "tugas"
+    var colH = row[7] ? row[7].toString().trim() : ""; // Seharusnya waktu, tapi jika bergeser isinya URL drive/docs
+    
+    // Indikator kuat baris bergeser:
+    // Kolom H berisi link Google Drive / Google Docs sementara Kolom G berisi tipe ("tugas" / "Editor") bukan link URL
+    var isShifted = (colH.includes("drive.google.com") || colH.includes("docs.google.com")) &&
+                    (!colG.includes("http://") && !colG.includes("https://"));
+
+    if (isShifted) {
+      var sNama = row[1] || "-";
+      Logger.log("⚠️ Mendeteksi baris bergeser di Baris " + (i + 1) + " (Siswa: " + sNama + ")");
+      
+      var namaAsli = row[2];  // Bergeser ke Kolom C
+      var kelas = row[3];     // Bergeser ke Kolom D
+      var idMateri = row[4];  // Bergeser ke Kolom E
+      var materi = row[5];    // Bergeser ke Kolom F
+      var tipe = row[6];      // Bergeser ke Kolom G
+      var linkTugas = row[7]; // Bergeser ke Kolom H
+      var waktu = row[8];     // Bergeser ke Kolom I
+
+      // Kembalikan ke posisi normal pada Kolom C s/d I (Kolom 3 s/d 9):
+      // Kolom C (3): kelas
+      // Kolom D (4): id_materi
+      // Kolom E (5): materi
+      // Kolom F (6): tipe
+      // Kolom G (7): link_tugas
+      // Kolom H (8): waktu
+      // Kolom I (9): nama_asli
+      sheetTugas.getRange(i + 1, 3, 1, 7).setValues([[
+        kelas,
+        idMateri,
+        materi,
+        tipe,
+        linkTugas,
+        waktu,
+        namaAsli
+      ]]);
+
+      fixedCount++;
+      Logger.log("   ✅ Baris " + (i + 1) + " BERHASIL DIRAPIKAN: Kelas=[" + kelas + "], id_materi=[" + idMateri + "], link=[" + linkTugas + "]");
+    }
+  }
+
+  SpreadsheetApp.flush();
+  Logger.log("=== SELESAI ===");
+  Logger.log("🎉 Berhasil merapikan " + fixedCount + " baris data tugas yang bergeser.");
+  return fixedCount;
 }
