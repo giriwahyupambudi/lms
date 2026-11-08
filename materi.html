@@ -139,10 +139,26 @@
        ============================================================ */
     .interactive-video-wrapper {
       width: 100%;
-      max-width: 900px;
+      max-width: 1100px;
       margin: 0 auto;
       padding: 16px;
       box-sizing: border-box;
+    }
+
+    /* Di layar HP: hilangkan padding pinggir agar video selebar layar penuh */
+    @media (max-width: 640px) {
+      .interactive-video-wrapper {
+        padding: 4px 0 16px 0;
+      }
+      .iv-banner {
+        margin: 0 10px 10px 10px;
+      }
+      .iv-checkpoints-card {
+        margin: 12px 10px 0 10px;
+      }
+      .iv-player-box {
+        border-radius: 0 !important;
+      }
     }
 
     .iv-banner {
@@ -182,6 +198,16 @@
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
     }
 
+    /* Saat ivPlayerBox Fullscreen: isi 100% tinggi dan lebar layar */
+    .iv-player-box:fullscreen,
+    .iv-player-box:-webkit-full-screen {
+      width: 100vw !important;
+      height: 100vh !important;
+      padding-bottom: 0 !important;
+      border-radius: 0 !important;
+      background: #000 !important;
+    }
+
     .iv-player-box iframe, 
     .iv-player-box #ivYtPlayer {
       position: absolute;
@@ -190,6 +216,31 @@
       width: 100%;
       height: 100%;
       border: none;
+    }
+
+    /* Tombol Fullscreen Web LMS di pojok player */
+    .iv-fs-btn {
+      position: absolute;
+      bottom: 14px;
+      right: 14px;
+      z-index: 25;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(4px);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .iv-fs-btn:hover {
+      background: rgba(37, 99, 235, 0.95);
+      transform: scale(1.04);
     }
 
     .iv-click-blocker {
@@ -260,18 +311,21 @@
       box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
     }
 
-    /* Modal Overlay Kuis Video */
+    /* Modal Overlay Kuis Video (Ditempatkan di dalam iv-player-box agar ikut saat fullscreen) */
     .iv-quiz-modal {
-      position: fixed;
+      position: absolute;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
+      width: 100%;
+      height: 100%;
       z-index: 9999;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 16px;
+      padding: 12px;
+      box-sizing: border-box;
     }
 
     .iv-quiz-backdrop {
@@ -295,8 +349,37 @@
       animation: ivPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       display: flex;
       flex-direction: column;
-      max-height: 90vh;
+      max-height: 94%;
       border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* Penyesuaian khusus jika HP diputar landscape atau layar kecil */
+    @media (max-height: 500px) {
+      .iv-quiz-dialog {
+        max-width: 600px;
+        max-height: 96%;
+      }
+      .iv-quiz-header {
+        padding: 8px 14px !important;
+      }
+      .iv-quiz-body {
+        padding: 10px 14px !important;
+      }
+      .iv-question-text {
+        font-size: 0.95rem !important;
+        margin-bottom: 8px !important;
+      }
+      .iv-option-item {
+        padding: 8px 10px !important;
+        gap: 8px !important;
+      }
+      .iv-quiz-footer {
+        padding: 8px 14px !important;
+      }
+      .iv-btn {
+        padding: 6px 12px !important;
+        font-size: 0.78rem !important;
+      }
     }
 
     @keyframes ivPopIn {
@@ -580,42 +663,74 @@
     return new URLSearchParams(window.location.search).get(name);
   }
 
-  // FUNGSI FULLSCREEN
-  function toggleFullscreen() {
-    const viewer = document.querySelector('.viewer');
-    const icon = document.getElementById('fsIcon');
+  // FUNGSI FULLSCREEN CONTAINER VIDEO / VIEWER
+  function togglePlayerBoxFullscreen() {
+    const box = document.getElementById('ivPlayerBox');
+    if (!box) {
+      toggleFullscreen();
+      return;
+    }
 
-    if (!document.fullscreenElement) {
-      if (viewer.requestFullscreen) {
-        viewer.requestFullscreen();
-      } else if (viewer.webkitRequestFullscreen) { /* Safari */
-        viewer.webkitRequestFullscreen();
-      } else if (viewer.msRequestFullscreen) { /* IE11 */
-        viewer.msRequestFullscreen();
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      if (box.requestFullscreen) {
+        box.requestFullscreen();
+      } else if (box.webkitRequestFullscreen) { /* Safari / iOS WebKit */
+        box.webkitRequestFullscreen();
+      } else if (box.msRequestFullscreen) {
+        box.msRequestFullscreen();
       }
-      const iconContainer = icon.parentNode;
-      iconContainer.innerHTML = '<i data-lucide="minimize" id="fsIcon"></i>';
-      lucide.createIcons();
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
       }
-      const iconContainer = icon.parentNode;
-      iconContainer.innerHTML = '<i data-lucide="maximize" id="fsIcon"></i>';
-      lucide.createIcons();
     }
   }
 
-  document.addEventListener('fullscreenchange', (event) => {
-    const icon = document.getElementById('fsIcon');
-    const iconContainer = icon.parentNode;
-    if (!document.fullscreenElement) {
-      iconContainer.innerHTML = '<i data-lucide="maximize" id="fsIcon"></i>';
+  // FUNGSI FULLSCREEN GLOBAL TOP BAR
+  function toggleFullscreen() {
+    const box = document.getElementById('ivPlayerBox');
+    const viewer = document.querySelector('.viewer');
+    const targetEl = box || viewer;
+
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      if (targetEl.requestFullscreen) {
+        targetEl.requestFullscreen();
+      } else if (targetEl.webkitRequestFullscreen) {
+        targetEl.webkitRequestFullscreen();
+      } else if (targetEl.msRequestFullscreen) {
+        targetEl.msRequestFullscreen();
+      }
     } else {
-      iconContainer.innerHTML = '<i data-lucide="minimize" id="fsIcon"></i>';
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
     }
-    lucide.createIcons();
-  });
+  }
+
+  function updateFsIcons() {
+    const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    const topIcon = document.getElementById('fsIcon');
+    if (topIcon) {
+      const parent = topIcon.parentNode;
+      parent.innerHTML = `<i data-lucide="${isFs ? 'minimize' : 'maximize'}" id="fsIcon"></i>`;
+    }
+
+    const ivBtn = document.getElementById('ivBtnFsPlayer');
+    const ivIcon = document.getElementById('ivFsIcon');
+    const ivText = document.getElementById('ivFsText');
+    if (ivIcon && ivText) {
+      ivIcon.setAttribute('data-lucide', isFs ? 'minimize' : 'maximize');
+      ivText.innerText = isFs ? 'Keluar Layar Penuh' : 'Layar Penuh';
+    }
+    if (window.lucide) lucide.createIcons();
+  }
+
+  document.addEventListener('fullscreenchange', updateFsIcons);
+  document.addEventListener('webkitfullscreenchange', updateFsIcons);
 
   const getVal = (obj, possibleKeys) => {
     if (!obj) return undefined;
@@ -702,6 +817,51 @@
         <div class="iv-player-box" id="ivPlayerBox">
           <div id="ivYtPlayer"></div>
           <div id="ivClickBlocker" class="iv-click-blocker" style="display:none;"></div>
+
+          <!-- Tombol Fullscreen Web LMS (Agar popup kuis tetap melayang di atas video layar penuh) -->
+          <button type="button" class="iv-fs-btn" id="ivBtnFsPlayer" onclick="togglePlayerBoxFullscreen()" title="Layar Penuh (Tetap Menampilkan Soal)">
+            <i data-lucide="maximize" id="ivFsIcon" style="width:14px;height:14px;"></i>
+            <span id="ivFsText">Layar Penuh</span>
+          </button>
+
+          <!-- MODAL KUIS VIDEO OVERLAY (Di dalam ivPlayerBox agar ikut saat Fullscreen) -->
+          <div id="ivQuizModal" class="iv-quiz-modal" style="display:none;">
+            <div class="iv-quiz-backdrop"></div>
+            <div class="iv-quiz-dialog">
+              <div class="iv-quiz-header">
+                <div class="iv-quiz-step-badge">
+                  <i data-lucide="help-circle" style="width:18px;height:18px;"></i>
+                  <span id="ivQuizDetikBadge">Menit 00:00</span>
+                </div>
+                <span class="iv-quiz-number" id="ivQuizNumber">Pertanyaan 1</span>
+              </div>
+
+              <div class="iv-quiz-body">
+                <h4 id="ivQuizQuestion" class="iv-question-text">Pertanyaan...</h4>
+                <div id="ivQuizOptions" class="iv-options-list"></div>
+
+                <div id="ivFeedbackBox" class="iv-feedback-box" style="display:none;">
+                  <div id="ivFeedbackAlert" class="iv-feedback-alert">
+                    <i id="ivFeedbackIcon" data-lucide="check-circle" style="width:18px;height:18px;"></i>
+                    <span id="ivFeedbackMsg">Jawaban Anda Benar!</span>
+                  </div>
+                  <p id="ivFeedbackDesc" class="iv-feedback-desc"></p>
+                </div>
+              </div>
+
+              <div class="iv-quiz-footer">
+                <button id="ivBtnRewind" type="button" class="iv-btn iv-btn-outline" onclick="ivRewind(15)">
+                  <i data-lucide="rotate-ccw" style="width:15px;height:15px;"></i> Ulangi 15 Detik
+                </button>
+                <button id="ivBtnSubmit" type="button" class="iv-btn iv-btn-primary" onclick="ivCheckAnswer()" disabled>
+                  Periksa Jawaban
+                </button>
+                <button id="ivBtnResume" type="button" class="iv-btn iv-btn-success" style="display:none;" onclick="ivResumeVideo()">
+                  Lanjutkan Menonton <i data-lucide="play" style="width:15px;height:15px;"></i>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="iv-checkpoints-card">
@@ -718,45 +878,6 @@
                 <span>Menit ${formatDetik(cp.detik)}</span>
               </div>
             `).join('')}
-          </div>
-        </div>
-      </div>
-
-      <!-- MODAL KUIS VIDEO OVERLAY -->
-      <div id="ivQuizModal" class="iv-quiz-modal" style="display:none;">
-        <div class="iv-quiz-backdrop"></div>
-        <div class="iv-quiz-dialog">
-          <div class="iv-quiz-header">
-            <div class="iv-quiz-step-badge">
-              <i data-lucide="help-circle" style="width:18px;height:18px;"></i>
-              <span id="ivQuizDetikBadge">Menit 00:00</span>
-            </div>
-            <span class="iv-quiz-number" id="ivQuizNumber">Pertanyaan 1</span>
-          </div>
-
-          <div class="iv-quiz-body">
-            <h4 id="ivQuizQuestion" class="iv-question-text">Pertanyaan...</h4>
-            <div id="ivQuizOptions" class="iv-options-list"></div>
-
-            <div id="ivFeedbackBox" class="iv-feedback-box" style="display:none;">
-              <div id="ivFeedbackAlert" class="iv-feedback-alert">
-                <i id="ivFeedbackIcon" data-lucide="check-circle" style="width:18px;height:18px;"></i>
-                <span id="ivFeedbackMsg">Jawaban Anda Benar!</span>
-              </div>
-              <p id="ivFeedbackDesc" class="iv-feedback-desc"></p>
-            </div>
-          </div>
-
-          <div class="iv-quiz-footer">
-            <button id="ivBtnRewind" type="button" class="iv-btn iv-btn-outline" onclick="ivRewind(15)">
-              <i data-lucide="rotate-ccw" style="width:15px;height:15px;"></i> Ulangi 15 Detik
-            </button>
-            <button id="ivBtnSubmit" type="button" class="iv-btn iv-btn-primary" onclick="ivCheckAnswer()" disabled>
-              Periksa Jawaban
-            </button>
-            <button id="ivBtnResume" type="button" class="iv-btn iv-btn-success" style="display:none;" onclick="ivResumeVideo()">
-              Lanjutkan Menonton <i data-lucide="play" style="width:15px;height:15px;"></i>
-            </button>
           </div>
         </div>
       </div>
@@ -875,6 +996,17 @@
 
     if (ivPlayer && typeof ivPlayer.pauseVideo === 'function') {
       try { ivPlayer.pauseVideo(); } catch(e){}
+    }
+
+    // Safety net: jika siswa menggunakan tombol fullscreen bawaan iframe YouTube yang menutupi DOM web,
+    // paksa keluar dari fullscreen bawaan YouTube agar kuis tidak tersembunyi
+    const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+    const box = document.getElementById('ivPlayerBox');
+    if (fsEl && fsEl !== box) {
+      try {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      } catch(e){}
     }
 
     // Tampilkan click blocker di atas video agar siswa tidak memencet play di video
