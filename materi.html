@@ -312,21 +312,30 @@
       box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
     }
 
-    /* Modal Overlay Kuis Video (Ditempatkan di dalam iv-player-box agar ikut saat fullscreen) */
+    /* Modal Overlay Kuis Video (Di luar fullscreen tampil sebagai modal penuh layar, di dalam fullscreen menyesuaikan player) */
     .iv-quiz-modal {
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 9999;
+      width: 100vw;
+      height: 100vh;
+      z-index: 99999;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 12px;
+      padding: 16px;
       box-sizing: border-box;
+    }
+
+    /* Saat player fullscreen, modal tetap mengisi penuh area fullscreen */
+    .iv-player-box:fullscreen .iv-quiz-modal,
+    .iv-player-box:-webkit-full-screen .iv-quiz-modal {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      z-index: 9999;
     }
 
     .iv-quiz-backdrop {
@@ -342,15 +351,15 @@
     .iv-quiz-dialog {
       position: relative;
       width: 100%;
-      max-width: 540px;
+      max-width: 560px;
       background: white;
       border-radius: 16px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
       overflow: hidden;
       animation: ivPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       display: flex;
       flex-direction: column;
-      max-height: 94%;
+      max-height: 88vh;
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
@@ -358,7 +367,7 @@
     @media (max-height: 500px) {
       .iv-quiz-dialog {
         max-width: 600px;
-        max-height: 96%;
+        max-height: 96vh;
       }
       .iv-quiz-header {
         padding: 8px 14px !important;
@@ -748,8 +757,27 @@
     }
   }
 
+  function ivSyncModalContainer() {
+    const modal = document.getElementById('ivQuizModal');
+    const box = document.getElementById('ivPlayerBox');
+    const host = document.getElementById('ivModalHost') || (box ? box.parentElement : document.body);
+    if (!modal || !box) return;
+
+    const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    if (isFs) {
+      if (modal.parentElement !== box) {
+        box.appendChild(modal);
+      }
+    } else {
+      if (modal.parentElement !== host) {
+        host.appendChild(modal);
+      }
+    }
+  }
+
   function updateFsIcons() {
     const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    ivSyncModalContainer();
     if (!isFs) {
       unlockOrientation();
     }
@@ -864,8 +892,10 @@
             <i data-lucide="maximize" id="ivFsIcon" style="width:14px;height:14px;"></i>
             <span id="ivFsText">Layar Penuh</span>
           </button>
+        </div>
 
-          <!-- MODAL KUIS VIDEO OVERLAY (Di dalam ivPlayerBox agar ikut saat Fullscreen) -->
+        <!-- MODAL KUIS VIDEO OVERLAY (Host di luar ivPlayerBox agar saat tidak fullscreen ukurannya leluasa di layar, dan dipindahkan ke dalam ivPlayerBox saat fullscreen) -->
+        <div id="ivModalHost">
           <div id="ivQuizModal" class="iv-quiz-modal" style="display:none;">
             <div class="iv-quiz-backdrop"></div>
             <div class="iv-quiz-dialog">
@@ -1114,6 +1144,7 @@
     }
 
     // Tampilkan Modal
+    ivSyncModalContainer();
     const modal = document.getElementById('ivQuizModal');
     if (modal) modal.style.display = 'flex';
 
