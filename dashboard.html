@@ -1754,8 +1754,17 @@
           dataMateriFiltered.forEach((m, i) => {
             const tipe = (getVal(m, ['tipeevaluasi', 'tipe', 'evaluasi', 'jenis']) || "").toString().trim().toLowerCase();
             
-            // ABAIKAN jika "hanya materi" / "materi" / "materi saja" / "bacaan"
-            if (!tipe || tipe === "materi" || tipe === "materi saja" || tipe === "bacaan" || tipe === "pengumuman") return;
+            let kRaw = getVal(m, ['kuis_video', 'kuisvideo', 'interaktif', 'soal_video', 'soalvideo']);
+            let isKuisVid = false;
+            if (kRaw) {
+              try {
+                let parsed = typeof kRaw === 'string' ? JSON.parse(kRaw) : kRaw;
+                if (Array.isArray(parsed) && parsed.length > 0) isKuisVid = true;
+              } catch(e) {}
+            }
+
+            // ABAIKAN jika "hanya materi" / "materi" / "materi saja" / "bacaan" KECUALI jika ada kuis video
+            if (!isKuisVid && (!tipe || tipe === "materi" || tipe === "materi saja" || tipe === "bacaan" || tipe === "pengumuman")) return;
 
             const rawMid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (i + 1)).toString();
             const rawJudul = (getVal(m, ['judul', 'materi']) || "").toString().trim();
@@ -1893,6 +1902,15 @@
           let ketText = (quizKeterangan.get(mid.toString()) || quizKeterangan.get(mJudulRaw) || "").toString().trim();
           let mapelName = (m.mapel || m.Mapel || m.matapelajaran || m.MataPelajaran || "Umum").toString().trim();
 
+          let kuisRaw = getVal(m, ['kuis_video', 'kuisvideo', 'interaktif', 'soal_video', 'soalvideo']);
+          let hasKuisVideo = false;
+          if (kuisRaw) {
+            try {
+              let parsedKuis = typeof kuisRaw === 'string' ? JSON.parse(kuisRaw) : kuisRaw;
+              if (Array.isArray(parsedKuis) && parsedKuis.length > 0) hasKuisVideo = true;
+            } catch(e) {}
+          }
+
           let isItemKuisVideo = (tipe && tipe.toLowerCase().includes("video")) || (hasKuisVideo) || (ketText && ketText.toLowerCase().includes("kuis video"));
           if (isItemKuisVideo) {
             uNum = 0;
@@ -1953,15 +1971,26 @@
 
           let textPelajari = (tipe === 'Praktik' || tipe === 'Ujian praktik') ? 'Jobsheet' : 'Pelajari';
           let iconPelajari = (tipe === 'Praktik' || tipe === 'Ujian praktik') ? 'file-text' : 'play';
+          if (isItemKuisVideo) {
+            textPelajari = hasScore ? 'Tonton Ulang Video' : 'Tonton & Jawab Kuis';
+            iconPelajari = hasScore ? 'rotate-ccw' : 'play-circle';
+          }
           let isMateriSaja = (tipe.toLowerCase() === "materi saja" || tipe.toLowerCase() === "materi" || tipe.toLowerCase() === "tidak ada" || tipe === "");
           
+          let btnStudyStyle = '';
+          if (isItemKuisVideo) {
+            btnStudyStyle = hasScore
+              ? 'background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-weight:600;'
+              : 'background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color:white; border:none; font-weight:700; box-shadow:0 4px 12px rgba(37,99,235,0.25);';
+          }
+
           btnPelajari = (link === "") 
             ? "" 
             : (isMateriLocked
-               ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed; ${isMateriSaja ? 'grid-column: 1 / -1;' : ''}" onclick="alertLocked('materi')"><i data-lucide="lock" style="width:14px"></i> Terkunci</button>`
-               : `<button class="btn-action btn-study" style="${isMateriSaja ? 'grid-column: 1 / -1;' : ''}" onclick="openMateri('${mid}')"><i data-lucide="${iconPelajari}" style="width:14px"></i> ${textPelajari}</button>`);
+               ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed; ${(isMateriSaja || isItemKuisVideo) ? 'grid-column: 1 / -1;' : ''}" onclick="alertLocked('materi')"><i data-lucide="lock" style="width:14px"></i> Terkunci</button>`
+               : `<button class="btn-action btn-study" style="${(isMateriSaja || isItemKuisVideo) ? 'grid-column: 1 / -1;' : ''} ${btnStudyStyle}" onclick="openMateri('${mid}')"><i data-lucide="${iconPelajari}" style="width:14px"></i> ${textPelajari}</button>`);
 
-          if (isMateriSaja) {
+          if (isMateriSaja || isItemKuisVideo) {
               btnKuis = "";
           } else if (tipe.toLowerCase() === "praktik" || tipe.toLowerCase() === "ujian praktik") {
             if (hasScore) {
@@ -2018,15 +2047,17 @@
               </div>`;
             }
           }
-          let isPendingTask = (!hasScore && !fileUrl && !isMateriSaja);
-          let isCompleted = hasScore || (isMateriSaja && openedMaterials.has(mid.toString()));
+          let isPendingTask = (!hasScore && !fileUrl && (!isMateriSaja || isItemKuisVideo));
+          let isCompleted = hasScore || (isMateriSaja && !isItemKuisVideo && openedMaterials.has(mid.toString()));
           
           let pendingHighlightStyle = "";
           let pendingBadge = "";
 
           if (isPendingTask) {
             pendingHighlightStyle = `border: 2px solid #fb923c; background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%); box-shadow: 0 4px 16px rgba(234,88,12,0.12);`;
-            pendingBadge = `<span class="badge" style="background:#ffedd5; color:#c2410c; border:1px solid #fed7aa; font-weight:700; display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; padding:2px 8px; border-radius:12px;"><i data-lucide="alert-circle" style="width:12px; height:12px;"></i> Belum Ada Nilai</span>`;
+            pendingBadge = isItemKuisVideo
+              ? `<span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:700; display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; padding:2px 8px; border-radius:12px;"><i data-lucide="sparkles" style="width:12px; height:12px;"></i> Video + Kuis</span>`
+              : `<span class="badge" style="background:#ffedd5; color:#c2410c; border:1px solid #fed7aa; font-weight:700; display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; padding:2px 8px; border-radius:12px;"><i data-lucide="alert-circle" style="width:12px; height:12px;"></i> Belum Ada Nilai</span>`;
           }
 
           let safeMid = mid.toString().replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -2043,7 +2074,7 @@
                   <div class="compact-info">
                     <div style="font-size:0.7rem; color:#059669; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px; display:flex; align-items:center; gap:6px;">
                       <span>${mapelName}</span>
-                      <span style="background:#d1fae5; color:#047857; padding:1px 6px; border-radius:4px; font-size:0.65rem;">Selesai</span>
+                      <span style="background:#d1fae5; color:#047857; padding:1px 6px; border-radius:4px; font-size:0.65rem;">${isItemKuisVideo ? 'Kuis Video Selesai' : 'Selesai'}</span>
                     </div>
                     <h4 class="compact-title">${m.judul || m.Judul || ("Materi " + (i + 1))}</h4>
                   </div>
