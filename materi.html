@@ -218,10 +218,10 @@
       border: none;
     }
 
-    /* Tombol Fullscreen Web LMS di pojok player */
+    /* Tombol Fullscreen Web LMS (Ditempatkan di pojok kanan ATAS player agar tidak menutupi tombol Lewati Iklan di kanan bawah) */
     .iv-fs-btn {
       position: absolute;
-      bottom: 14px;
+      top: 14px;
       right: 14px;
       z-index: 25;
       background: rgba(15, 23, 42, 0.85);
@@ -229,7 +229,7 @@
       color: white;
       border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 8px;
-      padding: 6px 10px;
+      padding: 6px 12px;
       font-size: 0.78rem;
       font-weight: 600;
       cursor: pointer;
@@ -237,6 +237,7 @@
       align-items: center;
       gap: 6px;
       transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
     .iv-fs-btn:hover {
       background: rgba(37, 99, 235, 0.95);
