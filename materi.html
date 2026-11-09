@@ -663,8 +663,40 @@
     return new URLSearchParams(window.location.search).get(name);
   }
 
+  // FUNGSI LOCK & UNLOCK ORIENTATION (AUTO LANDSCAPE HP)
+  async function lockLandscapeOrientation() {
+    try {
+      if (screen.orientation && typeof screen.orientation.lock === 'function') {
+        await screen.orientation.lock('landscape');
+      } else if (screen.lockOrientation) {
+        screen.lockOrientation('landscape');
+      } else if (screen.mozLockOrientation) {
+        screen.mozLockOrientation('landscape');
+      } else if (screen.msLockOrientation) {
+        screen.msLockOrientation('landscape');
+      }
+    } catch (e) {
+      // Browser seperti Safari iOS mengunci rotasi fisik, aman diabaikan
+      console.log('Orientation lock not supported or blocked:', e);
+    }
+  }
+
+  function unlockOrientation() {
+    try {
+      if (screen.orientation && typeof screen.orientation.unlock === 'function') {
+        screen.orientation.unlock();
+      } else if (screen.unlockOrientation) {
+        screen.unlockOrientation();
+      } else if (screen.mozUnlockOrientation) {
+        screen.mozUnlockOrientation();
+      } else if (screen.msUnlockOrientation) {
+        screen.msUnlockOrientation();
+      }
+    } catch (e) {}
+  }
+
   // FUNGSI FULLSCREEN CONTAINER VIDEO / VIEWER
-  function togglePlayerBoxFullscreen() {
+  async function togglePlayerBoxFullscreen() {
     const box = document.getElementById('ivPlayerBox');
     if (!box) {
       toggleFullscreen();
@@ -673,13 +705,15 @@
 
     if (!document.fullscreenElement && !document.webkitFullscreenElement) {
       if (box.requestFullscreen) {
-        box.requestFullscreen();
+        await box.requestFullscreen();
       } else if (box.webkitRequestFullscreen) { /* Safari / iOS WebKit */
         box.webkitRequestFullscreen();
       } else if (box.msRequestFullscreen) {
         box.msRequestFullscreen();
       }
+      lockLandscapeOrientation();
     } else {
+      unlockOrientation();
       if (document.exitFullscreen) {
         document.exitFullscreen();
       } else if (document.webkitExitFullscreen) {
@@ -689,20 +723,22 @@
   }
 
   // FUNGSI FULLSCREEN GLOBAL TOP BAR
-  function toggleFullscreen() {
+  async function toggleFullscreen() {
     const box = document.getElementById('ivPlayerBox');
     const viewer = document.querySelector('.viewer');
     const targetEl = box || viewer;
 
     if (!document.fullscreenElement && !document.webkitFullscreenElement) {
       if (targetEl.requestFullscreen) {
-        targetEl.requestFullscreen();
+        await targetEl.requestFullscreen();
       } else if (targetEl.webkitRequestFullscreen) {
         targetEl.webkitRequestFullscreen();
       } else if (targetEl.msRequestFullscreen) {
         targetEl.msRequestFullscreen();
       }
+      if (box) lockLandscapeOrientation();
     } else {
+      unlockOrientation();
       if (document.exitFullscreen) {
         document.exitFullscreen();
       } else if (document.webkitExitFullscreen) {
@@ -713,6 +749,10 @@
 
   function updateFsIcons() {
     const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    if (!isFs) {
+      unlockOrientation();
+    }
+
     const topIcon = document.getElementById('fsIcon');
     if (topIcon) {
       const parent = topIcon.parentNode;
