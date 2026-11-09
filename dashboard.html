@@ -1692,8 +1692,15 @@
             let durasiMenit = parseDurationToMinutes(rawDur);
 
             let finalScore = score;
+            const isKuisVideo = (pTipe && pTipe.toLowerCase().includes("video")) || (pKet && pKet.toLowerCase().includes("kuis video"));
             if (pTipe === "materi") {
               finalScore = 100;
+            } else if (isKuisVideo) {
+              durasiMenit = 0;
+              uNum = 0;
+              rawDur = "-";
+              timeStr = "-";
+              finalScore = score;
             } else if (isTugas && rawVal.toLowerCase().includes("terkirim") && !pNilai.toString().match(/\d+/)) {
               finalScore = 0;
             } else {
@@ -1886,19 +1893,29 @@
           let ketText = (quizKeterangan.get(mid.toString()) || quizKeterangan.get(mJudulRaw) || "").toString().trim();
           let mapelName = (m.mapel || m.Mapel || m.matapelajaran || m.MataPelajaran || "Umum").toString().trim();
 
+          let isItemKuisVideo = (tipe && tipe.toLowerCase().includes("video")) || (hasKuisVideo) || (ketText && ketText.toLowerCase().includes("kuis video"));
+          if (isItemKuisVideo) {
+            uNum = 0;
+            durVal = "";
+            durasiMenit = 0;
+            timeValue = "";
+          }
+
           let rincianObj = {
             materi: mJudulRaw,
             mapel: mapelName,
             tipe: tipe,
             murni: scoreValue !== null ? scoreValue : '-',
-            urutan: uNum,
-            durasi: durVal || '-',
-            durasiMenit: durasiMenit,
+            urutan: isItemKuisVideo ? 0 : uNum,
+            durasi: isItemKuisVideo ? '-' : (durVal || '-'),
+            durasiMenit: isItemKuisVideo ? 0 : durasiMenit,
             akhir: finalScoreValue !== null ? finalScoreValue : sVal,
             keterangan: ketText
           };
           let rincianStr = encodeURIComponent(JSON.stringify(rincianObj));
-          let titleTooltip = `Nilai Akhir: ${finalScoreValue !== null ? finalScoreValue : sVal}\nNilai Murni: ${scoreValue !== null ? scoreValue : '-'}\nUrutan Maju: #${uNum} (-${uNum})\nDurasi: ${durVal || '-'} (-${durasiMenit} mnt)\nFormula: ${scoreValue !== null ? scoreValue : 0} - ${uNum} - ${durasiMenit} = ${finalScoreValue !== null ? finalScoreValue : sVal}\n(Klik untuk lihat rincian)`;
+          let titleTooltip = isItemKuisVideo
+            ? `Nilai Akhir: ${finalScoreValue !== null ? finalScoreValue : sVal}\nNilai Murni: ${scoreValue !== null ? scoreValue : '-'}\n(Kuis Video Pemahaman)`
+            : `Nilai Akhir: ${finalScoreValue !== null ? finalScoreValue : sVal}\nNilai Murni: ${scoreValue !== null ? scoreValue : '-'}\nUrutan Maju: #${uNum} (-${uNum})\nDurasi: ${durVal || '-'} (-${durasiMenit} mnt)\nFormula: ${scoreValue !== null ? scoreValue : 0} - ${uNum} - ${durasiMenit} = ${finalScoreValue !== null ? finalScoreValue : sVal}\n(Klik untuk lihat rincian)`;
 
           let scoreBadge = '';
           if (hasScore) {
@@ -2344,19 +2361,26 @@
           let durasiMenit = parseDurationToMinutes(rawDur);
 
           let finalScore = score;
+          const isKuisVideo = (pTipe && pTipe.toString().toLowerCase().includes("video")) ||
+                              (getVal(n, ['keterangan', 'catatan']) || "").toString().toLowerCase().includes("kuis video");
           if (pTipe && pTipe.toString().toLowerCase() === "materi") {
             finalScore = 100;
+          } else if (isKuisVideo) {
+            durasiMenit = 0;
+            uNum = 0;
+            waktuSec = 0;
+            finalScore = score;
           } else {
             finalScore = Math.max(0, score - uNum - durasiMenit);
           }
 
           const existing = userObj.quizzes.get(mid);
           if (!existing) {
-            userObj.quizzes.set(mid, { score: finalScore, murni: score, urutan: uNum, durasiMenit, totalWaktuSec: waktuSec });
+            userObj.quizzes.set(mid, { score: finalScore, murni: score, urutan: (isKuisVideo ? 0 : uNum), durasiMenit: (isKuisVideo ? 0 : durasiMenit), totalWaktuSec: (isKuisVideo ? 0 : waktuSec) });
           } else {
             let bestScore = Math.max(finalScore, existing.score);
-            let sumTimeSec = existing.totalWaktuSec + waktuSec;
-            userObj.quizzes.set(mid, { score: bestScore, murni: Math.max(score, existing.murni || 0), urutan: uNum || existing.urutan, durasiMenit, totalWaktuSec: sumTimeSec });
+            let sumTimeSec = existing.totalWaktuSec + (isKuisVideo ? 0 : waktuSec);
+            userObj.quizzes.set(mid, { score: bestScore, murni: Math.max(score, existing.murni || 0), urutan: (isKuisVideo ? 0 : (uNum || existing.urutan)), durasiMenit: (isKuisVideo ? 0 : durasiMenit), totalWaktuSec: sumTimeSec });
           }
         });
 

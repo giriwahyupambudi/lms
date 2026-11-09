@@ -3981,8 +3981,15 @@
           let durasiMenit = parseDurationToMinutes(rawDur);
 
           let finalScore = score;
+          const isKuisVideo = (pTipe && pTipe.toString().toLowerCase().includes("video")) ||
+                              (getVal(n, ['keterangan', 'catatan']) || "").toString().toLowerCase().includes("kuis video");
           if (pTipe && pTipe.toString().toLowerCase() === "materi") {
             finalScore = 100;
+          } else if (isKuisVideo) {
+            durasiMenit = 0;
+            uNum = 0;
+            wSec = 0;
+            finalScore = score;
           } else {
             finalScore = Math.max(0, score - uNum - durasiMenit);
           }
@@ -3990,11 +3997,11 @@
           if (!userObj.quizzes) userObj.quizzes = new Map();
           const existing = userObj.quizzes.get(mid);
           if (!existing) {
-            userObj.quizzes.set(mid, { score: finalScore, murni: score, urutan: uNum, durasiMenit, totalWaktuSec: wSec });
+            userObj.quizzes.set(mid, { score: finalScore, murni: score, urutan: (isKuisVideo ? 0 : uNum), durasiMenit: (isKuisVideo ? 0 : durasiMenit), totalWaktuSec: (isKuisVideo ? 0 : wSec) });
           } else {
             let bestScore = Math.max(finalScore, (existing.score || 0));
-            let sumTimeSec = (existing.totalWaktuSec || 0) + wSec;
-            userObj.quizzes.set(mid, { score: bestScore, murni: Math.max(score, existing.murni || 0), urutan: uNum || existing.urutan, durasiMenit, totalWaktuSec: sumTimeSec });
+            let sumTimeSec = (existing.totalWaktuSec || 0) + (isKuisVideo ? 0 : wSec);
+            userObj.quizzes.set(mid, { score: bestScore, murni: Math.max(score, existing.murni || 0), urutan: (isKuisVideo ? 0 : (uNum || existing.urutan)), durasiMenit: (isKuisVideo ? 0 : durasiMenit), totalWaktuSec: sumTimeSec });
           }
         });
 
@@ -5708,19 +5715,30 @@
             let durVal = (rec && rec.durasi && isDurationString(rec.durasi)) ? rec.durasi.toString().replace(/^'/, '').trim() : '';
             let durasiMenit = durVal ? parseDurationToMinutes(durVal) : 0;
 
+            let isRecKuisVideo = (tipe && tipe.toUpperCase().includes("VIDEO")) ||
+                                 (rec && rec.raw && (getVal(rec.raw, ['tipe']) || '').toString().toLowerCase().includes('video')) ||
+                                 (rec && rec.raw && (getVal(rec.raw, ['keterangan']) || '').toString().toLowerCase().includes('kuis video'));
+            if (isRecKuisVideo) {
+              durVal = '';
+              durasiMenit = 0;
+              uMaju = 0;
+            }
+
             if (rec !== undefined) {
               const baseScore = typeof rec.score === 'number' ? rec.score : (parseInt(rec.score, 10) || 0);
-              const uNum = (typeof uMaju === 'number' && uMaju > 0) ? uMaju : 0;
-              const finalScore = Math.max(0, baseScore - uNum - durasiMenit);
+              const uNum = (typeof uMaju === 'number' && uMaju > 0 && !isRecKuisVideo) ? uMaju : 0;
+              const finalScore = isRecKuisVideo ? baseScore : Math.max(0, baseScore - uNum - durasiMenit);
 
               totalScore += finalScore;
               countScored++;
 
               let uInfo = uMaju ? ` | Urutan Maju: #${uMaju} (-${uNum})` : '';
               let dInfo = durVal ? ` | Durasi: ${durVal} (-${durasiMenit})` : '';
-              let formulaInfo = `Formula: ${baseScore} - ${uNum} - ${durasiMenit} = ${finalScore}`;
+              let formulaInfo = isRecKuisVideo ? `(Kuis Video Pemahaman)` : `Formula: ${baseScore} - ${uNum} - ${durasiMenit} = ${finalScore}`;
 
-              titleAttr = `Nilai Akhir: ${finalScore}\nNilai Murni: ${baseScore}${uInfo}${dInfo}\n${formulaInfo}\n(Klik untuk lihat rincian)`;
+              titleAttr = isRecKuisVideo
+                ? `Nilai Akhir: ${finalScore}\nNilai Murni: ${baseScore}\n(Kuis Video Pemahaman)`
+                : `Nilai Akhir: ${finalScore}\nNilai Murni: ${baseScore}${uInfo}${dInfo}\n${formulaInfo}\n(Klik untuk lihat rincian)`;
 
               let ketStr = rec.raw ? (getVal(rec.raw, ['keterangan', 'catatan']) || '') : '';
               let safeObj = {
@@ -5965,13 +5983,18 @@
       ];
 
       mappedStudents.forEach((st, idx) => {
-        let durVal = (st.durasi && isDurationString(st.durasi)) ? st.durasi.toString().replace(/^'/, '').trim() : '';
+        let isStKuisVideo = (targetMateriTipe && targetMateriTipe.toUpperCase().includes("VIDEO")) ||
+                            (st.raw && (getVal(st.raw, ['tipe']) || '').toString().toLowerCase().includes('video')) ||
+                            (st.keterangan && st.keterangan.toString().toLowerCase().includes('kuis video'));
+        let durVal = (!isStKuisVideo && st.durasi && isDurationString(st.durasi)) ? st.durasi.toString().replace(/^'/, '').trim() : '';
         let durasiMenit = durVal ? parseDurationToMinutes(durVal) : 0;
-        let durasiStr = durVal || '-';
+        let durasiStr = isStKuisVideo ? '-' : (durVal || '-');
 
         let scoreMurni = (st.nilai !== undefined && st.nilai !== null && st.nilai !== '') ? st.nilai : '-';
         let scoreAkhir = '-';
-        if (typeof scoreMurni === 'number') {
+        if (isStKuisVideo) {
+          scoreAkhir = scoreMurni;
+        } else if (typeof scoreMurni === 'number') {
           let uNum = (typeof st.urutan === 'number' && st.urutan < 999999) ? st.urutan : 0;
           scoreAkhir = Math.max(0, scoreMurni - uNum - durasiMenit);
         } else if (typeof scoreMurni === 'string' && !isNaN(parseInt(scoreMurni, 10))) {

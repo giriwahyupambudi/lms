@@ -1380,8 +1380,6 @@
 
     if (!username || !mid) return;
 
-    const durationSec = Math.round((Date.now() - ivStartTime) / 1000);
-    const waktuFormat = formatDetik(durationSec);
 
     try {
       localStorage.setItem(`kuis_video_score_${username}_${mid}`, finalScore.toString());
@@ -1397,7 +1395,7 @@
         id_materi: mid,
         tipe: 'Kuis Video',
         nilai: finalScore,
-        waktu: "'" + waktuFormat,
+        waktu: '-',
         timestamp: new Date().toISOString(),
         judul: judul,
         keterangan: `Selesai Kuis Video (${ivKuisList.length} soal)`
