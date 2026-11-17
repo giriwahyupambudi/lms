@@ -3,8 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="theme-color" content="#ffffff">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>Editor Tugas Terpadu</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -24,18 +24,21 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
-        body {
+        html, body {
             font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            width: 100%;
+            background-color: #f8fafc;
         }
 
         .animate-fade-in {
-            animation: fadeIn 0.4s ease-out forwards;
+            animation: fadeIn 0.3s ease-out forwards;
         }
 
         @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateY(12px);
+                transform: translateY(8px);
             }
             to {
                 opacity: 1;
@@ -49,9 +52,9 @@
             border-radius: 50%;
             border-top: 3px solid #2563eb;
             border-right: 3px solid transparent;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
+            width: 22px;
+            height: 22px;
+            animation: spin 0.8s linear infinite;
         }
 
         @keyframes spin {
@@ -59,7 +62,7 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Quill Editor overrides to look more like a document */
+        /* Quill Editor overrides to look like real paper */
         #editor-container {
             min-height: 400px;
             background: transparent;
@@ -67,7 +70,6 @@
             font-size: 14px;
         }
 
-        /* Matikan scroll internal agar kertas memanjang ke bawah */
         .ql-container.ql-snow {
             height: auto !important;
             border: none !important;
@@ -77,19 +79,26 @@
             overflow-y: hidden !important;
             height: auto !important;
             min-height: 400px;
+            padding: 0 !important;
         }
 
-        .ql-toolbar.ql-snow {
-            border-top-left-radius: 0.75rem;
-            border-top-right-radius: 0.75rem;
-            border-color: #e2e8f0;
-            background: #f8fafc;
+        /* Toolbar Sticky Handling */
+        #toolbar-container .ql-toolbar.ql-snow {
+            border: none !important;
+            background: transparent !important;
+            padding: 4px 6px !important;
         }
 
-        .ql-container.ql-snow {
-            border-bottom-left-radius: 0.75rem;
-            border-bottom-right-radius: 0.75rem;
-            border-color: #e2e8f0;
+        /* Mencegah icon toolbar Quill berantakan di HP */
+        #toolbar-container {
+            -webkit-overflow-scrolling: touch;
+        }
+        #toolbar-container::-webkit-scrollbar {
+            height: 3px;
+        }
+        #toolbar-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 2px;
         }
 
         /* PDF specific styling */
@@ -111,7 +120,6 @@
             color: #333;
         }
 
-        /* Cegah elemen terpotong horizontal saat berganti halaman di PDF */
         #pdf-export-area img,
         #pdf-export-area p,
         #pdf-export-area li,
@@ -123,7 +131,6 @@
             break-inside: avoid !important;
         }
 
-        /* Batasi gambar agar tidak melewati layar, tapi tetap bisa dikecilkan */
         .ql-editor img {
             max-width: 100%;
             height: auto;
@@ -131,24 +138,24 @@
             margin: 10px auto;
         }
 
-        /* Image resize overlay untuk mobile/desktop */
+        /* Image resize overlay */
         .img-resize-overlay {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(15, 23, 42, 0.92);
+            background: rgba(15, 23, 42, 0.94);
             backdrop-filter: blur(12px);
-            border-radius: 24px;
-            padding: 16px 20px;
+            border-radius: 20px;
+            padding: 14px 18px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
             z-index: 1000;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
             border: 1px solid rgba(255, 255, 255, 0.15);
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            max-width: 90vw;
         }
 
         .img-resize-controls {
@@ -163,18 +170,13 @@
             border-radius: 10px;
             background: rgba(255, 255, 255, 0.15);
             color: white;
-            font-size: 20px;
+            font-size: 18px;
             border: none;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: background 0.15s;
             -webkit-tap-highlight-color: transparent;
-        }
-
-        .img-resize-overlay button:active {
-            background: rgba(255, 255, 255, 0.35);
         }
 
         .img-resize-overlay span {
@@ -191,7 +193,7 @@
             border-radius: 2px;
         }
 
-        /* Funny Paste Modal Styles */
+        /* Funny Paste Modal */
         #funny-modal-content {
             transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
@@ -209,8 +211,8 @@
 
         /* Scrollbar Halus */
         ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+            width: 5px;
+            height: 5px;
         }
         ::-webkit-scrollbar-track {
             background: #f1f5f9;
@@ -225,121 +227,131 @@
     </style>
 </head>
 
-<body class="bg-slate-100 min-h-screen flex flex-col text-slate-800">
+<body class="bg-slate-100 min-h-screen flex flex-col text-slate-800 antialiased">
 
-    <!-- HEADER TERPADU (Sticky Top) -->
-    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 sm:px-6 py-2.5 shadow-xs flex items-center justify-between gap-3">
-        <!-- Kiri: Tombol Kembali & Info Tugas -->
-        <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <button onclick="handleBackToDashboard()" class="p-2 -ml-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors flex items-center gap-1 text-xs sm:text-sm font-semibold shrink-0" title="Kembali ke Dashboard">
-                <i data-lucide="arrow-left" class="w-4 h-4 sm:w-5 sm:h-5"></i>
-                <span class="hidden sm:inline">Kembali</span>
-            </button>
-            <div class="min-w-0">
-                <div class="flex items-center gap-2">
-                    <h1 id="topbar-title" class="text-sm sm:text-base font-bold text-slate-800 truncate leading-tight">Editor Tugas</h1>
-                    <span id="topbar-mapel" class="hidden md:inline-flex text-[11px] font-semibold px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full shrink-0">Tugas Siswa</span>
+    <!-- HEADER NAVIGASI TERPADU -->
+    <header class="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-xs w-full">
+        <!-- Baris 1: Brand & Status (Tinggi pas 52px, anti-overflow di HP) -->
+        <div class="max-w-[1750px] mx-auto px-3 sm:px-6 h-[52px] flex items-center justify-between gap-2">
+            <!-- Kiri: Tombol Kembali & Info Tugas -->
+            <div class="flex items-center gap-2 min-w-0">
+                <button onclick="handleBackToDashboard()" class="p-1.5 -ml-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 active:scale-95 rounded-xl transition-all flex items-center gap-1 text-xs font-semibold shrink-0" title="Kembali ke Dashboard">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                </button>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-1.5">
+                        <h1 id="topbar-title" class="text-xs sm:text-sm md:text-base font-bold text-slate-800 truncate leading-tight">Editor Tugas</h1>
+                        <span id="topbar-mapel" class="hidden md:inline-flex text-[11px] font-semibold px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full shrink-0">Tugas Siswa</span>
+                    </div>
+                    <p id="topbar-subtitle" class="text-[11px] text-slate-500 truncate leading-none mt-0.5">Memuat data soal & lembar kerja...</p>
                 </div>
-                <p id="topbar-subtitle" class="text-xs text-slate-500 truncate leading-tight mt-0.5">Memuat data soal & lembar kerja...</p>
+            </div>
+
+            <!-- Tengah: Switcher View Mode (Desktop ONLY: >= 1024px) -->
+            <div class="hidden lg:flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
+                <button id="mode-split-btn" onclick="setViewMode('split')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-blue-700 bg-white shadow-xs border border-slate-200/60" title="Tampilkan Soal & Lembar Kerja Berdampingan">
+                    <i data-lucide="columns-2" class="w-3.5 h-3.5"></i> Split View (Soal & Lembar)
+                </button>
+                <button id="mode-soal-btn" onclick="setViewMode('soal')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-slate-900" title="Fokus Pada Lembar Soal">
+                    <i data-lucide="file-question" class="w-3.5 h-3.5"></i> Lembar Soal
+                </button>
+                <button id="mode-editor-btn" onclick="setViewMode('editor')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-slate-900" title="Fokus Pada Lembar Jawaban">
+                    <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Lembar Jawaban
+                </button>
+            </div>
+
+            <!-- Kanan: Status Simpan & Tombol Aksi Desktop -->
+            <div class="flex items-center gap-2 shrink-0">
+                <div id="topbar-sync-badge" class="inline-flex items-center gap-1.5 text-[11px] sm:text-xs px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 font-medium">
+                    <i data-lucide="cloud" id="topbar-sync-icon" class="w-3.5 h-3.5 text-slate-400"></i>
+                    <span id="topbar-sync-text" class="hidden sm:inline">Siap</span>
+                </div>
+                <!-- Tombol Kirim Cepat Desktop (Hidden di HP karena sudah ada di bottom bar) -->
+                <button onclick="document.getElementById('preview-btn').click()" class="hidden sm:inline-flex px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs sm:text-sm font-bold shadow-xs transition-all items-center gap-1.5">
+                    <i data-lucide="send" class="w-3.5 h-3.5"></i> <span>Kirim Tugas</span>
+                </button>
             </div>
         </div>
 
-        <!-- Tengah: Switcher View Mode (Desktop: 3 Mode, Mobile: 2 Mode) -->
-        <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
-            <!-- Desktop Button: Split View -->
-            <button id="mode-split-btn" onclick="setViewMode('split')" class="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-blue-700 bg-white shadow-xs border border-slate-200/60" title="Tampilkan Soal dan Lembar Jawaban Berdampingan">
-                <i data-lucide="columns-2" class="w-3.5 h-3.5"></i> Split (Soal & Lembar)
+        <!-- Baris 2: Tab Navigasi Khusus Layar HP (< 1024px) -->
+        <div class="lg:hidden w-full border-t border-slate-200 bg-slate-50 px-2 py-1.5 flex gap-1.5">
+            <button id="mobile-tab-soal" onclick="setViewMode('soal')" class="flex-1 py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 text-slate-600 bg-transparent">
+                <i data-lucide="file-question" class="w-4 h-4"></i> <span>1. Lembar Soal</span>
             </button>
-            <!-- Button: Soal Saja -->
-            <button id="mode-soal-btn" onclick="setViewMode('soal')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-slate-900" title="Fokus Pada Lembar Soal">
-                <i data-lucide="file-question" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Lembar</span> Soal
-            </button>
-            <!-- Button: Lembar Kerja Saja -->
-            <button id="mode-editor-btn" onclick="setViewMode('editor')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-slate-900" title="Fokus Pada Lembar Jawaban">
-                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Lembar</span> Jawaban
-            </button>
-        </div>
-
-        <!-- Kanan: Status Sinkronisasi & Tombol Kirim Cepat -->
-        <div class="flex items-center gap-2 shrink-0">
-            <div id="topbar-sync-badge" class="hidden sm:inline-flex items-center gap-1.5 text-xs px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 font-medium">
-                <i data-lucide="cloud" id="topbar-sync-icon" class="w-3.5 h-3.5 text-slate-400"></i>
-                <span id="topbar-sync-text">Siap</span>
-            </div>
-            <button onclick="document.getElementById('preview-btn').click()" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs sm:text-sm font-bold shadow-xs transition-all flex items-center gap-1.5">
-                <i data-lucide="send" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i> <span>Kirim</span>
+            <button id="mobile-tab-editor" onclick="setViewMode('editor')" class="flex-1 py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 text-blue-700 bg-white shadow-xs border border-slate-200">
+                <i data-lucide="edit-3" class="w-4 h-4"></i> <span>2. Lembar Jawaban</span>
             </button>
         </div>
     </header>
 
-    <!-- MAIN WORKSPACE -->
-    <main class="flex-1 w-full max-w-[1750px] mx-auto px-2 sm:px-4 py-3 sm:py-5 pb-28 flex flex-col">
+    <!-- WORKSPACE UTAMA -->
+    <main class="flex-1 w-full max-w-[1750px] mx-auto px-0 sm:px-4 py-0 sm:py-4 pb-24 flex flex-col">
 
         <!-- Error Message Box -->
-        <div id="error-box" class="hidden mb-4 mx-auto w-full p-4 bg-red-50 rounded-xl border border-red-200 flex items-start gap-3">
+        <div id="error-box" class="hidden m-3 p-3.5 bg-red-50 rounded-xl border border-red-200 flex items-start gap-2.5">
             <i data-lucide="alert-circle" class="w-5 h-5 text-red-500 shrink-0 mt-0.5"></i>
-            <p id="error-text" class="text-sm font-medium text-red-800"></p>
+            <p id="error-text" class="text-xs sm:text-sm font-medium text-red-800"></p>
         </div>
 
-        <!-- GRID DUA KOLOM TERPADU -->
-        <div id="workspace-grid" class="w-full flex flex-col lg:flex-row gap-4 items-start">
+        <!-- GRID WORKSPACE (Bersebelahan di Laptop, Tab Terpisah di HP) -->
+        <div id="workspace-grid" class="w-full flex flex-col lg:flex-row gap-0 lg:gap-4 items-start">
 
-            <!-- PANEL KIRI: LEMBAR SOAL / JOBSHEET -->
-            <section id="soal-panel" class="w-full lg:w-1/2 flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-200">
-                <!-- Header Soal Panel -->
+            <!-- PANEL SOAL / JOBSHEET -->
+            <section id="soal-panel" class="w-full lg:w-1/2 flex flex-col bg-white rounded-none sm:rounded-2xl shadow-none sm:shadow-xs border-0 sm:border border-slate-200 overflow-hidden">
+                <!-- Bar Header Soal -->
                 <div class="px-3.5 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
                     <div class="flex items-center gap-2 min-w-0">
-                        <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold shrink-0">
-                            <i data-lucide="file-question" class="w-4 h-4"></i>
+                        <div class="w-6 h-6 rounded-md bg-blue-100 text-blue-700 flex items-center justify-center font-bold shrink-0">
+                            <i data-lucide="file-question" class="w-3.5 h-3.5"></i>
                         </div>
                         <div class="min-w-0">
-                            <h2 class="text-xs sm:text-sm font-bold text-slate-800 truncate leading-tight">Lembar Soal & Instruksi</h2>
-                            <p id="soal-meta-info" class="text-[11px] text-slate-500 truncate leading-tight mt-0.5">Menghubungkan ke berkas guru...</p>
+                            <h2 class="text-xs sm:text-sm font-bold text-slate-800 truncate leading-tight">Lembar Soal / Instruksi</h2>
+                            <p id="soal-meta-info" class="text-[11px] text-slate-500 truncate leading-none mt-0.5">Menghubungkan ke berkas guru...</p>
                         </div>
                     </div>
                     <!-- Action Toolbar Soal -->
                     <div class="flex items-center gap-1.5 shrink-0">
-                        <a id="btn-open-tab-soal" href="#" target="_blank" class="hidden text-xs font-semibold px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg transition-colors inline-flex items-center gap-1" title="Buka soal di tab baru browser">
-                            <i data-lucide="external-link" class="w-3.5 h-3.5"></i> <span class="hidden md:inline">Buka Tab Baru</span>
+                        <a id="btn-open-tab-soal" href="#" target="_blank" class="hidden text-xs font-bold px-2.5 py-1 bg-white border border-slate-300 hover:bg-slate-100 text-blue-600 rounded-lg inline-flex items-center gap-1 transition-colors" title="Buka berkas soal di tab baru browser">
+                            <i data-lucide="external-link" class="w-3.5 h-3.5"></i> <span>Buka Tab Baru</span>
                         </a>
-                        <button id="btn-toggle-fullscreen-soal" onclick="toggleMaximizeSoal()" class="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-lg transition-colors" title="Perbesar Layar Soal">
+                        <button id="btn-toggle-fullscreen-soal" onclick="toggleMaximizeSoal()" class="hidden lg:inline-flex p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-lg transition-colors" title="Perbesar Layar Soal">
                             <i data-lucide="maximize-2" id="icon-fullscreen-soal" class="w-4 h-4"></i>
                         </button>
                     </div>
                 </div>
 
                 <!-- Konten Soal (Embed Iframe / Teks Instruksi) -->
-                <div class="relative w-full flex-1 bg-slate-100 min-h-[500px] flex flex-col" style="height: calc(100vh - 165px);">
+                <div class="relative w-full flex-1 bg-slate-100 flex flex-col" style="height: calc(100dvh - 160px); min-height: 480px;">
                     <!-- Loader Soal -->
                     <div id="soal-loader" class="absolute inset-0 bg-slate-50/95 z-20 flex flex-col items-center justify-center p-6 text-center transition-opacity duration-300">
-                        <div class="w-9 h-9 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
-                        <div class="text-sm font-bold text-slate-700">Menyiapkan Lembar Soal...</div>
-                        <p class="text-xs text-slate-500 mt-1 max-w-xs">Mohon tunggu sebentar, dokumen tugas sedang dimuat dari server.</p>
+                        <div class="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-2.5"></div>
+                        <div class="text-xs sm:text-sm font-bold text-slate-700">Menyiapkan Lembar Soal...</div>
+                        <p class="text-[11px] text-slate-500 mt-0.5 max-w-xs">Mohon tunggu, dokumen soal sedang disiapkan.</p>
                     </div>
 
-                    <!-- Embed Iframe / Teks Soal -->
+                    <!-- Embed Iframe Container -->
                     <div id="soal-embed-container" class="w-full h-full relative overflow-hidden flex flex-col">
-                        <!-- Dynamic iframe / content inserted by JS -->
+                        <!-- Disisipkan otomatis via JS -->
                     </div>
                 </div>
             </section>
 
-            <!-- PANEL KANAN: LEMBAR KERJA EDITOR -->
-            <section id="editor-panel" class="w-full lg:w-1/2 flex flex-col transition-all duration-200">
+            <!-- PANEL LEMBAR KERJA EDITOR -->
+            <section id="editor-panel" class="w-full lg:w-1/2 flex flex-col">
                 <div id="editor-wrapper"
-                    class="bg-white sm:bg-slate-200 rounded-2xl shadow-sm border border-slate-200 animate-fade-in flex flex-col items-center relative overflow-hidden w-full">
+                    class="bg-white sm:bg-slate-200 rounded-none sm:rounded-2xl shadow-none sm:shadow-xs border-0 sm:border border-slate-200 animate-fade-in flex flex-col items-center relative overflow-hidden w-full">
 
-                    <!-- Custom Sticky Toolbar -->
+                    <!-- Custom Sticky Toolbar (Tetap sticky saat scroll lembar kerja) -->
                     <div id="toolbar-container"
-                        class="w-full bg-slate-50 border-b border-slate-300 sticky top-0 z-30 shadow-xs flex justify-center py-2 px-2 overflow-x-auto">
-                        <!-- Quill akan otomatis mengisi div ini -->
+                        class="w-full bg-slate-50 border-b border-slate-300 sticky top-[94px] lg:top-[52px] z-20 shadow-xs flex justify-start sm:justify-center py-1.5 px-2 overflow-x-auto">
+                        <!-- Quill Toolbar dipindahkan ke sini oleh JS -->
                     </div>
 
-                    <!-- Container Utama Kertas -->
+                    <!-- Container Utama Kertas A4 -->
                     <div class="w-full py-0 sm:py-4 pb-16 sm:pb-8 flex flex-col items-center">
-                        <!-- WRAPPER UNTUK SCALE -->
-                        <div id="scale-wrapper" class="w-full flex justify-center origin-top">
-                            <!-- Kertas A4 Virtual (Selalu 210mm, discale di HP agar proporsi sama dengan PDF) -->
+                        <!-- Scale Wrapper: Mencegah overflow horizontal pada HP -->
+                        <div id="scale-wrapper" class="w-full flex justify-center origin-top overflow-hidden">
+                            <!-- Kertas A4 Virtual (210mm proporsi PDF murni) -->
                             <div id="pdf-export-area" class="bg-white shadow-lg shrink-0 page-guide-bg"
                                 style="position: relative; width: 210mm; max-width: 210mm; min-height: 297mm; padding: 12.7mm; box-sizing: border-box; display: flex; flex-direction: column;">
 
@@ -348,18 +360,18 @@
                                     style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
                                     <div>
                                         <h2 id="doc-title"
-                                            style="margin: 0; font-size: 22px; font-weight: bold; font-family: 'Inter', sans-serif;">
+                                            style="margin: 0; font-size: 20px; font-weight: bold; font-family: 'Inter', sans-serif;">
                                             Judul Tugas</h2>
                                         <p id="doc-student"
-                                            style="margin: 6px 0 0 0; font-size: 14px; color: #333; font-family: 'Inter', sans-serif;">
+                                            style="margin: 4px 0 0 0; font-size: 13px; color: #333; font-family: 'Inter', sans-serif;">
                                             Nama: - | Kelas: -</p>
                                         <p id="doc-date"
-                                            style="margin: 6px 0 0 0; font-size: 14px; color: #333; font-family: 'Inter', sans-serif;">
+                                            style="margin: 4px 0 0 0; font-size: 13px; color: #333; font-family: 'Inter', sans-serif;">
                                             Waktu: -</p>
                                     </div>
                                     <div id="draft-sync-badge"
-                                        style="font-size:0.72rem; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:20px; padding:4px 10px; display:inline-flex; align-items:center; gap:6px; color:#475569; font-weight:600; flex-shrink:0; margin-top:2px;">
-                                        <i data-lucide="cloud" id="draft-status-icon" style="width:14px; height:14px; color:#64748b;"></i>
+                                        style="font-size:0.7rem; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:16px; padding:3px 8px; display:inline-flex; align-items:center; gap:5px; color:#475569; font-weight:600; flex-shrink:0; margin-top:2px;">
+                                        <i data-lucide="cloud" id="draft-status-icon" style="width:13px; height:13px; color:#64748b;"></i>
                                         <span id="draft-status-text">Memuat Draft...</span>
                                     </div>
                                 </div>
@@ -368,38 +380,49 @@
                                     style="border: none !important; font-family: 'Inter', sans-serif;"></div>
                             </div>
                         </div> <!-- End of scale-wrapper -->
-                    </div> <!-- End of scrollable container -->
+                    </div> <!-- End of container utama kertas -->
                 </div>
             </section>
         </div>
 
-        <!-- Tombol Aksi Bawah (Sticky Bottom) -->
-        <div id="action-container"
-            class="fixed bottom-0 w-full max-w-4xl mx-auto p-4 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] z-30 flex justify-between items-center gap-3 left-1/2 transform -translate-x-1/2 rounded-t-2xl sm:rounded-none">
-            <!-- Info Status Draft (Mobile) -->
-            <div class="sm:hidden flex items-center gap-1.5 text-xs font-semibold text-slate-500 truncate mr-2">
-                <i data-lucide="cloud" class="w-3.5 h-3.5 text-slate-400"></i>
-                <span id="mobile-draft-status">Draft Otomatis</span>
+        <!-- ================= BOTTOM ACTION BARS ================= -->
+        <!-- 1. Bottom Bar HP Saat di Tab Soal -->
+        <div id="action-soal-mobile" class="lg:hidden fixed bottom-0 left-0 right-0 p-2.5 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 flex items-center gap-2 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+            <button onclick="handleBackToDashboard()" class="px-3.5 py-2.5 rounded-xl font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 active:scale-95 text-xs shrink-0 flex items-center gap-1 transition-all">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> Kembali
+            </button>
+            <button onclick="setViewMode('editor')" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 flex items-center justify-center gap-1.5 transition-all">
+                <span>Buka Lembar Jawaban</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <!-- 2. Bottom Bar HP Saat di Tab Jawaban/Editor -->
+        <div id="action-editor-mobile" class="lg:hidden fixed bottom-0 left-0 right-0 p-2.5 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 flex items-center gap-2 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+            <button onclick="setViewMode('soal')" class="flex-1 py-2.5 rounded-xl font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 text-xs flex items-center justify-center gap-1.5 border border-slate-200 transition-all">
+                <i data-lucide="file-question" class="w-4 h-4 text-blue-600"></i> <span>Lihat Soal</span>
+            </button>
+            <button onclick="document.getElementById('preview-btn').click()" class="flex-[1.4] py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 flex items-center justify-center gap-1.5 transition-all">
+                <i data-lucide="send" class="w-4 h-4"></i> <span>Kirim Tugas</span>
+            </button>
+        </div>
+
+        <!-- 3. Bottom Bar Desktop (>= 1024px) -->
+        <div id="action-desktop" class="hidden lg:flex fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-md z-30 py-3 px-6 justify-between items-center">
+            <div class="flex items-center gap-2 text-xs text-slate-500">
+                <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+                <span>Sistem Auto-Save aktif otomatis mengamankan ketikan Anda (Lokal & Cloud).</span>
             </div>
-            
-            <div class="flex items-center gap-2 ml-auto w-full sm:w-auto justify-end">
-                <button onclick="handleBackToDashboard()"
-                    class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 text-sm">
-                    Kembali
+            <div class="flex items-center gap-3">
+                <button onclick="handleBackToDashboard()" class="px-4 py-2 rounded-xl font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors text-sm">
+                    Batal
                 </button>
-                <button id="preview-btn"
-                    class="flex-[2] sm:flex-none px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl font-bold shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 text-sm">
-                    <i id="btn-icon" data-lucide="send" class="w-4 h-4"></i> <span id="btn-text">Kirim Tugas</span>
+                <button id="preview-btn" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl font-bold shadow-md shadow-blue-500/25 transition-all flex items-center gap-2 text-sm">
+                    <i id="btn-icon" data-lucide="send" class="w-4 h-4"></i> <span id="btn-text">Pratinjau & Kirim</span>
                     <div id="btn-loader" class="spinner hidden ml-2 w-4 h-4" style="border-top-color: white;"></div>
                 </button>
             </div>
         </div>
-
-        <!-- Floating Quick Switch Button for Mobile (Intip Soal / Balik Mengetik) -->
-        <button id="mobile-peek-btn" onclick="toggleMobileView()" class="lg:hidden fixed bottom-20 right-4 z-30 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold px-4 py-3 rounded-full shadow-xl flex items-center gap-2 active:scale-95 transition-all text-sm border-2 border-white/30 backdrop-blur-md">
-            <i data-lucide="file-question" id="mobile-peek-icon" class="w-4 h-4"></i>
-            <span id="mobile-peek-text">Lihat Soal</span>
-        </button>
+        <!-- ================= END BOTTOM ACTION BARS ================= -->
 
         <!-- Success Container -->
         <div id="success-container"
@@ -407,15 +430,15 @@
             <div
                 class="w-full max-w-md flex flex-col items-center text-center bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
                 <div
-                    class="w-24 h-24 bg-gradient-to-br from-emerald-100 to-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-6 shadow-inner ring-8 ring-emerald-50">
-                    <i data-lucide="check-circle" class="w-12 h-12"></i>
+                    class="w-20 h-20 bg-gradient-to-br from-emerald-100 to-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-5 shadow-inner ring-8 ring-emerald-50">
+                    <i data-lucide="check-circle" class="w-10 h-10"></i>
                 </div>
-                <h2 class="text-3xl font-black text-slate-800 mb-3 tracking-tight">Tugas Terkirim!</h2>
-                <p class="text-slate-500 font-medium mb-8 leading-relaxed">Kerja bagus! Tugas Anda berhasil dikonversi ke PDF dan tercatat di sistem penilaian.</p>
+                <h2 class="text-2xl sm:text-3xl font-black text-slate-800 mb-2 tracking-tight">Tugas Terkirim!</h2>
+                <p class="text-slate-500 text-xs sm:text-sm font-medium mb-6 leading-relaxed">Kerja bagus! Tugas Anda berhasil dikonversi ke format PDF dan tercatat di sistem penilaian.</p>
 
                 <button onclick="window.location.href='dashboard.html'"
-                    class="w-full bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg shadow-slate-200 hover:bg-slate-900 hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2">
-                    <i data-lucide="home" class="w-5 h-5"></i> Kembali ke Dashboard
+                    class="w-full bg-slate-800 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-slate-200 hover:bg-slate-900 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">
+                    <i data-lucide="home" class="w-4 h-4"></i> Kembali ke Dashboard
                 </button>
             </div>
         </div>
@@ -426,31 +449,29 @@
         class="fixed inset-0 bg-slate-900/90 z-50 hidden flex items-center justify-center p-0 sm:p-4 transition-all">
         <div
             class="bg-white sm:rounded-2xl shadow-2xl w-full max-w-4xl h-full sm:h-[90vh] flex flex-col overflow-hidden transform transition-all">
-            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-                <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2"><i data-lucide="file-check"
-                        class="w-5 h-5 text-blue-600"></i> Preview Dokumen Tugas</h3>
+            <div class="p-3.5 sm:p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-sm sm:text-base text-slate-800 flex items-center gap-2"><i data-lucide="file-check"
+                        class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600"></i> Pratinjau Dokumen Tugas</h3>
                 <button onclick="closePreview()"
                     class="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-200">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
             <div class="flex-1 bg-slate-200 relative flex flex-col overflow-y-auto">
-                <iframe id="preview-iframe" class="w-full h-full border-0 bg-slate-200"></iframe>
+                <iframe id="preview-iframe" class="w-full h-full border-0 bg-slate-200 hidden"></iframe>
 
                 <!-- Fallback Mobile (Menampilkan Gambar dari Canvas) -->
                 <div id="mobile-pdf-fallback"
-                    class="hidden flex-col items-center p-4 w-full h-full bg-slate-200 overflow-y-auto">
+                    class="hidden flex-col items-center p-3 sm:p-4 w-full h-full bg-slate-200 overflow-y-auto">
                     <div
-                        class="w-full max-w-md bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 text-center">
-                        <i data-lucide="file-check" class="w-8 h-8 text-blue-600 mx-auto mb-2"></i>
-                        <h3 class="text-sm font-bold text-slate-800">Pratinjau Dokumen</h3>
-                        <p class="text-xs text-slate-500 mb-2">Ini adalah pratinjau tampilan dokumen Anda. Jika sudah
-                            sesuai, silakan tekan tombol Kirim Sekarang.</p>
+                        class="w-full max-w-md bg-white rounded-xl shadow-xs border border-slate-100 p-3.5 mb-3 text-center">
+                        <i data-lucide="file-check" class="w-7 h-7 text-blue-600 mx-auto mb-1.5"></i>
+                        <h3 class="text-xs sm:text-sm font-bold text-slate-800">Pratinjau Lembar Dokumen</h3>
+                        <p class="text-[11px] text-slate-500 mb-2">Pastikan lembar kerja Anda rapi sebelum mengirim.</p>
                         <a id="mobile-pdf-link" href="#" target="_blank"
-                            class="text-xs font-bold text-blue-600 hover:text-blue-800 underline">Unduh PDF Asli</a>
+                            class="text-xs font-bold text-blue-600 hover:text-blue-800 underline">Unduh File PDF</a>
                     </div>
-                    <!-- Gambar Pratinjau akan disisipkan ke sini -->
-                    <img id="mobile-preview-img" class="w-full h-auto shadow-md bg-white mb-8 p-2 sm:p-4" src=""
+                    <img id="mobile-preview-img" class="w-full h-auto shadow-md bg-white mb-8 p-1 sm:p-4" src=""
                         alt="Pratinjau Dokumen" />
                 </div>
 
@@ -458,29 +479,28 @@
                 <div id="preview-loading"
                     class="absolute inset-0 bg-slate-50 flex flex-col items-center justify-center z-20 p-4">
                     <div
-                        class="relative flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 mb-4 sm:mb-6 shrink-0">
+                        class="relative flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 mb-3 sm:mb-4 shrink-0">
                         <div class="absolute inset-0 border-4 border-slate-200 rounded-2xl shadow-inner"></div>
                         <div
-                            class="absolute inset-0 border-4 border-blue-600 rounded-2xl border-t-transparent animate-spin shadow-[0_0_15px_rgba(37,99,235,0.3)]">
+                            class="absolute inset-0 border-4 border-blue-600 rounded-2xl border-t-transparent animate-spin">
                         </div>
-                        <i data-lucide="file-check-2" class="w-8 h-8 sm:w-10 sm:h-10 text-blue-600 animate-pulse"></i>
+                        <i data-lucide="file-check-2" class="w-7 h-7 text-blue-600 animate-pulse"></i>
                     </div>
-                    <h3 class="text-lg sm:text-xl font-bold text-slate-800 mb-2 text-center">Menyusun Dokumen</h3>
-                    <p class="text-xs sm:text-sm text-slate-500 font-medium text-center max-w-xs leading-relaxed">Mohon
-                        tunggu sebentar, sistem sedang merakit file PDF Anda...</p>
+                    <h3 class="text-base sm:text-lg font-bold text-slate-800 mb-1 text-center">Merakit Dokumen PDF</h3>
+                    <p class="text-xs text-slate-500 font-medium text-center max-w-xs leading-relaxed">Sistem sedang memproses berkas PDF Anda...</p>
                 </div>
             </div>
             <div
-                class="p-4 border-t border-slate-200 bg-white flex flex-wrap justify-between items-center gap-4 mt-auto sticky bottom-0 z-30">
-                <p class="text-sm text-slate-500 hidden sm:block"><i data-lucide="info"
-                        class="w-4 h-4 inline-block -mt-1 mr-1"></i> Pastikan isi dokumen rapi sebelum mengirim.
+                class="p-3 sm:p-4 border-t border-slate-200 bg-white flex flex-wrap justify-between items-center gap-3 mt-auto sticky bottom-0 z-30">
+                <p class="text-xs text-slate-500 hidden sm:block"><i data-lucide="info"
+                        class="w-3.5 h-3.5 inline-block -mt-0.5 mr-1"></i> Periksa halaman dengan teliti sebelum mengirim.
                 </p>
-                <div class="flex gap-3 w-full sm:w-auto">
+                <div class="flex gap-2.5 w-full sm:w-auto">
                     <button onclick="closePreview()"
-                        class="flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-medium text-slate-700 hover:bg-slate-100 transition-colors border border-slate-300">Edit
+                        class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl font-medium text-slate-700 hover:bg-slate-100 transition-colors border border-slate-300 text-xs sm:text-sm">Edit
                         Lagi</button>
                     <button id="confirm-send-btn" onclick="sendTaskFromPreview()"
-                        class="flex-1 sm:flex-none px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium flex justify-center items-center gap-2 transition-colors shadow-sm">
+                        class="flex-1 sm:flex-none px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex justify-center items-center gap-2 transition-colors shadow-xs text-xs sm:text-sm">
                         <i data-lucide="send" class="w-4 h-4"></i> Kirim Sekarang
                     </button>
                 </div>
@@ -491,14 +511,14 @@
     <!-- FUNNY PASTE MODAL -->
     <div id="funny-paste-modal" class="fixed inset-0 z-[100] flex items-center justify-center hidden p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
-        <div class="bg-white rounded-3xl p-8 shadow-2xl relative z-10 max-w-xs w-full text-center transform scale-90 opacity-0"
+        <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl relative z-10 max-w-xs w-full text-center transform scale-90 opacity-0"
             id="funny-modal-content">
-            <div class="text-7xl mb-4 animate-bounce">🚫✍️</div>
-            <h3 class="text-2xl font-black text-slate-800 mb-2">Eits, Jangan di-Paste!</h3>
-            <p class="text-slate-600 font-medium mb-6 leading-relaxed">Ayo semangat mengetik sendiri ya..<br>Biar
+            <div class="text-6xl mb-3 animate-bounce">🚫✍️</div>
+            <h3 class="text-xl font-black text-slate-800 mb-1.5">Eits, Jangan di-Paste!</h3>
+            <p class="text-xs sm:text-sm text-slate-600 font-medium mb-5 leading-relaxed">Ayo semangat mengetik sendiri ya..<br>Biar
                 ilmunya makin nempel di kepala dan makin pinter! 💪✨</p>
             <button onclick="closeFunnyModal()"
-                class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-200 active:scale-95">
+                class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-md shadow-blue-200 active:scale-95 text-sm">
                 Siap, Pak 😅!
             </button>
         </div>
@@ -510,7 +530,7 @@
         const idMateri = urlParams.get('id');
         const titleParam = urlParams.get('title') || "Tugas Editor";
 
-        // Validasi Sesi
+        // Validasi Sesi Pengguna
         const userData = JSON.parse(localStorage.getItem('user') || '{}');
         if (!userData.username) {
             alert("Sesi Anda telah berakhir. Silakan login kembali.");
@@ -518,28 +538,42 @@
         }
 
         let quill;
-        let currentViewMode = window.innerWidth >= 1024 ? 'split' : 'editor';
+        let currentViewMode = window.innerWidth >= 1024 ? 'split' : 'soal';
 
-        // ===== VIEW MODE CONTROLS =====
+        // ===== VIEW MODE CONTROLLER =====
         function setViewMode(mode) {
             currentViewMode = mode;
             const soalPanel = document.getElementById('soal-panel');
             const editorPanel = document.getElementById('editor-panel');
+            
+            // Tombol Desktop
             const modeSplitBtn = document.getElementById('mode-split-btn');
             const modeSoalBtn = document.getElementById('mode-soal-btn');
             const modeEditorBtn = document.getElementById('mode-editor-btn');
-            const peekBtn = document.getElementById('mobile-peek-btn');
-            const peekText = document.getElementById('mobile-peek-text');
-            const peekIcon = document.getElementById('mobile-peek-icon');
+            
+            // Tab Mobile
+            const mobTabSoal = document.getElementById('mobile-tab-soal');
+            const mobTabEditor = document.getElementById('mobile-tab-editor');
+
+            // Bottom Bar Containers
+            const barSoalMob = document.getElementById('action-soal-mobile');
+            const barEditorMob = document.getElementById('action-editor-mobile');
+            const barDesktop = document.getElementById('action-desktop');
+
             const iconFs = document.getElementById('icon-fullscreen-soal');
 
-            // Reset segmented button styles
             const defaultBtnClass = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-slate-900";
             const activeBtnClass = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-blue-700 bg-white shadow-xs border border-slate-200/60";
+
+            const mobDefaultTab = "flex-1 py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 text-slate-600 bg-transparent";
+            const mobActiveTab = "flex-1 py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 text-blue-700 bg-white shadow-xs border border-slate-200";
 
             if (modeSplitBtn) modeSplitBtn.className = (mode === 'split' ? activeBtnClass : defaultBtnClass);
             if (modeSoalBtn) modeSoalBtn.className = (mode === 'soal' ? activeBtnClass : defaultBtnClass);
             if (modeEditorBtn) modeEditorBtn.className = (mode === 'editor' ? activeBtnClass : defaultBtnClass);
+
+            if (mobTabSoal) mobTabSoal.className = (mode === 'soal' ? mobActiveTab : mobDefaultTab);
+            if (mobTabEditor) mobTabEditor.className = (mode === 'editor' ? mobActiveTab : mobDefaultTab);
 
             if (mode === 'split') {
                 if (soalPanel) {
@@ -550,7 +584,9 @@
                     editorPanel.classList.remove('hidden', 'w-full');
                     editorPanel.classList.add('w-full', 'lg:w-1/2');
                 }
-                if (peekBtn) peekBtn.classList.add('hidden');
+                if (barSoalMob) barSoalMob.classList.add('hidden');
+                if (barEditorMob) barEditorMob.classList.add('hidden');
+                if (barDesktop) barDesktop.classList.remove('hidden');
                 if (iconFs) iconFs.setAttribute('data-lucide', 'maximize-2');
             } else if (mode === 'soal') {
                 if (soalPanel) {
@@ -560,10 +596,9 @@
                 if (editorPanel) {
                     editorPanel.classList.add('hidden');
                 }
-                if (peekBtn) {
-                    peekBtn.classList.remove('hidden');
-                    if (peekText) peekText.innerText = "Lembar Kerja";
-                    if (peekIcon) peekIcon.setAttribute('data-lucide', 'edit-3');
+                if (window.innerWidth < 1024) {
+                    if (barSoalMob) barSoalMob.classList.remove('hidden');
+                    if (barEditorMob) barEditorMob.classList.add('hidden');
                 }
                 if (iconFs) iconFs.setAttribute('data-lucide', 'minimize-2');
             } else if (mode === 'editor') {
@@ -574,29 +609,20 @@
                     editorPanel.classList.remove('hidden', 'lg:w-1/2');
                     editorPanel.classList.add('w-full');
                 }
-                if (peekBtn) {
-                    peekBtn.classList.remove('hidden');
-                    if (peekText) peekText.innerText = "Lihat Soal";
-                    if (peekIcon) peekIcon.setAttribute('data-lucide', 'file-question');
+                if (window.innerWidth < 1024) {
+                    if (barSoalMob) barSoalMob.classList.add('hidden');
+                    if (barEditorMob) barEditorMob.classList.remove('hidden');
                 }
             }
 
             if (window.lucide) lucide.createIcons();
 
-            // Pemicu penyesuaian skala A4
+            // Pemicu penyesuaian skala A4 virtual
             setTimeout(() => {
                 if (typeof window.adjustMobileScale === 'function') {
                     window.adjustMobileScale();
                 }
-            }, 120);
-        }
-
-        function toggleMobileView() {
-            if (currentViewMode === 'editor') {
-                setViewMode('soal');
-            } else {
-                setViewMode('editor');
-            }
+            }, 80);
         }
 
         function toggleMaximizeSoal() {
@@ -630,7 +656,7 @@
 
             let m = null;
 
-            // 1. Coba dari cache_materi di localStorage
+            // 1. Baca dari cache_materi
             try {
                 const rawCache = localStorage.getItem("cache_materi");
                 if (rawCache) {
@@ -647,7 +673,7 @@
                 console.warn("Gagal membaca cache_materi:", e);
             }
 
-            // 2. Jika tidak ada di cache, fetch dari Apps Script sheet materi
+            // 2. Fetch jika belum ada
             if (!m) {
                 try {
                     const res = await fetch(`${API_URL}?sheet=materi`);
@@ -676,7 +702,7 @@
                 if (topTitle) topTitle.innerText = mJudul;
                 if (topSubtitle) topSubtitle.innerText = `${mMapel} • ${userData.nama || '-'}`;
                 if (topMapel) topMapel.innerText = mMapel;
-                if (soalMetaInfo) soalMetaInfo.innerText = `${mMapel} • Lembar Soal`;
+                if (soalMetaInfo) soalMetaInfo.innerText = `${mMapel} • Berkas Soal`;
 
                 if (mLink && btnOpenTab) {
                     btnOpenTab.href = mLink;
@@ -685,14 +711,13 @@
 
                 renderSoalContent(mLink, mDeskripsi);
             } else {
-                // Fallback jika data materi tidak ditemukan
                 if (soalLoader) soalLoader.classList.add('hidden');
                 if (soalContainer) {
                     soalContainer.innerHTML = `
-                        <div class="flex-1 flex flex-col items-center justify-center p-8 text-center bg-white m-3 rounded-xl border border-dashed border-slate-300">
-                            <i data-lucide="file-question" class="w-12 h-12 text-slate-400 mb-3"></i>
-                            <h3 class="text-base font-bold text-slate-800">Lembar Tugas</h3>
-                            <p class="text-xs text-slate-500 mt-1 max-w-sm">Silakan ketikkan tugas sesuai instruksi guru Anda pada lembar kerja di samping.</p>
+                        <div class="flex-1 flex flex-col items-center justify-center p-6 text-center bg-white m-3 rounded-xl border border-dashed border-slate-300">
+                            <i data-lucide="file-question" class="w-10 h-10 text-slate-400 mb-2"></i>
+                            <h3 class="text-sm font-bold text-slate-800">Lembar Tugas</h3>
+                            <p class="text-xs text-slate-500 mt-1 max-w-xs">Silakan ketikkan jawaban sesuai instruksi guru Anda pada lembar kerja.</p>
                         </div>
                     `;
                     lucide.createIcons();
@@ -723,23 +748,30 @@
                 let match = link.match(/[-\w]{25,}/);
                 if (match) {
                     let fileId = match[0];
-                    embedHtml = `<iframe src="https://drive.google.com/file/d/${fileId}/preview#toolbar=0&navpanes=0&scrollbar=0" class="w-full h-full border-0" allow="autoplay"></iframe>`;
+                    // Trik CSS -50px untuk menyembunyikan toolbar Google Drive preview
+                    embedHtml = `
+                        <div class="w-full h-full relative overflow-hidden" style="touch-action: pan-y;">
+                            <iframe src="https://drive.google.com/file/d/${fileId}/preview#toolbar=0&navpanes=0&scrollbar=0" 
+                                    class="w-full border-0" 
+                                    style="position: absolute; top: -50px; left: 0; width: 100%; height: calc(100% + 50px); touch-action: pan-y;" 
+                                    allow="autoplay"></iframe>
+                        </div>`;
                 }
             } else if (link.toLowerCase().includes(".pdf")) {
-                embedHtml = `<iframe src="${link}#toolbar=0" class="w-full h-full border-0"></iframe>`;
+                embedHtml = `<iframe src="${link}#toolbar=0" class="w-full h-full border-0" style="touch-action: pan-y;"></iframe>`;
             } else if (link.includes("canva.com")) {
                 let embedUrl = link.includes("/view?") ? link.replace("/view?", "/view?embed") : link;
                 embedHtml = `<iframe src="${embedUrl}" allowfullscreen class="w-full h-full border-0"></iframe>`;
             } else if (link) {
-                embedHtml = `<iframe src="${link}" class="w-full h-full border-0"></iframe>`;
+                embedHtml = `<iframe src="${link}" class="w-full h-full border-0" style="touch-action: pan-y;"></iframe>`;
             }
 
             let fullHTML = "";
             if (deskripsi) {
                 fullHTML += `
-                    <div class="p-4 bg-white border-b border-slate-200 overflow-y-auto max-h-48 text-sm text-slate-700 leading-relaxed shrink-0">
-                        <div class="font-bold text-xs uppercase tracking-wider text-blue-600 mb-1 flex items-center gap-1.5">
-                            <i data-lucide="info" class="w-3.5 h-3.5"></i> Petunjuk & Instruksi:
+                    <div class="p-3.5 bg-white border-b border-slate-200 overflow-y-auto max-h-40 text-xs sm:text-sm text-slate-700 leading-relaxed shrink-0">
+                        <div class="font-bold text-[11px] uppercase tracking-wider text-blue-600 mb-1 flex items-center gap-1">
+                            <i data-lucide="info" class="w-3.5 h-3.5"></i> Petunjuk Guru:
                         </div>
                         <div>${deskripsi}</div>
                     </div>
@@ -747,13 +779,13 @@
             }
 
             if (embedHtml) {
-                fullHTML += `<div class="flex-1 w-full relative overflow-hidden bg-slate-100">${embedHtml}</div>`;
+                fullHTML += `<div class="flex-1 w-full relative overflow-hidden bg-slate-100 flex flex-col">${embedHtml}</div>`;
             } else if (!deskripsi) {
                 fullHTML += `
-                    <div class="flex-1 flex flex-col items-center justify-center p-8 text-center bg-white m-3 rounded-xl border border-dashed border-slate-300">
-                        <i data-lucide="file-check" class="w-12 h-12 text-slate-400 mb-3"></i>
-                        <h3 class="text-base font-bold text-slate-800">Tugas Mandiri</h3>
-                        <p class="text-xs text-slate-500 mt-1 max-w-sm">Kerjakan tugas ini langsung pada lembar kerja di samping sesuai arahan guru.</p>
+                    <div class="flex-1 flex flex-col items-center justify-center p-6 text-center bg-white m-3 rounded-xl border border-dashed border-slate-300">
+                        <i data-lucide="file-check" class="w-10 h-10 text-slate-400 mb-2"></i>
+                        <h3 class="text-sm font-bold text-slate-800">Tugas Mandiri</h3>
+                        <p class="text-xs text-slate-500 mt-0.5 max-w-xs">Kerjakan tugas ini langsung pada lembar jawaban sesuai arahan guru.</p>
                     </div>
                 `;
             }
@@ -764,14 +796,14 @@
             if (iframe) {
                 iframe.onload = () => {
                     if (loader) loader.classList.add('opacity-0', 'pointer-events-none');
-                    setTimeout(() => { if (loader) loader.classList.add('hidden'); }, 300);
+                    setTimeout(() => { if (loader) loader.classList.add('hidden'); }, 250);
                 };
                 setTimeout(() => {
                     if (loader) {
                         loader.classList.add('opacity-0', 'pointer-events-none');
-                        setTimeout(() => { if (loader) loader.classList.add('hidden'); }, 300);
+                        setTimeout(() => { if (loader) loader.classList.add('hidden'); }, 250);
                     }
-                }, 3500);
+                }, 3000);
             } else {
                 if (loader) loader.classList.add('hidden');
             }
@@ -779,7 +811,7 @@
             lucide.createIcons();
         }
 
-        // ===== WINDOW ONLOAD =====
+        // ===== INITIALIZATION =====
         window.onload = () => {
             lucide.createIcons();
             if (!idMateri) {
@@ -787,13 +819,7 @@
                 document.getElementById('preview-btn').disabled = true;
             }
 
-            // Atur view mode awal
-            setViewMode(window.innerWidth >= 1024 ? 'split' : 'editor');
-
-            // Ambil data soal
-            loadMateriData();
-
-            // Isi data kop surat dinamis di kertas A4
+            // Kop Surat Virtual A4
             document.getElementById('doc-title').innerText = decodeURIComponent(titleParam);
             document.getElementById('doc-student').innerText = `Nama: ${userData.nama || '-'} | Kelas: ${userData.kelas || userData.tingkat || '-'}`;
 
@@ -804,10 +830,10 @@
             updateTime();
             setInterval(updateTime, 1000);
 
-            // Initialize Quill editor
+            // Inisialisasi Quill Editor
             quill = new Quill('#editor-container', {
                 theme: 'snow',
-                placeholder: 'Mulai mengetik tugas Anda di sini...',
+                placeholder: 'Ketikkan jawaban tugas Anda di sini...',
                 modules: {
                     toolbar: [
                         [{ 'header': [1, 2, 3, false] }],
@@ -821,7 +847,7 @@
                 }
             });
 
-            // ===== MOBILE IMAGE RESIZE =====
+            // ===== MOBILE IMAGE RESIZE HANDLERS =====
             let selectedImg = null;
             let resizeOverlay = null;
 
@@ -830,17 +856,17 @@
                 resizeOverlay = document.createElement('div');
                 resizeOverlay.className = 'img-resize-overlay';
                 resizeOverlay.innerHTML = `
-                    <div class="text-white text-xs font-bold opacity-50 uppercase tracking-widest mb-1">Pengaturan Gambar</div>
+                    <div class="text-white text-[11px] font-bold opacity-60 uppercase tracking-widest">Atur Ukuran Gambar</div>
                     <div class="img-resize-controls">
                         <button id="img-shrink" title="Perkecil">−</button>
                         <span id="img-size-label">— × —</span>
                         <button id="img-grow" title="Perbesar">+</button>
                     </div>
-                    <div class="flex gap-4 w-full border-t border-white/10 pt-4 justify-center">
-                        <button id="img-rotate" class="flex-1 !w-auto !px-4" title="Putar">
-                            <i data-lucide="rotate-cw" class="w-5 h-5 mr-2"></i> Putar
+                    <div class="flex gap-3 w-full border-t border-white/10 pt-3 justify-center">
+                        <button id="img-rotate" class="flex-1 !w-auto !px-3 !text-xs font-bold" title="Putar">
+                            <i data-lucide="rotate-cw" class="w-4 h-4 mr-1"></i> Putar
                         </button>
-                        <button id="img-close" class="!w-12 !bg-red-500/20 hover:!bg-red-500/40 !text-red-500" title="Tutup">✕</button>
+                        <button id="img-close" class="!w-10 !bg-red-500/20 hover:!bg-red-500/40 !text-red-400 font-bold" title="Tutup">✕</button>
                     </div>
                 `;
                 document.body.appendChild(resizeOverlay);
@@ -866,8 +892,8 @@
                     const ratio = displayW / w;
                     const displayH = h * ratio;
                     const extraSpace = (displayW - displayH) / 2;
-                    selectedImg.style.marginTop = (extraSpace + 20) + 'px';
-                    selectedImg.style.marginBottom = (extraSpace + 20) + 'px';
+                    selectedImg.style.marginTop = (extraSpace + 15) + 'px';
+                    selectedImg.style.marginBottom = (extraSpace + 15) + 'px';
                 } else {
                     selectedImg.style.marginTop = '10px';
                     selectedImg.style.marginBottom = '10px';
@@ -932,7 +958,7 @@
                 qlToolbar.style.border = 'none';
             }
 
-            // --- FITUR AUTO-SAVE HYBRID (LOCAL + CLOUD DRAFT) ---
+            // --- AUTO-SAVE HYBRID (LOCAL FIRST + CLOUD DEBOUNCE) ---
             const draftKey = `draft_editor_${userData.username}_${idMateri}`;
             window.currentDraftRowNumber = null;
             let cloudSyncTimer = null;
@@ -943,12 +969,10 @@
                 const iconEl = document.getElementById('draft-status-icon');
                 const topText = document.getElementById('topbar-sync-text');
                 const topIcon = document.getElementById('topbar-sync-icon');
-                const mobText = document.getElementById('mobile-draft-status');
 
                 let textVal = message || "Tersimpan";
                 if (statusEl) statusEl.innerText = textVal;
                 if (topText) topText.innerText = textVal;
-                if (mobText) mobText.innerText = textVal;
 
                 if (statusType === 'saving') {
                     if (statusEl) statusEl.className = "text-amber-600 font-semibold";
@@ -969,7 +993,7 @@
                 }
             }
 
-            // 1. LOCAL FIRST: BACA MEMORI LOKAL DULU
+            // 1. Baca Memori Lokal Dulu (Instant)
             let localData = null;
             const rawLocal = localStorage.getItem(draftKey);
             if (rawLocal) {
@@ -989,15 +1013,29 @@
                 }
             }
 
-            if (localData && localData.html) {
+            let hasExistingDraft = false;
+            if (localData && localData.html && localData.html.trim() !== "<p><br></p>" && localData.html.length > 25) {
                 quill.root.innerHTML = localData.html;
                 lastLocalTimestamp = localData.updatedAt;
-                updateDraftStatus('local', localData.isLegacy ? "Draft Kemarin Dimuat" : "Draft Lokal Dimuat");
+                updateDraftStatus('local', "Draft Dimuat");
+                hasExistingDraft = true;
             } else {
-                updateDraftStatus('synced', "Draft Siap");
+                updateDraftStatus('synced', "Draft Kosong");
             }
 
-            // 2. BACKGROUND CLOUD FETCH & MIGRATION GUARD
+            // Tentukan View Mode Awal:
+            // Pada Desktop: Split View (50:50).
+            // Pada Mobile: Jika sudah ada ketikan draft -> Lembar Jawaban. Jika belum -> Lembar Soal!
+            if (window.innerWidth >= 1024) {
+                setViewMode('split');
+            } else {
+                setViewMode(hasExistingDraft ? 'editor' : 'soal');
+            }
+
+            // Ambil Data Soal di background
+            loadMateriData();
+
+            // 2. Background Cloud Sync
             async function syncCloudDraftInitial() {
                 try {
                     const norm = s => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
@@ -1048,11 +1086,11 @@
                     }
                 } catch (err) {
                     console.warn("Cloud Draft Sync notice:", err);
-                    updateDraftStatus('error', "Draft Tersimpan di HP");
+                    updateDraftStatus('error', "Tersimpan Lokal");
                 }
             }
 
-            // 3. FUNGSI SIMPAN DRAFT KE CLOUD
+            // 3. Simpan Draft ke Cloud
             async function saveDraftToCloud(htmlContent, timestamp) {
                 if (!htmlContent || htmlContent === "<p><br></p>") return;
                 try {
@@ -1079,17 +1117,17 @@
                     const res = await response.json();
                     if (res.status === "success" || res.rowNumber) {
                         if (res.rowNumber) window.currentDraftRowNumber = res.rowNumber;
-                        updateDraftStatus('synced', "Tersimpan (Lokal & Cloud)");
+                        updateDraftStatus('synced', "Tersimpan (Cloud)");
                     } else {
-                        updateDraftStatus('local', "Tersimpan di HP");
+                        updateDraftStatus('local', "Tersimpan Lokal");
                     }
                 } catch (e) {
                     console.warn("Save draft cloud error:", e);
-                    updateDraftStatus('error', "Tersimpan di HP");
+                    updateDraftStatus('error', "Tersimpan Lokal");
                 }
             }
 
-            // 4. REALTIME EVENT LISTENER
+            // 4. Realtime Ketik Listener
             quill.on('text-change', function () {
                 const currentHtml = quill.root.innerHTML;
                 const now = Date.now();
@@ -1100,19 +1138,20 @@
 
                 if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
                 cloudSyncTimer = setTimeout(() => {
-                    updateDraftStatus('saving', "Mengirim ke Cloud...");
+                    updateDraftStatus('saving', "Menyimpan Cloud...");
                     saveDraftToCloud(currentHtml, now);
                 }, 3500);
             });
 
-            setTimeout(syncCloudDraftInitial, 500);
+            setTimeout(syncCloudDraftInitial, 600);
 
-            document.getElementById('preview-btn').addEventListener('click', generatePreview);
+            const previewBtn = document.getElementById('preview-btn');
+            if (previewBtn) previewBtn.addEventListener('click', generatePreview);
 
             // Inisialisasi Skala Layar A4
             initMobileScale();
 
-            // Blokir Paste & Tampilkan Modal Edukatif
+            // Blokir Paste & Tampilkan Modal Lucu Edukatif
             if (quill && quill.root) {
                 quill.root.addEventListener('paste', function (e) {
                     e.preventDefault();
@@ -1213,10 +1252,10 @@
             document.getElementById('error-box').classList.add('hidden');
         }
 
-        // ===== GENERATE PREVIEW & EXPORT PDF =====
+        // ===== GENERATE PREVIEW & PDF =====
         async function generatePreview() {
             if (quill.getText().trim().length === 0 && !quill.root.innerHTML.includes('<img')) {
-                showError("Tugas masih kosong. Silakan isi lembar kerja terlebih dahulu.");
+                showError("Tugas masih kosong. Silakan isi lembar jawaban terlebih dahulu.");
                 return;
             }
 
@@ -1227,23 +1266,20 @@
             const btnLoader = document.getElementById('btn-loader');
             const btnIcon = document.getElementById('btn-icon');
 
-            btn.disabled = true;
-            btnText.innerText = "Mempersiapkan...";
-            btnIcon.classList.add('hidden');
-            btnLoader.classList.remove('hidden');
+            if (btn) btn.disabled = true;
+            if (btnText) btnText.innerText = "Mempersiapkan...";
+            if (btnIcon) btnIcon.classList.add('hidden');
+            if (btnLoader) btnLoader.classList.remove('hidden');
 
             try {
                 document.getElementById('preview-modal').classList.remove('hidden');
                 document.getElementById('preview-loading').style.display = 'flex';
                 document.getElementById('preview-iframe').src = "";
 
-                const actionContainer = document.getElementById('action-container');
-                if (actionContainer) {
-                    actionContainer.classList.add('hidden');
-                    actionContainer.classList.remove('flex');
-                }
-                const peekBtn = document.getElementById('mobile-peek-btn');
-                if (peekBtn) peekBtn.classList.add('hidden');
+                // Sembunyikan bottom bars selama preview
+                document.getElementById('action-soal-mobile').classList.add('hidden');
+                document.getElementById('action-editor-mobile').classList.add('hidden');
+                document.getElementById('action-desktop').classList.add('hidden');
 
                 const originalScrollY = window.scrollY;
 
@@ -1267,9 +1303,7 @@
                 await new Promise(resolve => setTimeout(resolve, 150));
 
                 const exportHeight = exportArea.scrollHeight;
-                btnText.innerText = "Memproses Gambar...";
-
-                document.getElementById('preview-iframe').classList.add('hidden');
+                if (btnText) btnText.innerText = "Memproses Gambar...";
 
                 const canvas = await html2canvas(exportArea, {
                     scale: 2,
@@ -1315,7 +1349,7 @@
                 const lockStyle = document.getElementById('pdf-lock-style');
                 if (lockStyle) lockStyle.remove();
 
-                btnText.innerText = "Menyusun PDF...";
+                if (btnText) btnText.innerText = "Menyusun PDF...";
 
                 const imgData = canvas.toDataURL('image/jpeg', 0.98);
                 const { jsPDF } = window.jspdf;
@@ -1347,7 +1381,7 @@
 
                 document.getElementById('preview-loading').style.display = 'none';
 
-                // Garis batas preview
+                // Gambar garis batas merah transparan di atas canvas pratinjau
                 const ctx = canvas.getContext('2d');
                 ctx.setTransform(1, 0, 0, 1, 0, 0);
 
@@ -1398,27 +1432,20 @@
                 showError("Gagal memproses pratinjau: " + error.message);
                 closePreview();
             } finally {
-                btn.disabled = false;
-                btnText.innerText = "Kirim Tugas";
-                btnIcon.classList.remove('hidden');
-                btnLoader.classList.add('hidden');
+                if (btn) btn.disabled = false;
+                if (btnText) btnText.innerText = "Pratinjau & Kirim";
+                if (btnIcon) btnIcon.classList.remove('hidden');
+                if (btnLoader) btnLoader.classList.add('hidden');
             }
         }
 
         window.closePreview = function () {
             document.getElementById('preview-modal').classList.add('hidden');
-            const actionContainer = document.getElementById('action-container');
-            if (actionContainer) {
-                actionContainer.classList.remove('hidden');
-                actionContainer.classList.add('flex');
-            }
-            const peekBtn = document.getElementById('mobile-peek-btn');
-            if (peekBtn && currentViewMode !== 'split') {
-                peekBtn.classList.remove('hidden');
-            }
+            // Kembalikan bottom bar sesuai mode saat ini
+            setViewMode(currentViewMode);
         };
 
-        // ===== PENGIRIMAN TUGAS =====
+        // ===== PENGIRIMAN TUGAS KE SERVER =====
         async function sendTaskFromPreview() {
             if (!window.currentPdfBase64) return;
 
@@ -1472,16 +1499,16 @@
 
                     document.getElementById('preview-modal').classList.add('hidden');
                     document.getElementById('workspace-grid').classList.add('hidden');
-                    document.getElementById('action-container').classList.add('hidden');
-                    const peekBtn = document.getElementById('mobile-peek-btn');
-                    if (peekBtn) peekBtn.classList.add('hidden');
+                    document.getElementById('action-soal-mobile').classList.add('hidden');
+                    document.getElementById('action-editor-mobile').classList.add('hidden');
+                    document.getElementById('action-desktop').classList.add('hidden');
 
                     const successDiv = document.getElementById('success-container');
                     successDiv.classList.remove('hidden');
                     successDiv.classList.add('flex');
                     lucide.createIcons();
                 } else {
-                    throw new Error(result.message || "Gagal mengunggah file");
+                    throw new Error(result.message || "Gagal mengunggah file.");
                 }
 
             } catch (error) {
