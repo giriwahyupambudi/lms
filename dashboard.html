@@ -2398,7 +2398,7 @@
           if ((pTipe && (pTipe.toString().toLowerCase() === "survey" || pTipe.toString().toLowerCase() === "pretest")) || mid === "survey1") {
             score = 100;
           }
-          const waktuSec = parseTimeToSeconds(getVal(n, ['waktu', 'timestamp']));
+          let waktuSec = parseTimeToSeconds(getVal(n, ['waktu', 'timestamp']));
 
           // Hitung Nilai Akhir untuk peringkat
           let userKls = norm(userObj.kelas);
