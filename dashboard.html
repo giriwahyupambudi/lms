@@ -1040,6 +1040,8 @@
       return undefined;
     };
 
+    const normStr = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+
     function parseDateTimestamp(dateVal) {
       if (!dateVal) return 0;
       if (typeof dateVal === 'number') return dateVal;
@@ -1300,7 +1302,6 @@
     function renderAbsenSiswa(dataAbsen, currentUser) {
       if (!Array.isArray(dataAbsen) || !currentUser) return;
 
-      const normStr = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
       const userNisnNorm = normStr(currentUser.username || currentUser.nisn || "");
       const userNamaNorm = normStr(currentUser.nama || currentUser.namalengkap || "");
 
@@ -1665,8 +1666,6 @@
         const quizRawScores = new Map();
         const quizKeterangan = new Map();
 
-        const normStr = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
-
         userProgress.filter(p => {
           let pTipe = getVal(p, ['tipe', 'tipeevaluasi', 'jenis']);
           return pTipe && pTipe.toString().toLowerCase() !== "materi";
@@ -1857,6 +1856,7 @@
         list.innerHTML = dataMateriFiltered.map((m, i) => {
           const mid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (i + 1)).toString();
           const mJudulRaw = (getVal(m, ['judul', 'materi']) || ("Materi " + (i + 1))).toString().trim();
+          const safeEncodedJudul = encodeURIComponent(mJudulRaw);
           const tipeRaw = getVal(m, ['tipeevaluasi', 'tipe', 'evaluasi', 'jenis']);
           let tipe = (tipeRaw && tipeRaw.toString().trim() !== "") ? tipeRaw.toString().trim() : (i % 2 === 0 ? "Kuis" : "Tugas");
           // Format menjadi Kuis atau Tugas atau Praktik
@@ -2022,7 +2022,7 @@
               : 'background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color:white; border:none; font-weight:700; box-shadow:0 4px 12px rgba(37,99,235,0.25);';
             btnKuis = isKuisLocked
                 ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed; border:1px solid #e2e8f0; grid-column: 1 / -1;" onclick="alertLocked('tugas')"><i data-lucide="lock" style="width:14px"></i> Tugas Terkunci</button>`
-                : `<button class="btn-action" style="grid-column: 1 / -1; ${editorBtnStyle}" onclick="handleEvaluasi('editor', '${mid}', encodeURIComponent(\`${m.judul || m.Judul || ("Materi " + (i + 1))}\`), '${mid}')"><i data-lucide="${editorBtnIcon}" style="width:14px"></i> ${editorBtnText}</button>`;
+                : `<button class="btn-action" style="grid-column: 1 / -1; ${editorBtnStyle}" onclick="handleEvaluasi('editor', '${mid}', '${safeEncodedJudul}', '${mid}')"><i data-lucide="${editorBtnIcon}" style="width:14px"></i> ${editorBtnText}</button>`;
           } else if (tipe.toLowerCase() === "praktik" || tipe.toLowerCase() === "ujian praktik") {
             if (hasScore) {
               btnKuis = `<button class="btn-action" style="background:#d1fae5; color:#059669; border:1px solid #a7f3d0; cursor:default; ${btnPelajari === '' ? 'grid-column: 1 / -1;' : ''}"><i data-lucide="check-circle" style="width:16px; flex-shrink:0;"></i> <span style="white-space:normal; line-height:1.1;">Lulus</span></button>`;
@@ -2032,7 +2032,7 @@
           } else {
             btnKuis = isKuisLocked
                 ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed; border:1px solid #e2e8f0; ${btnPelajari === '' ? 'grid-column: 1 / -1;' : ''}" onclick="alertLocked('${tipe.toLowerCase()}')"><i data-lucide="lock" style="width:14px"></i> ${tipe} Terkunci</button>`
-                : `<button class="btn-action btn-quiz" style="${btnPelajari === '' ? 'grid-column: 1 / -1;' : ''}" onclick="handleEvaluasi('${tipe}', '${mid}', encodeURIComponent(\`${m.judul || m.Judul || ("Materi " + (i + 1))}\`), '${mid}')"><i data-lucide="${tipe.toLowerCase() === 'kuis' ? 'edit-2' : (tipe.toLowerCase() === 'survey' ? 'clipboard-list' : (tipe.toLowerCase() === 'editor' ? 'type' : 'upload'))}" style="width:14px"></i> ${hasScore ? 'Ulangi ' + tipe : 'Kerjakan ' + tipe}</button>`;
+                : `<button class="btn-action btn-quiz" style="${btnPelajari === '' ? 'grid-column: 1 / -1;' : ''}" onclick="handleEvaluasi('${tipe}', '${mid}', '${safeEncodedJudul}', '${mid}')"><i data-lucide="${tipe.toLowerCase() === 'kuis' ? 'edit-2' : (tipe.toLowerCase() === 'survey' ? 'clipboard-list' : (tipe.toLowerCase() === 'editor' ? 'type' : 'upload'))}" style="width:14px"></i> ${hasScore ? 'Ulangi ' + tipe : 'Kerjakan ' + tipe}</button>`;
           }
 
           let viewBtnHTML = "";
