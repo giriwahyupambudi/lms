@@ -64,22 +64,33 @@
 
         /* Quill Editor overrides to look like real paper */
         #editor-container {
-            min-height: 400px;
+            min-height: 450px;
             background: transparent;
             font-family: 'Inter', sans-serif;
             font-size: 14px;
+            position: relative;
+            z-index: 25;
+            cursor: text;
         }
 
         .ql-container.ql-snow {
             height: auto !important;
             border: none !important;
+            position: relative;
+            z-index: 25;
         }
 
         .ql-editor {
             overflow-y: hidden !important;
             height: auto !important;
-            min-height: 400px;
+            min-height: 450px;
             padding: 0 !important;
+            position: relative;
+            z-index: 25;
+            cursor: text;
+            -webkit-user-select: text !important;
+            user-select: text !important;
+            touch-action: manipulation;
         }
 
         /* Toolbar Sticky Handling */
@@ -330,7 +341,7 @@
                     </div>
 
                     <!-- Embed Iframe Container -->
-                    <div id="soal-embed-container" class="w-full h-full relative overflow-hidden flex flex-col">
+                    <div id="soal-embed-container" class="w-full h-full relative overflow-hidden flex flex-col" style="flex: 1 1 0%; height: 100%;">
                         <!-- Disisipkan otomatis via JS -->
                     </div>
                 </div>
@@ -527,8 +538,33 @@
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbx8dBNFIqvVixZ5ORodulJYxqjtMvjr-Qajjez1uD7UIeq-ypSI1xaNjdUtJkq3ovzsbw/exec";
         const urlParams = new URLSearchParams(window.location.search);
-        const idMateri = urlParams.get('id');
+        const idMateri = urlParams.get('id') || urlParams.get('idx') || "";
         const titleParam = urlParams.get('title') || "Tugas Editor";
+
+        // Helper Aman Decode URI
+        function safeDecode(str) {
+            if (!str) return "";
+            try {
+                return decodeURIComponent(str);
+            } catch (e) {
+                return str;
+            }
+        }
+
+        // Helper case-insensitive objek properti
+        const getVal = (obj, possibleKeys) => {
+            if (!obj || typeof obj !== 'object') return undefined;
+            for (const p of possibleKeys) {
+                const pNorm = p.toLowerCase().replace(/[^a-z0-9]/g, '');
+                for (const key in obj) {
+                    const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    if (normKey === pNorm && obj[key] !== undefined && obj[key] !== null && obj[key] !== "") {
+                        return obj[key];
+                    }
+                }
+            }
+            return undefined;
+        };
 
         // Validasi Sesi Pengguna
         const userData = JSON.parse(localStorage.getItem('user') || '{}');
@@ -538,7 +574,7 @@
         }
 
         let quill;
-        let currentViewMode = window.innerWidth >= 1024 ? 'split' : 'soal';
+        let currentViewMode = window.innerWidth >= 1024 ? 'split' : 'editor';
 
         // ===== VIEW MODE CONTROLLER =====
         function setViewMode(mode) {
@@ -588,6 +624,10 @@
                 if (barEditorMob) barEditorMob.classList.add('hidden');
                 if (barDesktop) barDesktop.classList.remove('hidden');
                 if (iconFs) iconFs.setAttribute('data-lucide', 'maximize-2');
+                if (quill) {
+                    quill.enable(true);
+                    quill.update();
+                }
             } else if (mode === 'soal') {
                 if (soalPanel) {
                     soalPanel.classList.remove('hidden', 'lg:w-1/2');
@@ -613,6 +653,10 @@
                     if (barSoalMob) barSoalMob.classList.add('hidden');
                     if (barEditorMob) barEditorMob.classList.remove('hidden');
                 }
+                if (quill) {
+                    quill.enable(true);
+                    quill.update();
+                }
             }
 
             if (window.lucide) lucide.createIcons();
@@ -622,7 +666,7 @@
                 if (typeof window.adjustMobileScale === 'function') {
                     window.adjustMobileScale();
                 }
-            }, 80);
+            }, 60);
         }
 
         function toggleMaximizeSoal() {
@@ -647,62 +691,92 @@
             const btnOpenTab = document.getElementById('btn-open-tab-soal');
             const soalMetaInfo = document.getElementById('soal-meta-info');
 
-            let decodedTitle = decodeURIComponent(titleParam);
+            let decodedTitle = safeDecode(titleParam);
             if (topTitle) topTitle.innerText = decodedTitle;
 
             const norm = s => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
             const idNorm = norm(idMateri);
+            const idxParam = urlParams.get('idx');
+            const idxNorm = norm(idxParam);
             const titleNorm = norm(decodedTitle);
 
             let m = null;
 
-            // 1. Baca dari cache_materi
+            const matchItem = (item, index) => {
+                if (!item) return false;
+                let iMid = norm(getVal(item, ['idmateri', 'id_materi', 'id', 'materiid']));
+                let iJudul = norm(getVal(item, ['judul', 'materi', 'namamateri']));
+                let iRow = norm(item.rowNumber || item.rownumber);
+                let iIdx = (index !== undefined && index !== null) ? norm(index + 1) : "";
+
+                // Cocokkan ID atau RowNumber atau Indeks
+                if (idNorm && (iMid === idNorm || iRow === idNorm || iIdx === idNorm)) return true;
+                if (idxNorm && (iMid === idxNorm || iRow === idxNorm || iIdx === idxNorm)) return true;
+                // Cocokkan Judul (tepat atau sebagian)
+                if (titleNorm && iJudul && (iJudul === titleNorm || iJudul.includes(titleNorm) || titleNorm.includes(iJudul))) return true;
+
+                return false;
+            };
+
+            // 1. Baca dari cache_materi di localStorage
             try {
-                const rawCache = localStorage.getItem("cache_materi");
+                const rawCache = localStorage.getItem("cache_materi") || localStorage.getItem("LMS_CACHE_materi");
                 if (rawCache) {
                     const list = JSON.parse(rawCache);
                     if (Array.isArray(list)) {
-                        m = list.find(item => {
-                            let iMid = norm(item.idmateri || item.id_materi || item.id);
-                            let iJudul = norm(item.judul || item.materi || item.namamateri);
-                            return (idNorm && iMid === idNorm) || (titleNorm && iJudul === titleNorm);
-                        });
+                        m = list.find((item, idx) => matchItem(item, idx));
                     }
                 }
             } catch(e) {
-                console.warn("Gagal membaca cache_materi:", e);
+                console.warn("Gagal membaca cache materi:", e);
             }
 
-            // 2. Fetch jika belum ada
+            // 2. Fetch jika belum ada di cache
             if (!m) {
                 try {
                     const res = await fetch(`${API_URL}?sheet=materi`);
                     if (res.ok) {
                         const list = await res.json();
                         if (Array.isArray(list)) {
-                            localStorage.setItem("cache_materi", JSON.stringify(list));
-                            m = list.find(item => {
-                                let iMid = norm(item.idmateri || item.id_materi || item.id);
-                                let iJudul = norm(item.judul || item.materi || item.namamateri);
-                                return (idNorm && iMid === idNorm) || (titleNorm && iJudul === titleNorm);
-                            });
+                            try { localStorage.setItem("cache_materi", JSON.stringify(list)); } catch(e){}
+                            m = list.find((item, idx) => matchItem(item, idx));
                         }
                     }
                 } catch(e) {
-                    console.warn("Gagal fetch materi:", e);
+                    console.warn("Gagal fetch materi sheet:", e);
+                }
+            }
+
+            // 3. Fallback fetch tanpa sheet param
+            if (!m) {
+                try {
+                    const res = await fetch(API_URL);
+                    if (res.ok) {
+                        const list = await res.json();
+                        if (Array.isArray(list)) {
+                            m = list.find((item, idx) => matchItem(item, idx));
+                        }
+                    }
+                } catch(e) {
+                    console.warn("Gagal fetch materi default:", e);
                 }
             }
 
             if (m) {
-                let mJudul = m.judul || m.Judul || decodedTitle;
-                let mMapel = m.mapel || m.Mapel || m.matapelajaran || "Mata Pelajaran";
-                let mLink = (m.link || m.url || m.Link || m.URL || "").toString().trim();
-                let mDeskripsi = (m.deskripsi || m.materi || m.Deskripsi || m.Materi || m.keterangan || "").toString().trim();
+                let mJudul = getVal(m, ['judul', 'Judul', 'materi', 'namamateri']) || decodedTitle;
+                let mMapel = getVal(m, ['mapel', 'Mapel', 'matapelajaran', 'MataPelajaran']) || "Mata Pelajaran";
+                let mLink = (getVal(m, ['link', 'Link', 'url', 'URL', 'tautan', 'file']) || "").toString().trim();
+                let mDeskripsi = (getVal(m, ['deskripsi', 'Deskripsi', 'keterangan', 'petunjuk']) || "").toString().trim();
 
                 if (topTitle) topTitle.innerText = mJudul;
                 if (topSubtitle) topSubtitle.innerText = `${mMapel} • ${userData.nama || '-'}`;
                 if (topMapel) topMapel.innerText = mMapel;
                 if (soalMetaInfo) soalMetaInfo.innerText = `${mMapel} • Berkas Soal`;
+
+                const docTitle = document.getElementById('doc-title');
+                if (docTitle && (!docTitle.innerText || docTitle.innerText === "Judul Tugas" || docTitle.innerText === "Tugas Editor")) {
+                    docTitle.innerText = mJudul;
+                }
 
                 if (mLink && btnOpenTab) {
                     btnOpenTab.href = mLink;
@@ -734,7 +808,7 @@
 
             if (link.includes("youtube.com") || link.includes("youtu.be")) {
                 let id = link.includes("watch?v=") ? link.split("v=")[1].split("&")[0] : link.split("youtu.be/")[1];
-                embedHtml = `<iframe src="https://www.youtube.com/embed/${id}" allowfullscreen class="w-full h-full border-0"></iframe>`;
+                embedHtml = `<iframe src="https://www.youtube.com/embed/${id}" allowfullscreen class="w-full h-full flex-1 border-0" style="min-height:480px; flex:1;"></iframe>`;
             } else if (link.includes("docs.google.com/presentation")) {
                 let embedUrl = link;
                 if (link.includes("/pub")) embedUrl = link.replace("/pub", "/embed");
@@ -743,27 +817,26 @@
                     let match = link.match(/[-\w]{25,}/);
                     if (match) embedUrl = `https://docs.google.com/presentation/d/${match[0]}/embed`;
                 }
-                embedHtml = `<iframe src="${embedUrl}" allowfullscreen class="w-full h-full border-0"></iframe>`;
+                embedHtml = `<iframe src="${embedUrl}" allowfullscreen class="w-full h-full flex-1 border-0" style="min-height:480px; flex:1;"></iframe>`;
             } else if (link.includes("drive.google.com")) {
                 let match = link.match(/[-\w]{25,}/);
                 if (match) {
                     let fileId = match[0];
-                    // Trik CSS -50px untuk menyembunyikan toolbar Google Drive preview
                     embedHtml = `
-                        <div class="w-full h-full relative overflow-hidden" style="touch-action: pan-y;">
+                        <div class="w-full h-full flex-1 relative flex flex-col overflow-hidden" style="min-height:480px; flex:1;">
                             <iframe src="https://drive.google.com/file/d/${fileId}/preview#toolbar=0&navpanes=0&scrollbar=0" 
-                                    class="w-full border-0" 
-                                    style="position: absolute; top: -50px; left: 0; width: 100%; height: calc(100% + 50px); touch-action: pan-y;" 
+                                    class="w-full h-full flex-1 border-0" 
+                                    style="width: 100%; height: 100%; flex: 1; min-height: 480px; touch-action: pan-y;" 
                                     allow="autoplay"></iframe>
                         </div>`;
                 }
             } else if (link.toLowerCase().includes(".pdf")) {
-                embedHtml = `<iframe src="${link}#toolbar=0" class="w-full h-full border-0" style="touch-action: pan-y;"></iframe>`;
+                embedHtml = `<iframe src="${link}#toolbar=0" class="w-full h-full border-0" style="min-height:480px; flex:1; touch-action: pan-y;"></iframe>`;
             } else if (link.includes("canva.com")) {
                 let embedUrl = link.includes("/view?") ? link.replace("/view?", "/view?embed") : link;
-                embedHtml = `<iframe src="${embedUrl}" allowfullscreen class="w-full h-full border-0"></iframe>`;
+                embedHtml = `<iframe src="${embedUrl}" allowfullscreen class="w-full h-full border-0" style="min-height:480px; flex:1;"></iframe>`;
             } else if (link) {
-                embedHtml = `<iframe src="${link}" class="w-full h-full border-0" style="touch-action: pan-y;"></iframe>`;
+                embedHtml = `<iframe src="${link}" class="w-full h-full border-0" style="min-height:480px; flex:1; touch-action: pan-y;"></iframe>`;
             }
 
             let fullHTML = "";
@@ -779,7 +852,7 @@
             }
 
             if (embedHtml) {
-                fullHTML += `<div class="flex-1 w-full relative overflow-hidden bg-slate-100 flex flex-col">${embedHtml}</div>`;
+                fullHTML += `<div class="flex-1 w-full relative overflow-hidden bg-slate-100 flex flex-col" style="min-height:480px; flex:1 1 0%;">${embedHtml}</div>`;
             } else if (!deskripsi) {
                 fullHTML += `
                     <div class="flex-1 flex flex-col items-center justify-center p-6 text-center bg-white m-3 rounded-xl border border-dashed border-slate-300">
@@ -792,20 +865,19 @@
 
             container.innerHTML = fullHTML;
 
+            const hideLoader = () => {
+                if (loader) {
+                    loader.classList.add('opacity-0', 'pointer-events-none');
+                    setTimeout(() => { if (loader) loader.classList.add('hidden'); }, 200);
+                }
+            };
+
             const iframe = container.querySelector('iframe');
             if (iframe) {
-                iframe.onload = () => {
-                    if (loader) loader.classList.add('opacity-0', 'pointer-events-none');
-                    setTimeout(() => { if (loader) loader.classList.add('hidden'); }, 250);
-                };
-                setTimeout(() => {
-                    if (loader) {
-                        loader.classList.add('opacity-0', 'pointer-events-none');
-                        setTimeout(() => { if (loader) loader.classList.add('hidden'); }, 250);
-                    }
-                }, 3000);
+                iframe.onload = hideLoader;
+                setTimeout(hideLoader, 1200); // Garansi pasti hilang dalam 1.2 detik
             } else {
-                if (loader) loader.classList.add('hidden');
+                hideLoader();
             }
 
             lucide.createIcons();
@@ -820,7 +892,8 @@
             }
 
             // Kop Surat Virtual A4
-            document.getElementById('doc-title').innerText = decodeURIComponent(titleParam);
+            const initialTitle = safeDecode(titleParam);
+            document.getElementById('doc-title').innerText = initialTitle;
             document.getElementById('doc-student').innerText = `Nama: ${userData.nama || '-'} | Kelas: ${userData.kelas || userData.tingkat || '-'}`;
 
             const updateTime = () => {
@@ -846,6 +919,23 @@
                     ]
                 }
             });
+
+            // Set atribut eksplisit pada editor agar mudah disentuh dan diketik di HP
+            if (quill && quill.root) {
+                quill.root.setAttribute('tabindex', '0');
+                quill.root.style.minHeight = '450px';
+                quill.root.style.cursor = 'text';
+            }
+
+            // Sentuhan di area kertas A4 otomatis fokuskan kursor ke Quill
+            const exportArea = document.getElementById('pdf-export-area');
+            if (exportArea) {
+                exportArea.addEventListener('click', function (e) {
+                    if (!e.target.closest('button') && !e.target.closest('a') && !e.target.closest('#dynamic-kop') && !e.target.closest('.img-resize-overlay')) {
+                        if (quill) quill.focus();
+                    }
+                });
+            }
 
             // ===== MOBILE IMAGE RESIZE HANDLERS =====
             let selectedImg = null;
@@ -1023,6 +1113,9 @@
                 updateDraftStatus('synced', "Draft Kosong");
             }
 
+            // Inisialisasi Skala Layar A4 terlebih dahulu sebelum setViewMode
+            initMobileScale();
+
             // Tentukan View Mode Awal:
             // Pada Desktop: Split View (50:50).
             // Pada Mobile: Jika sudah ada ketikan draft -> Lembar Jawaban. Jika belum -> Lembar Soal!
@@ -1103,7 +1196,7 @@
                             nama: userData.nama || "-",
                             kelas: userData.kelas || userData.tingkat || "-",
                             id_materi: idMateri,
-                            judul: decodeURIComponent(titleParam),
+                            judul: safeDecode(titleParam),
                             isi_html: htmlContent,
                             updated_at: timestamp
                         })
@@ -1148,9 +1241,6 @@
             const previewBtn = document.getElementById('preview-btn');
             if (previewBtn) previewBtn.addEventListener('click', generatePreview);
 
-            // Inisialisasi Skala Layar A4
-            initMobileScale();
-
             // Blokir Paste & Tampilkan Modal Lucu Edukatif
             if (quill && quill.root) {
                 quill.root.addEventListener('paste', function (e) {
@@ -1174,29 +1264,31 @@
                 const a4Width = 794;
                 const targetWidth = scaleWrapper.offsetWidth;
 
+                // Jika sedang tidak tampak / offsetWidth 0, tunda penyesuaian
                 if (targetWidth === 0) return;
 
                 if (targetWidth < a4Width) {
                     const scale = targetWidth / a4Width;
                     area.style.transform = `scale(${scale})`;
                     area.style.transformOrigin = 'top center';
-                    scaleWrapper.style.height = (area.scrollHeight * scale) + 'px';
+                    const pageMinH = Math.ceil(1123 * scale);
+                    const actualH = Math.max(Math.ceil(area.scrollHeight * scale), pageMinH);
+                    scaleWrapper.style.height = actualH + 'px';
+                    scaleWrapper.style.minHeight = pageMinH + 'px';
                 } else {
                     area.style.transform = 'none';
                     scaleWrapper.style.height = 'auto';
+                    scaleWrapper.style.minHeight = '1123px';
                 }
 
                 updatePageBoundaries();
             };
 
+            let lastPageCount = 0;
             function updatePageBoundaries() {
                 const area = document.getElementById('pdf-export-area');
                 const editorContainer = document.getElementById('editor-container');
                 if (!area || area.offsetWidth === 0) return;
-
-                if (window.editorObserver) window.editorObserver.disconnect();
-
-                document.querySelectorAll('.visual-page-boundary').forEach(el => el.remove());
 
                 let contentHeight = area.scrollHeight;
                 if (editorContainer) {
@@ -1204,6 +1296,14 @@
                 }
                 const pageHeightPx = area.offsetWidth * (297 / 210);
                 const totalPages = Math.max(1, Math.ceil((contentHeight + 100) / pageHeightPx));
+
+                // Optimasi performa ketik di HP: jika jumlah halaman tidak bertambah, jangan bongkar DOM
+                if (totalPages === lastPageCount && document.querySelector('.visual-page-boundary')) {
+                    return;
+                }
+                lastPageCount = totalPages;
+
+                document.querySelectorAll('.visual-page-boundary').forEach(el => el.remove());
 
                 area.style.minHeight = (totalPages * pageHeightPx) + 'px';
 
@@ -1223,23 +1323,22 @@
 
                     area.appendChild(boundary);
                 }
-
-                if (window.editorObserver) {
-                    window.editorObserver.observe(area, { childList: true, subtree: true, characterData: true });
-                }
             }
 
             window.adjustMobileScale = adjustScale;
 
-            setTimeout(adjustScale, 100);
-            window.addEventListener('resize', adjustScale);
+            let scaleDebounce = null;
+            const debouncedAdjustScale = () => {
+                if (scaleDebounce) clearTimeout(scaleDebounce);
+                scaleDebounce = setTimeout(adjustScale, 80);
+            };
+
+            setTimeout(adjustScale, 80);
+            window.addEventListener('resize', debouncedAdjustScale);
 
             if (quill) {
-                quill.on('text-change', adjustScale);
+                quill.on('text-change', debouncedAdjustScale);
             }
-
-            window.editorObserver = new MutationObserver(adjustScale);
-            window.editorObserver.observe(area, { childList: true, subtree: true, characterData: true });
         }
 
         function showError(msg) {
@@ -1463,7 +1562,7 @@
                         nama: userData.nama || "-",
                         kelas: userData.kelas || userData.tingkat || "-",
                         id_materi: idMateri,
-                        judul: decodeURIComponent(titleParam),
+                        judul: safeDecode(titleParam),
                         tipe: urlParams.get('tipe') || "Editor",
                         filename: (userData.nama ? userData.nama.split(" ")[0] : "Siswa") + "_" + idMateri + "_Tugas_Editor.pdf",
                         base64: window.currentPdfBase64
