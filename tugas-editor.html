@@ -352,9 +352,9 @@
                 <div id="editor-wrapper"
                     class="bg-white sm:bg-slate-200 rounded-none sm:rounded-2xl shadow-none sm:shadow-xs border-0 sm:border border-slate-200 animate-fade-in flex flex-col items-center relative overflow-hidden w-full">
 
-                    <!-- Custom Sticky Toolbar (Tetap sticky saat scroll lembar kerja) -->
+                    <!-- Custom Toolbar (Relatif di HP agar tidak menutupi lembar kerja/kop surat, Sticky di Desktop) -->
                     <div id="toolbar-container"
-                        class="w-full bg-slate-50 border-b border-slate-300 sticky top-[94px] lg:top-[52px] z-20 shadow-xs flex justify-start sm:justify-center py-1.5 px-2 overflow-x-auto">
+                        class="w-full bg-slate-50 border-b border-slate-300 relative lg:sticky lg:top-[52px] z-10 shadow-xs flex justify-start sm:justify-center py-1.5 px-2 overflow-x-auto">
                         <!-- Quill Toolbar dipindahkan ke sini oleh JS -->
                     </div>
 
@@ -659,6 +659,10 @@
                 }
             }
 
+            if (window.innerWidth < 1024) {
+                window.scrollTo({ top: 0, behavior: 'instant' });
+            }
+
             if (window.lucide) lucide.createIcons();
 
             // Pemicu penyesuaian skala A4 virtual
@@ -667,6 +671,11 @@
                     window.adjustMobileScale();
                 }
             }, 60);
+            setTimeout(() => {
+                if (typeof window.adjustMobileScale === 'function') {
+                    window.adjustMobileScale();
+                }
+            }, 200);
         }
 
         function toggleMaximizeSoal() {
