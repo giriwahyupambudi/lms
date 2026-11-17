@@ -1613,21 +1613,39 @@
         dataMateriFiltered = materiAsli;
         renderPengumuman(pengumuman);
 
-        // Filter progres hanya untuk user yang sedang login
-        const userProgress = dataProgres.filter(p =>
-          p.username && p.username.toString().trim() === user.username.toString().trim()
-        );
+        const myUserNorm = (user.username || "").toString().trim().toLowerCase();
+        const myNameNorm = (user.nama || user.Nama || "").toString().trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        // Filter progres hanya untuk user yang sedang login (case-insensitive & fallback nama siswa)
+        const userProgress = dataProgres.filter(p => {
+          let pUser = (p.username || p.Username || p.nisn || p.NISN || "").toString().trim().toLowerCase();
+          let pNama = (p.nama || p.Nama || "").toString().trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (pUser && pUser === myUserNorm) return true;
+          if (myNameNorm && pNama && pNama === myNameNorm) return true;
+          return false;
+        });
 
         // Peta URL Tugas dari logTugas (terpisah dari logNilai numerik)
         const taskUrls = new Map();
         if (Array.isArray(dataLogTugas)) {
           dataLogTugas.forEach(t => {
-            let rUser = t.username || t.Username || t.USERNAME || t.nisn || t.NISN || "";
-            if (rUser.toString().trim() === user.username.toString().trim()) {
-              let rMid = t.idmateri || t.id_materi || t.id || "";
-              if (rMid) {
-                let url = t.link_tugas || t.linktugas || t.url_file || t.urlfile || t.link || t['link tugas'] || t['url file'] || t.file || "";
-                if (url) taskUrls.set(rMid.toString(), url);
+            let rUser = (t.username || t.Username || t.USERNAME || t.nisn || t.NISN || "").toString().trim().toLowerCase();
+            let rNama = (t.nama || t.Nama || "").toString().trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+            let isMyTask = (rUser && rUser === myUserNorm) || (myNameNorm && rNama && rNama === myNameNorm);
+
+            if (isMyTask) {
+              let rMid = (t.idmateri || t.id_materi || t.id || "").toString().trim();
+              let rJudul = (t.materi || t.judul || t.namamateri || "").toString().trim();
+              let url = (t.link_tugas || t.linktugas || t.url_file || t.urlfile || t.link || t['link tugas'] || t['url file'] || t.file || "").toString().trim();
+              if (url) {
+                if (rMid) {
+                  taskUrls.set(rMid, url);
+                  taskUrls.set(normStr(rMid), url);
+                }
+                if (rJudul) {
+                  taskUrls.set(rJudul, url);
+                  taskUrls.set(normStr(rJudul), url);
+                }
               }
             }
           });
@@ -1769,8 +1787,8 @@
             const rawMid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (i + 1)).toString();
             const rawJudul = (getVal(m, ['judul', 'materi']) || "").toString().trim();
 
-            const hasScore = quizScores.has(rawMid) || (rawJudul !== "" && quizScores.has(rawJudul));
-            const hasUpload = taskUrls.has(rawMid) || (rawJudul !== "" && taskUrls.has(rawJudul));
+            const hasScore = quizScores.has(rawMid) || (rawJudul !== "" && quizScores.has(rawJudul)) || quizScores.has(normStr(rawMid)) || (rawJudul !== "" && quizScores.has(normStr(rawJudul)));
+            const hasUpload = taskUrls.has(rawMid) || (rawJudul !== "" && taskUrls.has(rawJudul)) || taskUrls.has(normStr(rawMid)) || (rawJudul !== "" && taskUrls.has(normStr(rawJudul)));
 
             if (!hasScore && !hasUpload) {
               pendingTasksCount++;
@@ -1845,13 +1863,13 @@
           tipe = tipe.charAt(0).toUpperCase() + tipe.slice(1).toLowerCase();
 
           // SKOR
-          let hasScore = quizScores.has(mid.toString()) || quizScores.has(mJudulRaw);
-          let scoreValue = hasScore ? (quizScores.get(mid.toString()) !== undefined ? quizScores.get(mid.toString()) : quizScores.get(mJudulRaw)) : null;
-          let finalScoreValue = hasScore ? (quizFinalScores.get(mid.toString()) !== undefined ? quizFinalScores.get(mid.toString()) : quizFinalScores.get(mJudulRaw)) : null;
-          let rawScoreValue = hasScore ? (quizRawScores.get(mid.toString()) || quizRawScores.get(mJudulRaw) || "") : "";
-          let timeValue = hasScore ? (quizTimes.get(mid.toString()) || quizTimes.get(mJudulRaw)) : null;
-          let durVal = hasScore ? (quizDurasi.get(mid.toString()) || quizDurasi.get(mJudulRaw) || "") : "";
-          let uNum = hasScore ? (quizUrutan.get(mid.toString()) || quizUrutan.get(mJudulRaw) || 0) : 0;
+          let hasScore = quizScores.has(mid.toString()) || quizScores.has(mJudulRaw) || quizScores.has(normStr(mid)) || quizScores.has(normStr(mJudulRaw));
+          let scoreValue = hasScore ? (quizScores.get(mid.toString()) !== undefined ? quizScores.get(mid.toString()) : (quizScores.get(mJudulRaw) !== undefined ? quizScores.get(mJudulRaw) : (quizScores.get(normStr(mid)) !== undefined ? quizScores.get(normStr(mid)) : quizScores.get(normStr(mJudulRaw))))) : null;
+          let finalScoreValue = hasScore ? (quizFinalScores.get(mid.toString()) !== undefined ? quizFinalScores.get(mid.toString()) : (quizFinalScores.get(mJudulRaw) !== undefined ? quizFinalScores.get(mJudulRaw) : (quizFinalScores.get(normStr(mid)) !== undefined ? quizFinalScores.get(normStr(mid)) : quizFinalScores.get(normStr(mJudulRaw))))) : null;
+          let rawScoreValue = hasScore ? (quizRawScores.get(mid.toString()) || quizRawScores.get(mJudulRaw) || quizRawScores.get(normStr(mid)) || quizRawScores.get(normStr(mJudulRaw)) || "") : "";
+          let timeValue = hasScore ? (quizTimes.get(mid.toString()) || quizTimes.get(mJudulRaw) || quizTimes.get(normStr(mid)) || quizTimes.get(normStr(mJudulRaw))) : null;
+          let durVal = hasScore ? (quizDurasi.get(mid.toString()) || quizDurasi.get(mJudulRaw) || quizDurasi.get(normStr(mid)) || quizDurasi.get(normStr(mJudulRaw)) || "") : "";
+          let uNum = hasScore ? (quizUrutan.get(mid.toString()) || quizUrutan.get(mJudulRaw) || quizUrutan.get(normStr(mid)) || quizUrutan.get(normStr(mJudulRaw)) || 0) : 0;
           if (!uNum) {
             let uOrder = myClassUrutanMap.get(`${normStr(mid)}_${normStr(user.username)}`) ||
                          myClassUrutanMap.get(`${normStr(mJudulRaw)}_${normStr(user.username)}`) ||
@@ -1866,7 +1884,10 @@
           let isMateriLocked = false;
 
           let sVal = rawScoreValue;
-          let fileUrl = taskUrls.has(mid.toString()) ? taskUrls.get(mid.toString()) : "";
+          let fileUrl = taskUrls.get(mid.toString()) || 
+                        taskUrls.get(mJudulRaw) || 
+                        taskUrls.get(normStr(mid)) || 
+                        taskUrls.get(normStr(mJudulRaw)) || "";
 
           if (hasScore) {
             // Jika ada format "Terkirim (http...)" peninggalan lama di logNilai, ekstrak URL-nya
@@ -1964,7 +1985,8 @@
           }
 
           let link = (getVal(m, ['link', 'url']) || "").toString().trim();
-          let isKuisLocked = isMateriLocked || (link !== "" && tipe.toLowerCase() !== "survey" && !openedMaterials.has(mid.toString()) && !hasScore);
+          let isItemEditor = (tipe.toLowerCase() === "editor");
+          let isKuisLocked = isMateriLocked || (!isItemEditor && link !== "" && tipe.toLowerCase() !== "survey" && !openedMaterials.has(mid.toString()) && !hasScore);
 
           let btnPelajari = "";
           let btnKuis = "";
@@ -1984,7 +2006,7 @@
               : 'background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color:white; border:none; font-weight:700; box-shadow:0 4px 12px rgba(37,99,235,0.25);';
           }
 
-          btnPelajari = (link === "") 
+          btnPelajari = (link === "" || isItemEditor) 
             ? "" 
             : (isMateriLocked
                ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed; ${(isMateriSaja || isItemKuisVideo) ? 'grid-column: 1 / -1;' : ''}" onclick="alertLocked('materi')"><i data-lucide="lock" style="width:14px"></i> Terkunci</button>`
@@ -1992,6 +2014,15 @@
 
           if (isMateriSaja || isItemKuisVideo) {
               btnKuis = "";
+          } else if (isItemEditor) {
+            let editorBtnText = hasScore ? 'Edit Ulang Tugas' : 'Buka & Kerjakan Tugas';
+            let editorBtnIcon = hasScore ? 'rotate-ccw' : 'file-edit';
+            let editorBtnStyle = hasScore
+              ? 'background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-weight:700;'
+              : 'background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color:white; border:none; font-weight:700; box-shadow:0 4px 12px rgba(37,99,235,0.25);';
+            btnKuis = isKuisLocked
+                ? `<button class="btn-action" style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed; border:1px solid #e2e8f0; grid-column: 1 / -1;" onclick="alertLocked('tugas')"><i data-lucide="lock" style="width:14px"></i> Tugas Terkunci</button>`
+                : `<button class="btn-action" style="grid-column: 1 / -1; ${editorBtnStyle}" onclick="handleEvaluasi('editor', '${mid}', encodeURIComponent(\`${m.judul || m.Judul || ("Materi " + (i + 1))}\`), '${mid}')"><i data-lucide="${editorBtnIcon}" style="width:14px"></i> ${editorBtnText}</button>`;
           } else if (tipe.toLowerCase() === "praktik" || tipe.toLowerCase() === "ujian praktik") {
             if (hasScore) {
               btnKuis = `<button class="btn-action" style="background:#d1fae5; color:#059669; border:1px solid #a7f3d0; cursor:default; ${btnPelajari === '' ? 'grid-column: 1 / -1;' : ''}"><i data-lucide="check-circle" style="width:16px; flex-shrink:0;"></i> <span style="white-space:normal; line-height:1.1;">Lulus</span></button>`;
