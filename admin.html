@@ -1353,7 +1353,7 @@
         <button class="close-modal" onclick="closeModal('modalRekapWA')" style="color: white; background: none; border: none; cursor: pointer;"><i data-lucide="x"></i></button>
       </div>
       
-      <div class="modal-body" style="padding: 16px 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; background: #f1f5f9;">
+      <div class="modal-body" style="display: block; padding: 16px 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; min-height: 0; background: #f1f5f9;">
         <!-- Control Bar -->
         <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px; margin-bottom: 12px; display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
           <div style="flex: 1; min-width: 160px;">
@@ -1389,9 +1389,9 @@
         </div>
 
         <!-- Preview Wrapper -->
-        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; display: flex; justify-content: center; padding: 10px 0 20px 0;">
+        <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 10px 0 20px 0;">
           <!-- CARD INFOGRAFIS UNTUK RENDER CANVAS -->
-          <div id="rekapWACard" style="width: 800px; min-width: 800px; background: #ffffff; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); border: 1px solid #cbd5e1; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; overflow: hidden; color: #1e293b;">
+          <div id="rekapWACard" style="width: 800px; min-width: 800px; margin: 0 auto; background: #ffffff; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); border: 1px solid #cbd5e1; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; overflow: hidden; color: #1e293b;">
             <!-- Konten Dinamis di-render via JS -->
           </div>
         </div>
