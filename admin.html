@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 
 <head>
@@ -1353,7 +1353,7 @@
         <button class="close-modal" onclick="closeModal('modalRekapWA')" style="color: white; background: none; border: none; cursor: pointer;"><i data-lucide="x"></i></button>
       </div>
       
-      <div class="modal-body" style="padding: 16px 20px; overflow-y: auto; flex: 1; background: #f1f5f9;">
+      <div class="modal-body" style="padding: 16px 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; background: #f1f5f9;">
         <!-- Control Bar -->
         <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
           <div style="flex: 1; min-width: 180px;">
@@ -1361,8 +1361,8 @@
             <select id="selectKelasRekapWA" class="form-control" style="font-weight: 700; font-size: 0.9rem;" onchange="generateRekapWACard()"></select>
           </div>
           <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-            <button id="btnCopyRekapImg" class="btn" style="background:#16a34a; color:#fff; border:none; font-weight:700; display:inline-flex; align-items:center; gap:6px; padding: 9px 16px; font-size: 0.85rem; box-shadow: 0 2px 6px rgba(22,163,74,0.3);" onclick="copyRekapWAImage()">
-              <i data-lucide="copy" style="width:16px; height:16px;"></i> <span id="btnCopyImgText">Salin Gambar (Ctrl+V di WA)</span>
+            <button id="btnCopyRekapImg" class="btn" style="background:#16a34a; color:#fff; border:none; font-weight:700; display:inline-flex; align-items:center; gap:6px; padding: 9px 16px; font-size: 0.85rem; box-shadow: 0 2px 6px rgba(22,163,74,0.3);" onclick="actionKirimRekapWA()">
+              <span id="btnShareIconHolder"><i data-lucide="share-2" style="width:16px; height:16px;"></i></span> <span id="btnCopyImgText">Kirim / Salin Gambar WA</span>
             </button>
             <button id="btnDownloadRekapImg" class="btn btn-outline" style="display:inline-flex; align-items:center; gap:6px; padding: 9px 14px; font-size: 0.85rem;" onclick="downloadRekapWAImage()">
               <i data-lucide="download" style="width:16px; height:16px;"></i> Unduh PNG
@@ -1374,7 +1374,7 @@
         </div>
 
         <!-- Preview Wrapper -->
-        <div style="overflow-x: auto; display: flex; justify-content: center; padding: 10px 0 20px 0;">
+        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; display: flex; justify-content: center; padding: 10px 0 20px 0;">
           <!-- CARD INFOGRAFIS UNTUK RENDER CANVAS -->
           <div id="rekapWACard" style="width: 800px; min-width: 800px; background: #ffffff; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); border: 1px solid #cbd5e1; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; overflow: hidden; color: #1e293b;">
             <!-- Konten Dinamis di-render via JS -->
@@ -1384,7 +1384,7 @@
 
       <div class="modal-footer" style="padding: 12px 20px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
         <span style="font-size: 0.8rem; color: #64748b;">
-          💡 <b>Cara Kirim ke WA:</b> Klik <b>Salin Gambar</b>, lalu buka WhatsApp Web / Desktop dan tekan <b>Ctrl + V</b> di ruang obrolan kelas.
+          💡 <b>Cara Kirim ke WA:</b> Di HP klik <b>Kirim / Salin</b> untuk langsung bagikan ke WhatsApp. Di PC klik untuk salin gambar lalu tekan <b>Ctrl + V</b> di chat WA.
         </span>
         <button class="btn btn-outline" onclick="closeModal('modalRekapWA')">Tutup</button>
       </div>
@@ -6083,7 +6083,7 @@
       XLSX.writeFile(wb, `Rekap_Nilai_${safeKls}_${safeMat}_${tgl}.xlsx`);
     }
 
-    // ===== FITUR REKAP TUNGGAKAN WA (MODE GAMBAR INFOGRAFIS) =====
+// ===== FITUR REKAP TUNGGAKAN WA (MODE GAMBAR INFOGRAFIS) =====
     function openModalRekapWA() {
       const kSelect = document.getElementById('selectKelasRekapWA');
       if (!kSelect) return;
@@ -6116,6 +6116,18 @@
       }
 
       kSelect.innerHTML = klsList.map(k => `<option value="${k}" ${k === curKelas ? 'selected' : ''}>${k}</option>`).join('');
+
+      // Sesuaikan label tombol jika perangkat mobile / mendukung share
+      const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (window.innerWidth < 768 && ('ontouchstart' in window));
+      const btnText = document.getElementById('btnCopyImgText');
+      const iconHolder = document.getElementById('btnShareIconHolder');
+      if (isMobileDevice && navigator.canShare) {
+        if (btnText) btnText.innerHTML = 'Bagikan ke WA (Langsung)';
+        if (iconHolder) iconHolder.innerHTML = '<i data-lucide="share-2" style="width:16px; height:16px;"></i>';
+      } else {
+        if (btnText) btnText.innerHTML = 'Salin Gambar (Ctrl+V di WA)';
+        if (iconHolder) iconHolder.innerHTML = '<i data-lucide="copy" style="width:16px; height:16px;"></i>';
+      }
 
       const modal = document.getElementById('modalRekapWA');
       if (modal) {
@@ -6246,23 +6258,23 @@
         `;
       } else {
         pendingHtml = `
-          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 16px 0;">
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 14px 0;">
             ${data.pendingStudents.map((st, idx) => `
-              <div style="background: #ffffff; border: 1px solid #fee2e2; border-left: 4px solid #ef4444; border-radius: 10px; padding: 12px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
-                  <div style="font-weight: 700; font-size: 13.5px; color: #1e293b; line-height: 1.3;">
+              <div style="background: #ffffff; border: 1px solid #fee2e2; border-left: 4px solid #ef4444; border-radius: 10px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 6px; border-bottom: 1px dashed #fee2e2; padding-bottom: 5px;">
+                  <div style="font-weight: 700; font-size: 13px; color: #1e293b; line-height: 1.2;">
                     <span style="color: #64748b; font-weight: 600; margin-right: 4px;">${idx + 1}.</span>${st.nama}
                   </div>
-                  <span style="background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px; white-space: nowrap;">
+                  <span style="background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px; white-space: nowrap;">
                     ${st.tunggakan.length} Belum
                   </span>
                 </div>
-                <div style="display: flex; flex-direction: column; gap: 4px;">
+                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
                   ${st.tunggakan.map(t => `
-                    <div style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #475569; background: #fafafa; border: 1px solid #f1f5f9; padding: 4px 8px; border-radius: 6px;">
-                      <span style="color: #ef4444; font-weight: bold; font-size: 12px;">✕</span>
-                      <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${t}</span>
-                    </div>
+                    <span style="display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; color: #991b1b; background: #fef2f2; border: 1px solid #fecdd3; padding: 2px 7px; border-radius: 5px; line-height: 1.25;">
+                      <span style="color: #ef4444; font-weight: 800; font-size: 11px;">✕</span>
+                      <span>${t}</span>
+                    </span>
                   `).join('')}
                 </div>
               </div>
@@ -6274,17 +6286,17 @@
       let completedHtml = '';
       if (data.completedStudents.length > 0) {
         completedHtml = `
-          <div style="margin-top: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-              <span style="font-size: 12.5px; font-weight: 800; color: #166534; display: flex; align-items: center; gap: 6px;">
+          <div style="margin-top: 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-size: 12px; font-weight: 800; color: #166534; display: flex; align-items: center; gap: 6px;">
                 <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#16a34a;"></span>
                 SUDAH TUNTAS 100% (${data.completedStudents.length} SISWA)
               </span>
               <span style="font-size: 11px; color: #15803d; font-weight: 600;">Terima kasih atas kerja kerasnya! 👏</span>
             </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            <div style="display: flex; flex-wrap: wrap; gap: 5px;">
               ${data.completedStudents.map(s => `
-                <span style="background: #ffffff; border: 1px solid #bbf7d0; color: #15803d; border-radius: 6px; padding: 3px 9px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                <span style="background: #ffffff; border: 1px solid #bbf7d0; color: #15803d; border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
                   <span style="color: #16a34a; font-weight: bold;">✓</span> ${s.nama}
                 </span>
               `).join('')}
@@ -6296,9 +6308,17 @@
       let taskListHtml = '';
       if (data.taskMaterials.length > 0) {
         taskListHtml = `
-          <div style="margin-bottom: 16px; padding: 10px 14px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; font-size: 11.5px; color: #64748b;">
-            <span style="font-weight: 700; color: #334155; margin-right: 6px;">Daftar ${data.totalTugas} Tugas/Kuis:</span>
-            ${data.taskMaterials.map((tm, i) => `<span style="display:inline-block; background:#ffffff; border:1px solid #e2e8f0; padding:2px 7px; border-radius:4px; margin:2px; color:#334155;"><b>${i+1}.</b> ${tm}</span>`).join(' ')}
+          <div style="margin-bottom: 14px; padding: 10px 14px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px;">
+            <div style="font-size: 11.5px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+              📋 DAFTAR ${data.totalTugas} TUGAS / KUIS YANG DINILAI:
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+              ${data.taskMaterials.map((tm, i) => `
+                <span style="display: inline-flex; align-items: center; background: #ffffff; border: 1px solid #e2e8f0; padding: 2px 7px; border-radius: 5px; font-size: 10.5px; color: #334155;">
+                  <b style="color: #059669; margin-right: 4px;">${i+1}.</b> ${tm}
+                </span>
+              `).join('')}
+            </div>
           </div>
         `;
       }
@@ -6306,46 +6326,46 @@
       card.innerHTML = `
         <div style="background: #ffffff; color: #1e293b; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
           <!-- HEADER KARTU DENGAN JUDUL SPESIFIK USER -->
-          <div style="background: linear-gradient(135deg, #065f46 0%, #047857 50%, #059669 100%); padding: 22px 28px; color: #ffffff; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #10b981;">
+          <div style="background: linear-gradient(135deg, #065f46 0%, #047857 50%, #059669 100%); padding: 20px 24px; color: #ffffff; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #10b981;">
             <div>
               <div style="display: flex; align-items: center; gap: 10px;">
                 <div style="background: rgba(255,255,255,0.2); border-radius: 10px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; border: 1px solid rgba(255,255,255,0.3);">
                   📖
                 </div>
                 <div>
-                  <h1 style="margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -0.3px; color: #ffffff; line-height: 1.1;">Al ILMI LMS</h1>
-                  <div style="font-size: 13.5px; font-weight: 600; color: #a7f3d0; margin-top: 3px;">Mata pelajaran : KK TKR Elemen Engine</div>
+                  <h1 style="margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -0.3px; color: #ffffff; line-height: 1.1;">Al ILMI LMS</h1>
+                  <div style="font-size: 13px; font-weight: 600; color: #a7f3d0; margin-top: 3px;">Mata pelajaran : KK TKR Elemen Engine</div>
                 </div>
               </div>
             </div>
-            <div style="text-align: right; background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.25); border-radius: 10px; padding: 8px 16px;">
-              <div style="font-size: 17px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px;">KELAS ${data.kelas.toUpperCase()}</div>
-              <div style="font-size: 11px; color: #d1fae5; margin-top: 2px;">Update: ${data.tanggal}</div>
+            <div style="text-align: right; background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.25); border-radius: 10px; padding: 6px 14px;">
+              <div style="font-size: 15px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px;">KELAS ${data.kelas.toUpperCase()}</div>
+              <div style="font-size: 10.5px; color: #d1fae5; margin-top: 2px;">Update: ${data.tanggal}</div>
             </div>
           </div>
 
           <!-- BODY KARTU -->
-          <div style="padding: 24px 28px;">
+          <div style="padding: 20px 24px;">
             <!-- STATS ROW -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1.3fr; gap: 12px; margin-bottom: 16px;">
-              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center;">
-                <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Total Siswa</div>
-                <div style="font-size: 24px; font-weight: 900; color: #1e293b; margin-top: 2px;">${data.totalSiswa}</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1.3fr; gap: 10px; margin-bottom: 14px;">
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; text-align: center;">
+                <div style="font-size: 10.5px; font-weight: 700; color: #64748b; text-transform: uppercase;">Total Siswa</div>
+                <div style="font-size: 22px; font-weight: 900; color: #1e293b; margin-top: 2px;">${data.totalSiswa}</div>
               </div>
-              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px; text-align: center;">
-                <div style="font-size: 11px; font-weight: 700; color: #15803d; text-transform: uppercase;">Sudah Tuntas</div>
-                <div style="font-size: 24px; font-weight: 900; color: #16a34a; margin-top: 2px;">${data.selesaiCount}</div>
+              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px; text-align: center;">
+                <div style="font-size: 10.5px; font-weight: 700; color: #15803d; text-transform: uppercase;">Sudah Tuntas</div>
+                <div style="font-size: 22px; font-weight: 900; color: #16a34a; margin-top: 2px;">${data.selesaiCount}</div>
               </div>
-              <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 12px; text-align: center;">
-                <div style="font-size: 11px; font-weight: 700; color: #b91c1c; text-transform: uppercase;">Ada Tunggakan</div>
-                <div style="font-size: 24px; font-weight: 900; color: #dc2626; margin-top: 2px;">${data.belumCount}</div>
+              <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 10px; text-align: center;">
+                <div style="font-size: 10.5px; font-weight: 700; color: #b91c1c; text-transform: uppercase;">Ada Tunggakan</div>
+                <div style="font-size: 22px; font-weight: 900; color: #dc2626; margin-top: 2px;">${data.belumCount}</div>
               </div>
-              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; justify-content: center;">
-                <div style="display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 700; margin-bottom: 6px;">
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; justify-content: center;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; margin-bottom: 5px;">
                   <span style="color: #475569;">Progress Tuntas</span>
                   <span style="color: #16a34a;">${data.persentaseTuntas}%</span>
                 </div>
-                <div style="width: 100%; height: 10px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+                <div style="width: 100%; height: 9px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
                   <div style="height: 100%; width: ${data.persentaseTuntas}%; background: linear-gradient(90deg, #10b981, #059669); border-radius: 999px;"></div>
                 </div>
               </div>
@@ -6355,12 +6375,12 @@
             ${taskListHtml}
 
             <!-- SECTION DAFTAR SISWA BELUM SELESAI -->
-            <div style="margin-top: 18px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">
-                <h3 style="margin: 0; font-size: 14.5px; font-weight: 800; color: #dc2626; display: flex; align-items: center; gap: 6px;">
+            <div style="margin-top: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 6px;">
+                <h3 style="margin: 0; font-size: 14px; font-weight: 800; color: #dc2626; display: flex; align-items: center; gap: 6px;">
                   <span>⚠️</span> DAFTAR SISWA BELUM SELESAI (${data.pendingStudents.length} SISWA)
                 </h3>
-                <span style="font-size: 11px; color: #64748b;">Harap segera melengkapi</span>
+                <span style="font-size: 10.5px; color: #64748b;">Harap segera melengkapi</span>
               </div>
               ${pendingHtml}
             </div>
@@ -6370,7 +6390,7 @@
           </div>
 
           <!-- FOOTER KARTU -->
-          <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 14px 28px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #64748b;">
+          <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #64748b;">
             <div style="display: flex; align-items: center; gap: 6px;">
               <span style="font-weight: 700; color: #334155;">📌 Catatan Guru:</span>
               <span>Bagi siswa yang namanya tercantum di atas, segera selesaikan tugas/kuis sebelum tenggat waktu.</span>
@@ -6383,101 +6403,206 @@
       `;
     }
 
-    async function copyRekapWAImage() {
+    // Fungsi Render Canvas Mandiri (Offscreen Clone) untuk Menghindari Gambar Terpotong dan Hang
+    async function renderRekapCanvas() {
       const card = document.getElementById('rekapWACard');
-      const btn = document.getElementById('btnCopyRekapImg');
-      const btnText = document.getElementById('btnCopyImgText');
-      if (!card || !btn) return;
-      const originalText = btnText ? btnText.innerHTML : 'Salin Gambar';
+      if (!card) throw new Error("Elemen kartu rekap tidak ditemukan.");
+
+      if (typeof html2canvas === 'undefined') {
+        throw new Error("Library html2canvas belum siap. Coba muat ulang halaman.");
+      }
+
+      // Kloning elemen ke document.body tanpa batasan scroll / overflow parent
+      const clone = card.cloneNode(true);
+      clone.id = 'rekapWACard_render_clone';
+      clone.style.position = 'fixed';
+      clone.style.left = '-9999px';
+      clone.style.top = '0';
+      clone.style.width = '800px';
+      clone.style.minWidth = '800px';
+      clone.style.maxWidth = '800px';
+      clone.style.height = 'auto';
+      clone.style.maxHeight = 'none';
+      clone.style.overflow = 'visible';
+      clone.style.zIndex = '-9999';
+      clone.style.boxShadow = 'none';
+      clone.style.transform = 'none';
+
+      // Pastikan semua child tidak memiliki overflow terpotong
+      const allChildren = clone.querySelectorAll('*');
+      allChildren.forEach(el => {
+        if (el.style) {
+          if (el.style.overflow === 'hidden' || el.style.overflowY === 'auto' || el.style.overflowX === 'auto') {
+            el.style.overflow = 'visible';
+          }
+          if (el.style.maxHeight && el.style.maxHeight !== 'none') {
+            el.style.maxHeight = 'none';
+          }
+        }
+      });
+
+      document.body.appendChild(clone);
+
+      // Beri jeda 80ms untuk reflow DOM clone
+      await new Promise(r => setTimeout(r, 80));
+
+      const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
+      const scaleFactor = isMobile ? 1.5 : 2;
 
       try {
-        btn.disabled = true;
-        if (btnText) btnText.innerHTML = 'Memproses Gambar...';
-
-        if (typeof html2canvas === 'undefined') {
-          throw new Error("Library html2canvas belum siap. Coba muat ulang halaman.");
-        }
-
-        const canvas = await html2canvas(card, {
-          scale: 2,
+        const canvas = await html2canvas(clone, {
+          scale: scaleFactor,
           useCORS: true,
           logging: false,
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: 800,
+          width: 800,
+          height: clone.scrollHeight
         });
-
-        canvas.toBlob(async (blob) => {
-          if (!blob) {
-            alert("Gagal mengonversi kartu ke gambar.");
-            btn.disabled = false;
-            if (btnText) btnText.innerHTML = originalText;
-            return;
-          }
-
-          if (navigator.clipboard && navigator.clipboard.write && window.ClipboardItem) {
-            try {
-              const item = new ClipboardItem({ 'image/png': blob });
-              await navigator.clipboard.write([item]);
-              if (btnText) btnText.innerHTML = '✓ Gambar Tersalin!';
-              if (typeof showToastAdmin === 'function') {
-                showToastAdmin('Gambar rekap berhasil disalin! Tekan Ctrl+V di WhatsApp.', 'success');
-              } else {
-                alert('Gambar rekap berhasil disalin ke clipboard! Buka WhatsApp lalu tekan Ctrl+V.');
-              }
-              setTimeout(() => {
-                if (btnText) btnText.innerHTML = originalText;
-                btn.disabled = false;
-              }, 3000);
-              return;
-            } catch (clipErr) {
-              console.warn("ClipboardItem write failed, fallback to download:", clipErr);
-            }
-          }
-
-          // Fallback: download gambar
-          const selKelas = (document.getElementById('selectKelasRekapWA') ? document.getElementById('selectKelasRekapWA').value : "").trim() || "Kelas";
-          const link = document.createElement('a');
-          link.download = `Rekap_Tugas_${selKelas.replace(/[^a-zA-Z0-9_-]/g, '_')}_${new Date().toISOString().slice(0, 10)}.png`;
-          link.href = canvas.toDataURL('image/png');
-          link.click();
-          if (btnText) btnText.innerHTML = '✓ Gambar Diunduh';
-          alert('Perangkat Anda tidak mengizinkan salin gambar otomatis ke clipboard. File gambar telah diunduh, silakan kirim langsung via WhatsApp.');
-          setTimeout(() => {
-            if (btnText) btnText.innerHTML = originalText;
-            btn.disabled = false;
-          }, 3000);
-        }, 'image/png');
-
-      } catch (err) {
-        console.error("Error copyRekapWAImage:", err);
-        alert("Gagal memproses gambar: " + err.message);
-        if (btnText) btnText.innerHTML = originalText;
-        btn.disabled = false;
+        return canvas;
+      } finally {
+        if (clone && clone.parentNode) {
+          clone.parentNode.removeChild(clone);
+        }
       }
     }
 
-    async function downloadRekapWAImage() {
-      const card = document.getElementById('rekapWACard');
-      const selKelas = (document.getElementById('selectKelasRekapWA') ? document.getElementById('selectKelasRekapWA').value : "").trim() || "Kelas";
+    function downloadCanvasBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        if (link && link.parentNode) link.parentNode.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 1000);
+    }
+
+    async function actionKirimRekapWA() {
+      const btn = document.getElementById('btnCopyRekapImg');
+      const btnText = document.getElementById('btnCopyImgText');
+      const originalText = btnText ? btnText.innerHTML : 'Kirim / Salin';
+
       try {
-        if (typeof showOverlay === 'function') showOverlay("Menyiapkan gambar PNG...", 2000);
-        if (typeof html2canvas === 'undefined') {
-          throw new Error("Library html2canvas belum siap. Coba muat ulang halaman.");
-        }
-        const canvas = await html2canvas(card, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff'
-        });
+        if (btn) btn.disabled = true;
+        if (btnText) btnText.innerHTML = '⏳ Menyiapkan Gambar...';
+        if (typeof showOverlay === 'function') showOverlay("Sedang memproses gambar kartu...", 3000);
+
+        // Beri jeda agar browser sempat menggambar status loading
+        await new Promise(r => setTimeout(r, 100));
+
+        const selKelas = (document.getElementById('selectKelasRekapWA') ? document.getElementById('selectKelasRekapWA').value : "").trim() || "Kelas";
+        const canvas = await renderRekapCanvas();
+
         if (typeof hideOverlay === 'function') hideOverlay();
 
-        const link = document.createElement('a');
-        link.download = `Rekap_Tugas_${selKelas.replace(/[^a-zA-Z0-9_-]/g, '_')}_${new Date().toISOString().slice(0, 10)}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        if (!blob) throw new Error("Gagal membuat gambar PNG dari kartu.");
+
+        const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (window.innerWidth < 768 && ('ontouchstart' in window));
+        const filename = `Rekap_Tugas_${selKelas.replace(/[^a-zA-Z0-9_-]/g, '_')}_${new Date().toISOString().slice(0, 10)}.png`;
+
+        // 1. Prioritas Mobile: Web Share API langsung ke WhatsApp
+        if (isMobileDevice && navigator.canShare) {
+          try {
+            const file = new File([blob], filename, { type: 'image/png' });
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                files: [file],
+                title: `Al ILMI LMS - Rekap Tugas ${selKelas}`,
+                text: `Rekap tunggakan tugas kelas ${selKelas} - Al ILMI LMS (KK TKR Elemen Engine)`
+              });
+              if (btnText) btnText.innerHTML = '✓ Berhasil Dibagikan!';
+              setTimeout(() => {
+                if (btnText) btnText.innerHTML = originalText;
+                if (btn) btn.disabled = false;
+              }, 2500);
+              return;
+            }
+          } catch (shareErr) {
+            if (shareErr.name === 'AbortError') {
+              if (btnText) btnText.innerHTML = originalText;
+              if (btn) btn.disabled = false;
+              return;
+            }
+            console.warn("navigator.share gagal:", shareErr);
+          }
+        }
+
+        // 2. Prioritas Desktop: Salin ke Clipboard (Ctrl+V di WhatsApp Web)
+        if (navigator.clipboard && navigator.clipboard.write && window.ClipboardItem && !isMobileDevice) {
+          try {
+            const item = new ClipboardItem({ 'image/png': blob });
+            await navigator.clipboard.write([item]);
+            if (btnText) btnText.innerHTML = '✓ Gambar Tersalin!';
+            if (typeof showToastAdmin === 'function') {
+              showToastAdmin('Gambar rekap berhasil disalin! Tekan Ctrl+V di WhatsApp.', 'success');
+            } else {
+              alert('Gambar rekap berhasil disalin ke clipboard! Buka WhatsApp Web lalu tekan Ctrl+V.');
+            }
+            setTimeout(() => {
+              if (btnText) btnText.innerHTML = originalText;
+              if (btn) btn.disabled = false;
+            }, 3000);
+            return;
+          } catch (clipErr) {
+            console.warn("ClipboardItem write gagal:", clipErr);
+          }
+        }
+
+        // 3. Fallback Aman: Unduh Gambar Langsung (Tidak akan hang!)
+        downloadCanvasBlob(blob, filename);
+        if (btnText) btnText.innerHTML = '✓ Gambar Diunduh';
+        if (typeof showToastAdmin === 'function') {
+          showToastAdmin('Gambar telah diunduh ke perangkat Anda. Silakan kirim langsung ke WhatsApp.', 'info');
+        } else {
+          alert('Gambar telah diunduh ke perangkat Anda. Silakan lampirkan langsung ke WhatsApp.');
+        }
+        setTimeout(() => {
+          if (btnText) btnText.innerHTML = originalText;
+          if (btn) btn.disabled = false;
+        }, 3000);
+
+      } catch (err) {
+        if (typeof hideOverlay === 'function') hideOverlay();
+        console.error("Error actionKirimRekapWA:", err);
+        alert("Gagal memproses gambar: " + err.message);
+        if (btnText) btnText.innerHTML = originalText;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    // Alias untuk tombol lama
+    const copyRekapWAImage = actionKirimRekapWA;
+
+    async function downloadRekapWAImage() {
+      const btn = document.getElementById('btnDownloadRekapImg');
+      const selKelas = (document.getElementById('selectKelasRekapWA') ? document.getElementById('selectKelasRekapWA').value : "").trim() || "Kelas";
+      try {
+        if (btn) btn.disabled = true;
+        if (typeof showOverlay === 'function') showOverlay("Menyiapkan file gambar PNG...", 3000);
+        await new Promise(r => setTimeout(r, 80));
+
+        const canvas = await renderRekapCanvas();
+        if (typeof hideOverlay === 'function') hideOverlay();
+
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        if (!blob) throw new Error("Gagal membuat gambar PNG.");
+
+        const filename = `Rekap_Tugas_${selKelas.replace(/[^a-zA-Z0-9_-]/g, '_')}_${new Date().toISOString().slice(0, 10)}.png`;
+        downloadCanvasBlob(blob, filename);
+        if (typeof showToastAdmin === 'function') {
+          showToastAdmin("Gambar PNG berhasil diunduh!", "success");
+        }
       } catch(e) {
         if (typeof hideOverlay === 'function') hideOverlay();
         alert("Gagal mengunduh gambar: " + e.message);
+      } finally {
+        if (btn) btn.disabled = false;
       }
     }
 
@@ -6546,6 +6671,7 @@
       }
       document.body.removeChild(ta);
     }
+
 
     function buildRekapAoa(selKelas) {
       const data = buildRekapDataForClass(selKelas);
