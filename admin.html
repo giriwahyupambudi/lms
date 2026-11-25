@@ -13,6 +13,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <link rel="manifest" href="manifest.json">
   <script src="pwa-handler.js" defer></script>
   <!-- YouTube IFrame API -->
@@ -923,6 +924,7 @@
               <select class="form-control" id="filterMateriNilai" onchange="renderTableNilai()"></select>
             </div>
             <div style="margin-bottom: 0; display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn" style="background:#16a34a; color:#fff; border:none; display:inline-flex; align-items:center; gap:6px; font-weight:600;" onclick="openModalRekapWA()"><i data-lucide="image"></i> Rekap WA</button>
               <button class="btn btn-primary" onclick="simpanSemuaNilai()"><i data-lucide="saveAll"></i> Simpan Semua</button>
               <button class="btn btn-outline" onclick="downloadRekapNilaiMateri()"><i data-lucide="download"></i> Download Excel</button>
             </div>
@@ -1186,6 +1188,7 @@
             <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Lihat seluruh progres pengerjaan materi siswa per kelas.</p>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn" style="background:#16a34a; color:#fff; border:none; display:inline-flex; align-items:center; gap:6px; font-weight:600;" onclick="openModalRekapWA()"><i data-lucide="image"></i> Rekap Gambar WA</button>
             <button class="btn btn-primary" onclick="downloadRekap()"><i data-lucide="download"></i> Download XLSX</button>
             <button class="btn btn-outline" onclick="downloadSemuaKelas()"><i data-lucide="layers"></i> Semua Kelas</button>
           </div>
@@ -1336,6 +1339,54 @@
       </div>
       <div class="modal-footer" style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end;">
         <button class="btn btn-primary" onclick="closeModal('modalDetailNilaiAkhir')">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL REKAP TUNGGAKAN WA (GAMBAR) ================= -->
+  <div id="modalRekapWA" class="modal-overlay" style="display:none; z-index:2200;">
+    <div class="modal" style="max-width: 900px; width: 95%; max-height: 92vh; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; padding: 0;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: white; padding: 14px 20px; border-bottom: none;">
+        <h3 style="color: white; display: flex; align-items: center; gap: 8px; font-size: 1.05rem; margin: 0; font-weight: 700;">
+          <i data-lucide="image" style="width: 20px; height: 20px;"></i> Rekap Tunggakan Tugas (Mode Gambar WhatsApp)
+        </h3>
+        <button class="close-modal" onclick="closeModal('modalRekapWA')" style="color: white; background: none; border: none; cursor: pointer;"><i data-lucide="x"></i></button>
+      </div>
+      
+      <div class="modal-body" style="padding: 16px 20px; overflow-y: auto; flex: 1; background: #f1f5f9;">
+        <!-- Control Bar -->
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
+          <div style="flex: 1; min-width: 180px;">
+            <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 6px;">Pilih Kelas</label>
+            <select id="selectKelasRekapWA" class="form-control" style="font-weight: 700; font-size: 0.9rem;" onchange="generateRekapWACard()"></select>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <button id="btnCopyRekapImg" class="btn" style="background:#16a34a; color:#fff; border:none; font-weight:700; display:inline-flex; align-items:center; gap:6px; padding: 9px 16px; font-size: 0.85rem; box-shadow: 0 2px 6px rgba(22,163,74,0.3);" onclick="copyRekapWAImage()">
+              <i data-lucide="copy" style="width:16px; height:16px;"></i> <span id="btnCopyImgText">Salin Gambar (Ctrl+V di WA)</span>
+            </button>
+            <button id="btnDownloadRekapImg" class="btn btn-outline" style="display:inline-flex; align-items:center; gap:6px; padding: 9px 14px; font-size: 0.85rem;" onclick="downloadRekapWAImage()">
+              <i data-lucide="download" style="width:16px; height:16px;"></i> Unduh PNG
+            </button>
+            <button class="btn btn-outline" style="display:inline-flex; align-items:center; gap:6px; padding: 9px 14px; font-size: 0.85rem;" onclick="copyRekapWAText()">
+              <i data-lucide="file-text" style="width:16px; height:16px;"></i> Salin Teks
+            </button>
+          </div>
+        </div>
+
+        <!-- Preview Wrapper -->
+        <div style="overflow-x: auto; display: flex; justify-content: center; padding: 10px 0 20px 0;">
+          <!-- CARD INFOGRAFIS UNTUK RENDER CANVAS -->
+          <div id="rekapWACard" style="width: 800px; min-width: 800px; background: #ffffff; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); border: 1px solid #cbd5e1; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; overflow: hidden; color: #1e293b;">
+            <!-- Konten Dinamis di-render via JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding: 12px 20px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <span style="font-size: 0.8rem; color: #64748b;">
+          💡 <b>Cara Kirim ke WA:</b> Klik <b>Salin Gambar</b>, lalu buka WhatsApp Web / Desktop dan tekan <b>Ctrl + V</b> di ruang obrolan kelas.
+        </span>
+        <button class="btn btn-outline" onclick="closeModal('modalRekapWA')">Tutup</button>
       </div>
     </div>
   </div>
@@ -6030,6 +6081,470 @@
       const safeKls = selKelas.replace(/[^a-zA-Z0-9_-]/g, '_');
       const safeMat = judulMateriStr.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 20);
       XLSX.writeFile(wb, `Rekap_Nilai_${safeKls}_${safeMat}_${tgl}.xlsx`);
+    }
+
+    // ===== FITUR REKAP TUNGGAKAN WA (MODE GAMBAR INFOGRAFIS) =====
+    function openModalRekapWA() {
+      const kSelect = document.getElementById('selectKelasRekapWA');
+      if (!kSelect) return;
+
+      let klsSet = new Set();
+      if (Array.isArray(window.MY_KELAS) && window.MY_KELAS.length > 0) {
+        window.MY_KELAS.forEach(k => { if (k && k !== 'SEMUA') klsSet.add(k.toString().trim()); });
+      }
+      if (Array.isArray(dataUser)) {
+        dataUser.forEach(u => {
+          let r = (getVal(u, ['role', 'peran']) || "").toString().toLowerCase().trim();
+          if (r === 'admin' || r === 'guru') return;
+          let k = (getVal(u, ['kelas', 'tingkat', 'rombel']) || "").toString().trim();
+          if (k) klsSet.add(k);
+        });
+      }
+
+      let klsList = Array.from(klsSet).sort();
+      if (klsList.length === 0) {
+        return alert("Tidak ada data kelas yang tersedia.");
+      }
+
+      let curKelas = (document.getElementById('filterKelasNilai') ? document.getElementById('filterKelasNilai').value : "") ||
+                     (document.getElementById('filterKelasRekap') ? document.getElementById('filterKelasRekap').value : "") ||
+                     (document.getElementById('filterKelas') ? document.getElementById('filterKelas').value : "") ||
+                     klsList[0];
+
+      if (!klsList.includes(curKelas)) {
+        curKelas = klsList[0];
+      }
+
+      kSelect.innerHTML = klsList.map(k => `<option value="${k}" ${k === curKelas ? 'selected' : ''}>${k}</option>`).join('');
+
+      const modal = document.getElementById('modalRekapWA');
+      if (modal) {
+        modal.style.display = 'flex';
+      }
+
+      generateRekapWACard();
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function getRekapWAData(selKelas) {
+      if (!selKelas) return null;
+      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      const students = getStudentsForClass(selKelas);
+      if (!students || students.length === 0) return null;
+
+      // Filter materi yang termasuk penugasan / kuis (bukan materi bacaan biasa tanpa kuis interaktif)
+      const allMaterials = getMaterialsForClass(selKelas);
+      const taskMaterials = allMaterials.filter(m => {
+        let t = (getVal(m, ['tipe', 'tipe_evaluasi']) || "").toString().trim().toLowerCase();
+        if (t === 'materi saja' || t === 'materi' || t === 'bacaan' || t === 'pengumuman') {
+          let rawKv = getVal(m, ['kuis_video', 'kuisvideo', 'interaktif']) || "";
+          try {
+            let parsed = typeof rawKv === 'string' ? JSON.parse(rawKv) : rawKv;
+            if (Array.isArray(parsed) && parsed.length > 0) return true;
+          } catch(e){}
+          return false;
+        }
+        return true;
+      });
+
+      const maps = buildRekapIndexMaps();
+      const rekapNilaiMap = maps.rekapNilaiMap;
+      const rekapLogTugasMap = maps.rekapLogTugasMap;
+
+      let pendingStudents = [];
+      let completedStudents = [];
+
+      students.forEach(st => {
+        const rawUsername = (getVal(st, ['username', 'nisn']) || "").toString().trim();
+        const uNorm = norm(rawUsername);
+        const sNamaRaw = (getVal(st, ['nama', 'namalengkap', 'namasiswa']) || "").toString().trim();
+        const sNamaNorm = norm(sNamaRaw);
+
+        let tunggakan = [];
+
+        taskMaterials.forEach((m, mIdx) => {
+          const mid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || (mIdx + 1)).toString().trim();
+          const midNorm = norm(mid);
+          const mJudulRaw = (getVal(m, ['judul', 'materi']) || `Tugas ${mIdx + 1}`).toString().trim();
+          const mJudul = norm(mJudulRaw);
+
+          let k1 = `${uNorm}_${midNorm}`;
+          let k2 = `${uNorm}_${mJudul}`;
+          let k3 = `${sNamaNorm}_${midNorm}`;
+          let k4 = `${sNamaNorm}_${mJudul}`;
+
+          let hasNilai = rekapNilaiMap.has(k1) || rekapNilaiMap.has(k2) || rekapNilaiMap.has(k3) || rekapNilaiMap.has(k4);
+          let hasUpload = rekapLogTugasMap.has(k1) || rekapLogTugasMap.has(k2) || rekapLogTugasMap.has(k3) || rekapLogTugasMap.has(k4);
+
+          if (!hasNilai && !hasUpload) {
+            tunggakan.push(mJudulRaw);
+          }
+        });
+
+        if (tunggakan.length > 0) {
+          pendingStudents.push({
+            username: rawUsername,
+            nama: sNamaRaw,
+            tunggakan: tunggakan,
+            selesai: taskMaterials.length - tunggakan.length,
+            totalTugas: taskMaterials.length
+          });
+        } else {
+          completedStudents.push({
+            username: rawUsername,
+            nama: sNamaRaw,
+            totalTugas: taskMaterials.length
+          });
+        }
+      });
+
+      pendingStudents.sort((a, b) => {
+        if (b.tunggakan.length !== a.tunggakan.length) {
+          return b.tunggakan.length - a.tunggakan.length;
+        }
+        return a.nama.localeCompare(b.nama);
+      });
+
+      return {
+        kelas: selKelas,
+        tanggal: (typeof formatWaktuIndo === 'function') ? formatWaktuIndo(new Date()) : new Date().toLocaleDateString('id-ID'),
+        totalSiswa: students.length,
+        totalTugas: taskMaterials.length,
+        taskMaterials: taskMaterials.map(m => (getVal(m, ['judul', 'materi']) || '').toString().trim()),
+        pendingStudents: pendingStudents,
+        completedStudents: completedStudents,
+        selesaiCount: completedStudents.length,
+        belumCount: pendingStudents.length,
+        persentaseTuntas: students.length > 0 ? Math.round((completedStudents.length / students.length) * 100) : 0
+      };
+    }
+
+    function generateRekapWACard() {
+      const card = document.getElementById('rekapWACard');
+      if (!card) return;
+
+      const selKelas = (document.getElementById('selectKelasRekapWA') ? document.getElementById('selectKelasRekapWA').value : "").trim();
+      if (!selKelas) {
+        card.innerHTML = `<div style="padding: 40px; text-align: center; color: #64748b;">Pilih kelas terlebih dahulu.</div>`;
+        return;
+      }
+
+      const data = getRekapWAData(selKelas);
+      if (!data) {
+        card.innerHTML = `<div style="padding: 40px; text-align: center; color: #64748b;">Tidak ada data siswa untuk kelas ${selKelas}.</div>`;
+        return;
+      }
+
+      let pendingHtml = '';
+      if (data.pendingStudents.length === 0) {
+        pendingHtml = `
+          <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 24px; text-align: center; margin: 16px 0;">
+            <div style="font-size: 32px; margin-bottom: 8px;">🎉</div>
+            <div style="font-size: 16px; font-weight: 800; color: #166534;">Luar Biasa! Semua Siswa Sudah Tuntas 100%!</div>
+            <div style="font-size: 13px; color: #15803d; margin-top: 4px;">Tidak ada tanggungan tugas/kuis untuk kelas ${data.kelas}.</div>
+          </div>
+        `;
+      } else {
+        pendingHtml = `
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 16px 0;">
+            ${data.pendingStudents.map((st, idx) => `
+              <div style="background: #ffffff; border: 1px solid #fee2e2; border-left: 4px solid #ef4444; border-radius: 10px; padding: 12px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+                  <div style="font-weight: 700; font-size: 13.5px; color: #1e293b; line-height: 1.3;">
+                    <span style="color: #64748b; font-weight: 600; margin-right: 4px;">${idx + 1}.</span>${st.nama}
+                  </div>
+                  <span style="background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px; white-space: nowrap;">
+                    ${st.tunggakan.length} Belum
+                  </span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  ${st.tunggakan.map(t => `
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #475569; background: #fafafa; border: 1px solid #f1f5f9; padding: 4px 8px; border-radius: 6px;">
+                      <span style="color: #ef4444; font-weight: bold; font-size: 12px;">✕</span>
+                      <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${t}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      let completedHtml = '';
+      if (data.completedStudents.length > 0) {
+        completedHtml = `
+          <div style="margin-top: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span style="font-size: 12.5px; font-weight: 800; color: #166534; display: flex; align-items: center; gap: 6px;">
+                <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#16a34a;"></span>
+                SUDAH TUNTAS 100% (${data.completedStudents.length} SISWA)
+              </span>
+              <span style="font-size: 11px; color: #15803d; font-weight: 600;">Terima kasih atas kerja kerasnya! 👏</span>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+              ${data.completedStudents.map(s => `
+                <span style="background: #ffffff; border: 1px solid #bbf7d0; color: #15803d; border-radius: 6px; padding: 3px 9px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                  <span style="color: #16a34a; font-weight: bold;">✓</span> ${s.nama}
+                </span>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      let taskListHtml = '';
+      if (data.taskMaterials.length > 0) {
+        taskListHtml = `
+          <div style="margin-bottom: 16px; padding: 10px 14px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; font-size: 11.5px; color: #64748b;">
+            <span style="font-weight: 700; color: #334155; margin-right: 6px;">Daftar ${data.totalTugas} Tugas/Kuis:</span>
+            ${data.taskMaterials.map((tm, i) => `<span style="display:inline-block; background:#ffffff; border:1px solid #e2e8f0; padding:2px 7px; border-radius:4px; margin:2px; color:#334155;"><b>${i+1}.</b> ${tm}</span>`).join(' ')}
+          </div>
+        `;
+      }
+
+      card.innerHTML = `
+        <div style="background: #ffffff; color: #1e293b; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+          <!-- HEADER KARTU DENGAN JUDUL SPESIFIK USER -->
+          <div style="background: linear-gradient(135deg, #065f46 0%, #047857 50%, #059669 100%); padding: 22px 28px; color: #ffffff; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #10b981;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="background: rgba(255,255,255,0.2); border-radius: 10px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; border: 1px solid rgba(255,255,255,0.3);">
+                  📖
+                </div>
+                <div>
+                  <h1 style="margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -0.3px; color: #ffffff; line-height: 1.1;">Al ILMI LMS</h1>
+                  <div style="font-size: 13.5px; font-weight: 600; color: #a7f3d0; margin-top: 3px;">Mata pelajaran : KK TKR Elemen Engine</div>
+                </div>
+              </div>
+            </div>
+            <div style="text-align: right; background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.25); border-radius: 10px; padding: 8px 16px;">
+              <div style="font-size: 17px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px;">KELAS ${data.kelas.toUpperCase()}</div>
+              <div style="font-size: 11px; color: #d1fae5; margin-top: 2px;">Update: ${data.tanggal}</div>
+            </div>
+          </div>
+
+          <!-- BODY KARTU -->
+          <div style="padding: 24px 28px;">
+            <!-- STATS ROW -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1.3fr; gap: 12px; margin-bottom: 16px;">
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center;">
+                <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Total Siswa</div>
+                <div style="font-size: 24px; font-weight: 900; color: #1e293b; margin-top: 2px;">${data.totalSiswa}</div>
+              </div>
+              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px; text-align: center;">
+                <div style="font-size: 11px; font-weight: 700; color: #15803d; text-transform: uppercase;">Sudah Tuntas</div>
+                <div style="font-size: 24px; font-weight: 900; color: #16a34a; margin-top: 2px;">${data.selesaiCount}</div>
+              </div>
+              <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 12px; text-align: center;">
+                <div style="font-size: 11px; font-weight: 700; color: #b91c1c; text-transform: uppercase;">Ada Tunggakan</div>
+                <div style="font-size: 24px; font-weight: 900; color: #dc2626; margin-top: 2px;">${data.belumCount}</div>
+              </div>
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; justify-content: center;">
+                <div style="display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 700; margin-bottom: 6px;">
+                  <span style="color: #475569;">Progress Tuntas</span>
+                  <span style="color: #16a34a;">${data.persentaseTuntas}%</span>
+                </div>
+                <div style="width: 100%; height: 10px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+                  <div style="height: 100%; width: ${data.persentaseTuntas}%; background: linear-gradient(90deg, #10b981, #059669); border-radius: 999px;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TASK LIST HEADER -->
+            ${taskListHtml}
+
+            <!-- SECTION DAFTAR SISWA BELUM SELESAI -->
+            <div style="margin-top: 18px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">
+                <h3 style="margin: 0; font-size: 14.5px; font-weight: 800; color: #dc2626; display: flex; align-items: center; gap: 6px;">
+                  <span>⚠️</span> DAFTAR SISWA BELUM SELESAI (${data.pendingStudents.length} SISWA)
+                </h3>
+                <span style="font-size: 11px; color: #64748b;">Harap segera melengkapi</span>
+              </div>
+              ${pendingHtml}
+            </div>
+
+            <!-- SECTION SISWA SUDAH TUNTAS -->
+            ${completedHtml}
+          </div>
+
+          <!-- FOOTER KARTU -->
+          <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 14px 28px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #64748b;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-weight: 700; color: #334155;">📌 Catatan Guru:</span>
+              <span>Bagi siswa yang namanya tercantum di atas, segera selesaikan tugas/kuis sebelum tenggat waktu.</span>
+            </div>
+            <div style="font-weight: 600; color: #059669; white-space: nowrap;">
+              Al ILMI LMS • TKR Engine
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function copyRekapWAImage() {
+      const card = document.getElementById('rekapWACard');
+      const btn = document.getElementById('btnCopyRekapImg');
+      const btnText = document.getElementById('btnCopyImgText');
+      if (!card || !btn) return;
+      const originalText = btnText ? btnText.innerHTML : 'Salin Gambar';
+
+      try {
+        btn.disabled = true;
+        if (btnText) btnText.innerHTML = 'Memproses Gambar...';
+
+        if (typeof html2canvas === 'undefined') {
+          throw new Error("Library html2canvas belum siap. Coba muat ulang halaman.");
+        }
+
+        const canvas = await html2canvas(card, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+
+        canvas.toBlob(async (blob) => {
+          if (!blob) {
+            alert("Gagal mengonversi kartu ke gambar.");
+            btn.disabled = false;
+            if (btnText) btnText.innerHTML = originalText;
+            return;
+          }
+
+          if (navigator.clipboard && navigator.clipboard.write && window.ClipboardItem) {
+            try {
+              const item = new ClipboardItem({ 'image/png': blob });
+              await navigator.clipboard.write([item]);
+              if (btnText) btnText.innerHTML = '✓ Gambar Tersalin!';
+              if (typeof showToastAdmin === 'function') {
+                showToastAdmin('Gambar rekap berhasil disalin! Tekan Ctrl+V di WhatsApp.', 'success');
+              } else {
+                alert('Gambar rekap berhasil disalin ke clipboard! Buka WhatsApp lalu tekan Ctrl+V.');
+              }
+              setTimeout(() => {
+                if (btnText) btnText.innerHTML = originalText;
+                btn.disabled = false;
+              }, 3000);
+              return;
+            } catch (clipErr) {
+              console.warn("ClipboardItem write failed, fallback to download:", clipErr);
+            }
+          }
+
+          // Fallback: download gambar
+          const selKelas = (document.getElementById('selectKelasRekapWA') ? document.getElementById('selectKelasRekapWA').value : "").trim() || "Kelas";
+          const link = document.createElement('a');
+          link.download = `Rekap_Tugas_${selKelas.replace(/[^a-zA-Z0-9_-]/g, '_')}_${new Date().toISOString().slice(0, 10)}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+          if (btnText) btnText.innerHTML = '✓ Gambar Diunduh';
+          alert('Perangkat Anda tidak mengizinkan salin gambar otomatis ke clipboard. File gambar telah diunduh, silakan kirim langsung via WhatsApp.');
+          setTimeout(() => {
+            if (btnText) btnText.innerHTML = originalText;
+            btn.disabled = false;
+          }, 3000);
+        }, 'image/png');
+
+      } catch (err) {
+        console.error("Error copyRekapWAImage:", err);
+        alert("Gagal memproses gambar: " + err.message);
+        if (btnText) btnText.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    async function downloadRekapWAImage() {
+      const card = document.getElementById('rekapWACard');
+      const selKelas = (document.getElementById('selectKelasRekapWA') ? document.getElementById('selectKelasRekapWA').value : "").trim() || "Kelas";
+      try {
+        if (typeof showOverlay === 'function') showOverlay("Menyiapkan gambar PNG...", 2000);
+        if (typeof html2canvas === 'undefined') {
+          throw new Error("Library html2canvas belum siap. Coba muat ulang halaman.");
+        }
+        const canvas = await html2canvas(card, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+        if (typeof hideOverlay === 'function') hideOverlay();
+
+        const link = document.createElement('a');
+        link.download = `Rekap_Tugas_${selKelas.replace(/[^a-zA-Z0-9_-]/g, '_')}_${new Date().toISOString().slice(0, 10)}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } catch(e) {
+        if (typeof hideOverlay === 'function') hideOverlay();
+        alert("Gagal mengunduh gambar: " + e.message);
+      }
+    }
+
+    function copyRekapWAText() {
+      const selKelas = (document.getElementById('selectKelasRekapWA') ? document.getElementById('selectKelasRekapWA').value : "").trim();
+      const data = getRekapWAData(selKelas);
+      if (!data) return;
+
+      let text = `*Al ILMI LMS*\n`;
+      text += `*Mata pelajaran : KK TKR Elemen Engine*\n`;
+      text += `*Kelas : ${data.kelas}*\n`;
+      text += `*Tanggal : ${data.tanggal}*\n\n`;
+      text += `📊 *STATUS KELAS:*\n`;
+      text += `• Total Siswa: ${data.totalSiswa}\n`;
+      text += `• Tuntas 100%: ${data.selesaiCount} siswa\n`;
+      text += `• Ada Tunggakan: ${data.belumCount} siswa\n\n`;
+
+      if (data.pendingStudents.length > 0) {
+        text += `⚠️ *DAFTAR SISWA BELUM SELESAI:*\n`;
+        data.pendingStudents.forEach((st, idx) => {
+          text += `${idx + 1}. *${st.nama}*\n`;
+          st.tunggakan.forEach(t => {
+            text += `   ❌ ${t}\n`;
+          });
+        });
+        text += `\n`;
+      }
+
+      if (data.completedStudents.length > 0) {
+        text += `✅ *SUDAH TUNTAS 100% (${data.completedStudents.length} Siswa):*\n`;
+        text += data.completedStudents.map(s => s.nama).join(', ') + `\n\n`;
+      }
+
+      text += `_Mohon bagi siswa yang namanya tercantum di atas segera menyelesaikan tugas/kuis melalui web LMS. Terima kasih._`;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          if (typeof showToastAdmin === 'function') {
+            showToastAdmin("Teks rekap berhasil disalin ke clipboard!", "success");
+          } else {
+            alert("Teks rekap berhasil disalin! Silakan paste di WhatsApp.");
+          }
+        }).catch(() => fallbackCopyText(text));
+      } else {
+        fallbackCopyText(text);
+      }
+    }
+
+    function fallbackCopyText(text) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand('copy');
+        if (typeof showToastAdmin === 'function') {
+          showToastAdmin("Teks rekap berhasil disalin ke clipboard!", "success");
+        } else {
+          alert("Teks rekap berhasil disalin! Silakan paste di WhatsApp.");
+        }
+      } catch(e) {
+        prompt("Salin teks di bawah ini (Ctrl+C):", text);
+      }
+      document.body.removeChild(ta);
     }
 
     function buildRekapAoa(selKelas) {
