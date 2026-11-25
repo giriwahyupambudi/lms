@@ -1355,12 +1355,15 @@
       
       <div class="modal-body" style="padding: 16px 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; background: #f1f5f9;">
         <!-- Control Bar -->
-        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
-          <div style="flex: 1; min-width: 180px;">
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px; margin-bottom: 12px; display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
+          <div style="flex: 1; min-width: 160px;">
             <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 6px;">Pilih Kelas</label>
-            <select id="selectKelasRekapWA" class="form-control" style="font-weight: 700; font-size: 0.9rem;" onchange="generateRekapWACard()"></select>
+            <select id="selectKelasRekapWA" class="form-control" style="font-weight: 700; font-size: 0.9rem;" onchange="onKelasChangeRekapWA()"></select>
           </div>
           <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <button id="btnToggleFilterMateriWA" class="btn btn-outline" style="display:inline-flex; align-items:center; gap:6px; padding: 9px 14px; font-size: 0.85rem; border-color:#cbd5e1;" onclick="toggleFilterMateriRekapWA()">
+              <i data-lucide="list-filter" style="width:16px; height:16px;"></i> <span id="lblFilterMateriWA">Filter Materi</span>
+            </button>
             <button id="btnCopyRekapImg" class="btn" style="background:#16a34a; color:#fff; border:none; font-weight:700; display:inline-flex; align-items:center; gap:6px; padding: 9px 16px; font-size: 0.85rem; box-shadow: 0 2px 6px rgba(22,163,74,0.3);" onclick="actionKirimRekapWA()">
               <span id="btnShareIconHolder"><i data-lucide="share-2" style="width:16px; height:16px;"></i></span> <span id="btnCopyImgText">Kirim / Salin Gambar WA</span>
             </button>
@@ -1371,6 +1374,18 @@
               <i data-lucide="file-text" style="width:16px; height:16px;"></i> Salin Teks
             </button>
           </div>
+        </div>
+
+        <!-- Panel Filter / Exclude Materi -->
+        <div id="rekapWAMateriFilterBox" style="display:none; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #f1f5f9;">
+            <span style="font-size:0.82rem; font-weight:700; color:#334155;">Centang materi/tugas yang ingin dimasukkan ke rekap (hilangkan centang untuk exclude):</span>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="btn btn-outline" style="padding:4px 10px; font-size:0.75rem;" onclick="setAllRekapWAMateri(true)">Pilih Semua</button>
+              <button type="button" class="btn btn-outline" style="padding:4px 10px; font-size:0.75rem;" onclick="setAllRekapWAMateri(false)">Kosongkan</button>
+            </div>
+          </div>
+          <div id="rekapWAMateriFilterList" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap:8px; max-height:220px; overflow-y:auto; padding-right:4px;"></div>
         </div>
 
         <!-- Preview Wrapper -->
@@ -6134,19 +6149,22 @@
         modal.style.display = 'flex';
       }
 
+      renderFilterMateriRekapWA(curKelas);
       generateRekapWACard();
       if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
-    function getRekapWAData(selKelas) {
-      if (!selKelas) return null;
-      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
-      const students = getStudentsForClass(selKelas);
-      if (!students || students.length === 0) return null;
+    function onKelasChangeRekapWA() {
+      const selKelas = (document.getElementById('selectKelasRekapWA') ? document.getElementById('selectKelasRekapWA').value : "").trim();
+      renderFilterMateriRekapWA(selKelas);
+      generateRekapWACard();
+    }
 
-      // Filter materi yang termasuk penugasan / kuis (bukan materi bacaan biasa tanpa kuis interaktif)
+    function getBaseTaskMaterialsForRekapWA(selKelas) {
+      if (!selKelas) return [];
+      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
       const allMaterials = getMaterialsForClass(selKelas);
-      const taskMaterials = allMaterials.filter(m => {
+      return allMaterials.filter(m => {
         let t = (getVal(m, ['tipe', 'tipe_evaluasi']) || "").toString().trim().toLowerCase();
         if (t === 'materi saja' || t === 'materi' || t === 'bacaan' || t === 'pengumuman') {
           let rawKv = getVal(m, ['kuis_video', 'kuisvideo', 'interaktif']) || "";
@@ -6157,7 +6175,106 @@
           return false;
         }
         return true;
+      }).map((m, idx) => {
+        const mid = (getVal(m, ['idmateri', 'id_materi', 'materiid']) || "").toString().trim();
+        const mJudulRaw = (getVal(m, ['judul', 'materi']) || `Tugas ${idx + 1}`).toString().trim();
+        const matKey = norm(mid || mJudulRaw) || `idx_${idx}`;
+        return { raw: m, matKey, judul: mJudulRaw };
       });
+    }
+
+    function getExcludedRekapWAMateri(selKelas) {
+      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      const key = `LMS_REKAP_WA_EXCLUDED_${norm(selKelas)}`;
+      try {
+        const raw = localStorage.getItem(key);
+        const arr = raw ? JSON.parse(raw) : [];
+        return new Set(Array.isArray(arr) ? arr : []);
+      } catch(e) {
+        return new Set();
+      }
+    }
+
+    function saveExcludedRekapWAMateri(selKelas, excludedSet) {
+      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      const key = `LMS_REKAP_WA_EXCLUDED_${norm(selKelas)}`;
+      try {
+        localStorage.setItem(key, JSON.stringify(Array.from(excludedSet)));
+      } catch(e) {}
+    }
+
+    function toggleFilterMateriRekapWA() {
+      const box = document.getElementById('rekapWAMateriFilterBox');
+      if (!box) return;
+      box.style.display = (box.style.display === 'none' || box.style.display === '') ? 'block' : 'none';
+    }
+
+    function renderFilterMateriRekapWA(selKelas) {
+      const listEl = document.getElementById('rekapWAMateriFilterList');
+      const lblEl = document.getElementById('lblFilterMateriWA');
+      const items = getBaseTaskMaterialsForRekapWA(selKelas);
+      const excluded = getExcludedRekapWAMateri(selKelas);
+      const activeCount = items.filter(it => !excluded.has(it.matKey)).length;
+
+      if (lblEl) {
+        lblEl.innerText = `Filter Materi (${activeCount}/${items.length})`;
+      }
+
+      if (!listEl) return;
+      if (items.length === 0) {
+        listEl.innerHTML = `<div style="font-size:0.8rem; color:#64748b; grid-column:1/-1;">Tidak ada materi tugas/kuis aktif di kelas ini.</div>`;
+        return;
+      }
+
+      listEl.innerHTML = items.map((it, idx) => {
+        const isChecked = !excluded.has(it.matKey);
+        const safeKey = it.matKey.replace(/'/g, "\\'");
+        return `
+          <label style="display:flex; align-items:flex-start; gap:8px; background:${isChecked ? '#f0fdf4' : '#fef2f2'}; border:1px solid ${isChecked ? '#bbf7d0' : '#fecaca'}; border-radius:8px; padding:7px 10px; cursor:pointer; font-size:0.78rem; color:#1e293b; user-select:none;">
+            <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="onToggleRekapWAMateriItem('${safeKey}', this.checked)" style="margin-top:2px; accent-color:#16a34a; cursor:pointer;">
+            <span style="line-height:1.3; ${isChecked ? 'font-weight:600;' : 'text-decoration:line-through; color:#94a3b8;'}"><b>${idx + 1}.</b> ${it.judul}</span>
+          </label>
+        `;
+      }).join('');
+    }
+
+    function onToggleRekapWAMateriItem(matKey, isChecked) {
+      const selKelas = (document.getElementById('selectKelasRekapWA') ? document.getElementById('selectKelasRekapWA').value : "").trim();
+      if (!selKelas) return;
+      const excluded = getExcludedRekapWAMateri(selKelas);
+      if (isChecked) {
+        excluded.delete(matKey);
+      } else {
+        excluded.add(matKey);
+      }
+      saveExcludedRekapWAMateri(selKelas, excluded);
+      renderFilterMateriRekapWA(selKelas);
+      generateRekapWACard();
+    }
+
+    function setAllRekapWAMateri(includeAll) {
+      const selKelas = (document.getElementById('selectKelasRekapWA') ? document.getElementById('selectKelasRekapWA').value : "").trim();
+      if (!selKelas) return;
+      const excluded = new Set();
+      if (!includeAll) {
+        getBaseTaskMaterialsForRekapWA(selKelas).forEach(it => excluded.add(it.matKey));
+      }
+      saveExcludedRekapWAMateri(selKelas, excluded);
+      renderFilterMateriRekapWA(selKelas);
+      generateRekapWACard();
+    }
+
+    function getRekapWAData(selKelas) {
+      if (!selKelas) return null;
+      const norm = (s) => (s || "").toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      const students = getStudentsForClass(selKelas);
+      if (!students || students.length === 0) return null;
+
+      // Filter materi yang termasuk penugasan / kuis dan tidak di-exclude oleh admin
+      const excluded = getExcludedRekapWAMateri(selKelas);
+      const taskMaterials = getBaseTaskMaterialsForRekapWA(selKelas)
+        .filter(it => !excluded.has(it.matKey))
+        .map(it => it.raw);
 
       const maps = buildRekapIndexMaps();
       const rekapNilaiMap = maps.rekapNilaiMap;
@@ -6244,6 +6361,15 @@
       const data = getRekapWAData(selKelas);
       if (!data) {
         card.innerHTML = `<div style="padding: 40px; text-align: center; color: #64748b;">Tidak ada data siswa untuk kelas ${selKelas}.</div>`;
+        return;
+      }
+
+      if (data.totalTugas === 0) {
+        card.innerHTML = `<div style="padding: 40px; text-align: center; color: #64748b;">
+          <div style="font-size: 28px; margin-bottom: 8px;">📋</div>
+          <div style="font-weight: 700; color: #334155; font-size: 15px;">Belum ada materi/tugas yang dipilih untuk direkap</div>
+          <div style="font-size: 13px; margin-top: 6px;">Klik tombol <b>Filter Materi</b> di atas lalu centang minimal 1 materi.</div>
+        </div>`;
         return;
       }
 
@@ -6447,13 +6573,14 @@
       await new Promise(r => setTimeout(r, 80));
 
       const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
-      const scaleFactor = isMobile ? 1.5 : 2;
+      const scaleFactor = isMobile ? 1 : 1.5;
 
       try {
         const canvas = await html2canvas(clone, {
           scale: scaleFactor,
           useCORS: true,
           logging: false,
+          imageTimeout: 0,
           backgroundColor: '#ffffff',
           scrollX: 0,
           scrollY: 0,
@@ -6490,17 +6617,16 @@
       try {
         if (btn) btn.disabled = true;
         if (btnText) btnText.innerHTML = '⏳ Menyiapkan Gambar...';
-        if (typeof showOverlay === 'function') showOverlay("Sedang memproses gambar kartu...", 3000);
+        if (typeof showOverlay === 'function') showOverlay("Sedang memproses gambar kartu...", 0);
 
         // Beri jeda agar browser sempat menggambar status loading
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 60));
 
         const selKelas = (document.getElementById('selectKelasRekapWA') ? document.getElementById('selectKelasRekapWA').value : "").trim() || "Kelas";
         const canvas = await renderRekapCanvas();
-
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         if (typeof hideOverlay === 'function') hideOverlay();
 
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         if (!blob) throw new Error("Gagal membuat gambar PNG dari kartu.");
 
         const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (window.innerWidth < 768 && ('ontouchstart' in window));
@@ -6582,15 +6708,20 @@
     async function downloadRekapWAImage() {
       const btn = document.getElementById('btnDownloadRekapImg');
       const selKelas = (document.getElementById('selectKelasRekapWA') ? document.getElementById('selectKelasRekapWA').value : "").trim() || "Kelas";
+      const origHtml = btn ? btn.innerHTML : '';
       try {
-        if (btn) btn.disabled = true;
-        if (typeof showOverlay === 'function') showOverlay("Menyiapkan file gambar PNG...", 3000);
-        await new Promise(r => setTimeout(r, 80));
+        if (btn) {
+          btn.disabled = true;
+          btn.innerHTML = '<i data-lucide="loader" class="spin-anim" style="width:16px; height:16px;"></i> Mengunduh...';
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+        if (typeof showOverlay === 'function') showOverlay("Menyiapkan file gambar PNG...", 0);
+        await new Promise(r => setTimeout(r, 60));
 
         const canvas = await renderRekapCanvas();
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         if (typeof hideOverlay === 'function') hideOverlay();
 
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         if (!blob) throw new Error("Gagal membuat gambar PNG.");
 
         const filename = `Rekap_Tugas_${selKelas.replace(/[^a-zA-Z0-9_-]/g, '_')}_${new Date().toISOString().slice(0, 10)}.png`;
@@ -6602,7 +6733,11 @@
         if (typeof hideOverlay === 'function') hideOverlay();
         alert("Gagal mengunduh gambar: " + e.message);
       } finally {
-        if (btn) btn.disabled = false;
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = origHtml;
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
       }
     }
 
